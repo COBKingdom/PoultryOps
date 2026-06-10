@@ -67,3 +67,19 @@ export async function getTotalFlocks(
 
   return count || 0;
 }
+export async function getFarmFlocks(
+  farmId: string
+) {
+  const { data, error } =
+    await supabase
+      .from("flocks")
+      .select("*")
+      .eq("farm_id", farmId)
+      .order(
+        "flock_name"
+      );
+
+  if (error) throw error;
+
+  return data;
+}

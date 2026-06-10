@@ -1,20 +1,36 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
 
 import {
   getTotalBirds,
   getTotalFlocks,
 } from "@/lib/flocks";
 
+import {
+  getTodayEggs,
+} from "@/lib/eggs";
+
 export function useDashboardStats(
   farmId?: string
 ) {
-  const [totalBirds, setTotalBirds] =
-    useState(0);
+  const [
+    totalBirds,
+    setTotalBirds,
+  ] = useState(0);
 
-  const [totalFlocks, setTotalFlocks] =
-    useState(0);
+  const [
+    totalFlocks,
+    setTotalFlocks,
+  ] = useState(0);
+
+  const [
+    todayEggs,
+    setTodayEggs,
+  ] = useState(0);
 
   useEffect(() => {
     async function load() {
@@ -30,8 +46,22 @@ export function useDashboardStats(
           farmId
         );
 
-      setTotalBirds(birds);
-      setTotalFlocks(flocks);
+      const eggs =
+        await getTodayEggs(
+          farmId
+        );
+
+      setTotalBirds(
+        birds
+      );
+
+      setTotalFlocks(
+        flocks
+      );
+
+      setTodayEggs(
+        eggs
+      );
     }
 
     load();
@@ -40,5 +70,6 @@ export function useDashboardStats(
   return {
     totalBirds,
     totalFlocks,
+    todayEggs,
   };
 }

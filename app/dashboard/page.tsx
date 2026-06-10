@@ -30,6 +30,7 @@ const subscription =
 const {
   totalBirds,
   totalFlocks,
+  todayEggs,
 } = useDashboardStats(
   farm?.id
 );
@@ -118,9 +119,9 @@ if (loading) {
                value={totalFlocks}
             />
 
-            <KpiCard
-              title="Feed Stock"
-              value="0"
+             <KpiCard
+              title="Today's Eggs"
+               value={todayEggs}
             />
 
             <KpiCard
