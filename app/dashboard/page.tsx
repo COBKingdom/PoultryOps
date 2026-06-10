@@ -29,9 +29,9 @@ export default function DashboardPage() {
   const {
     currentBirds,
     todayEggs,
-    todayFeed,
-    totalMortality,
+    totalRevenue,
     totalExpenses,
+    profit,
   } = useDashboardStats(
     farm?.id
   );
@@ -83,6 +83,7 @@ export default function DashboardPage() {
         <div className="p-6 space-y-6">
 
           <div className="grid md:grid-cols-2 gap-6">
+
             <FarmCard
               farmName={farm?.name}
             />
@@ -98,6 +99,7 @@ export default function DashboardPage() {
                 daysRemaining
               }
             />
+
           </div>
 
           <div className="grid md:grid-cols-5 gap-6">
@@ -113,13 +115,8 @@ export default function DashboardPage() {
             />
 
             <KpiCard
-              title="Today's Feed"
-              value={`${todayFeed}kg`}
-            />
-
-            <KpiCard
-              title="Mortality"
-              value={totalMortality}
+              title="Revenue"
+              value={totalRevenue}
             />
 
             <KpiCard
@@ -127,11 +124,17 @@ export default function DashboardPage() {
               value={totalExpenses}
             />
 
+            <KpiCard
+              title="Profit"
+              value={profit}
+            />
+
           </div>
 
           <QuickActions />
 
         </div>
+
       </main>
     </div>
   );

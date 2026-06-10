@@ -18,24 +18,25 @@ import {
 } from "@/lib/mortality";
 
 import {
-  getTodayFeed,
-} from "@/lib/feed";
-
-import {
   getTotalExpenses,
 } from "@/lib/expenses";
+
+import {
+  getTotalRevenue,
+} from "@/lib/sales";
 
 export function useDashboardStats(
   farmId?: string
 ) {
-  const [currentBirds, setCurrentBirds] =
-    useState(0);
+  const [
+    currentBirds,
+    setCurrentBirds,
+  ] = useState(0);
 
-  const [todayEggs, setTodayEggs] =
-    useState(0);
-
-  const [todayFeed, setTodayFeed] =
-    useState(0);
+  const [
+    todayEggs,
+    setTodayEggs,
+  ] = useState(0);
 
   const [
     totalMortality,
@@ -45,6 +46,16 @@ export function useDashboardStats(
   const [
     totalExpenses,
     setTotalExpenses,
+  ] = useState(0);
+
+  const [
+    totalRevenue,
+    setTotalRevenue,
+  ] = useState(0);
+
+  const [
+    profit,
+    setProfit,
   ] = useState(0);
 
   useEffect(() => {
@@ -67,13 +78,13 @@ export function useDashboardStats(
             farmId
           );
 
-        const feed =
-          await getTodayFeed(
+        const expenses =
+          await getTotalExpenses(
             farmId
           );
 
-        const expenses =
-          await getTotalExpenses(
+        const revenue =
+          await getTotalRevenue(
             farmId
           );
 
@@ -85,16 +96,21 @@ export function useDashboardStats(
           eggs
         );
 
-        setTodayFeed(
-          feed
-        );
-
         setTotalMortality(
           mortality
         );
 
         setTotalExpenses(
           expenses
+        );
+
+        setTotalRevenue(
+          revenue
+        );
+
+        setProfit(
+          revenue -
+            expenses
         );
 
       } catch (error) {
@@ -108,8 +124,9 @@ export function useDashboardStats(
   return {
     currentBirds,
     todayEggs,
-    todayFeed,
     totalMortality,
     totalExpenses,
+    totalRevenue,
+    profit,
   };
 }
