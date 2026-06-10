@@ -1,24 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { createEggProduction } from "@/lib/eggs";
+import { createFeedStock } from "@/lib/feedInventory";
 
 type Props = {
   farmId: string;
-  flocks: any[];
 };
 
-export default function AddEggForm({
+export default function AddFeedStockForm({
   farmId,
-  flocks,
 }: Props) {
-  const [flockId, setFlockId] =
+  const [feedType, setFeedType] =
+    useState("Starter");
+
+  const [quantity, setQuantity] =
     useState("");
 
-  const [eggCount, setEggCount] =
+  const [cost, setCost] =
     useState("");
 
-  const [crackedEggs, setCrackedEggs] =
+  const [supplier, setSupplier] =
     useState("");
 
   const [loading, setLoading] =
@@ -26,38 +27,35 @@ export default function AddEggForm({
 
   async function handleSave() {
     try {
-      if (!flockId) {
-        alert("Select a flock");
-        return;
-      }
-
       setLoading(true);
 
-      await createEggProduction({
+      await createFeedStock({
         farm_id: farmId,
-        flock_id: flockId,
-        production_date:
+        purchase_date:
           new Date()
             .toISOString()
             .split("T")[0],
-        egg_count:
-          Number(eggCount),
-        cracked_eggs:
-          Number(crackedEggs || 0),
+        feed_type: feedType,
+        quantity_kg:
+          Number(quantity),
+        cost:
+          Number(cost || 0),
+        supplier,
       });
 
-      setEggCount("");
-      setCrackedEggs("");
+      setQuantity("");
+      setCost("");
+      setSupplier("");
 
       alert(
-        "Egg production saved"
+        "Feed stock added"
       );
 
     } catch (error) {
       console.error(error);
 
       alert(
-        "Failed to save"
+        "Failed to save feed stock"
       );
 
     } finally {
@@ -69,42 +67,32 @@ export default function AddEggForm({
     <div className="bg-white rounded-xl p-6 shadow">
 
       <h2 className="font-bold text-lg mb-4">
-        Record Egg Production
+        Add Feed Stock
       </h2>
 
       <div className="space-y-3">
 
         <select
-          value={flockId}
+          value={feedType}
           onChange={(e) =>
-            setFlockId(
+            setFeedType(
               e.target.value
             )
           }
           className="w-full border p-3 rounded"
         >
-          <option value="">
-            Select Flock
-          </option>
-
-          {flocks.map(
-            (flock) => (
-              <option
-                key={flock.id}
-                value={flock.id}
-              >
-                {flock.flock_name}
-              </option>
-            )
-          )}
+          <option>Starter</option>
+          <option>Grower</option>
+          <option>Finisher</option>
+          <option>Layer Mash</option>
         </select>
 
         <input
           type="number"
-          placeholder="Egg Count"
-          value={eggCount}
+          placeholder="Quantity (kg)"
+          value={quantity}
           onChange={(e) =>
-            setEggCount(
+            setQuantity(
               e.target.value
             )
           }
@@ -113,10 +101,21 @@ export default function AddEggForm({
 
         <input
           type="number"
-          placeholder="Cracked Eggs"
-          value={crackedEggs}
+          placeholder="Cost"
+          value={cost}
           onChange={(e) =>
-            setCrackedEggs(
+            setCost(
+              e.target.value
+            )
+          }
+          className="w-full border p-3 rounded"
+        />
+
+        <input
+          placeholder="Supplier"
+          value={supplier}
+          onChange={(e) =>
+            setSupplier(
               e.target.value
             )
           }
@@ -130,11 +129,10 @@ export default function AddEggForm({
         >
           {loading
             ? "Saving..."
-            : "Save Production"}
+            : "Add Feed Stock"}
         </button>
 
       </div>
-
     </div>
   );
 }

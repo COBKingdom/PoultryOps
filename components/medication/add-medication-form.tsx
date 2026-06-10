@@ -1,24 +1,30 @@
 "use client";
 
 import { useState } from "react";
-import { createEggProduction } from "@/lib/eggs";
+import { createMedication } from "@/lib/medication";
 
 type Props = {
   farmId: string;
   flocks: any[];
 };
 
-export default function AddEggForm({
+export default function AddMedicationForm({
   farmId,
   flocks,
 }: Props) {
   const [flockId, setFlockId] =
     useState("");
 
-  const [eggCount, setEggCount] =
+  const [medicationName, setMedicationName] =
     useState("");
 
-  const [crackedEggs, setCrackedEggs] =
+  const [category, setCategory] =
+    useState("Vaccine");
+
+  const [cost, setCost] =
+    useState("");
+
+  const [notes, setNotes] =
     useState("");
 
   const [loading, setLoading] =
@@ -26,38 +32,36 @@ export default function AddEggForm({
 
   async function handleSave() {
     try {
-      if (!flockId) {
-        alert("Select a flock");
-        return;
-      }
-
       setLoading(true);
 
-      await createEggProduction({
+      await createMedication({
         farm_id: farmId,
         flock_id: flockId,
-        production_date:
+        medication_date:
           new Date()
             .toISOString()
             .split("T")[0],
-        egg_count:
-          Number(eggCount),
-        cracked_eggs:
-          Number(crackedEggs || 0),
+        medication_name:
+          medicationName,
+        category,
+        cost:
+          Number(cost || 0),
+        notes,
       });
 
-      setEggCount("");
-      setCrackedEggs("");
+      setMedicationName("");
+      setCost("");
+      setNotes("");
 
       alert(
-        "Egg production saved"
+        "Medication record saved"
       );
 
     } catch (error) {
       console.error(error);
 
       alert(
-        "Failed to save"
+        "Failed to save medication"
       );
 
     } finally {
@@ -69,7 +73,7 @@ export default function AddEggForm({
     <div className="bg-white rounded-xl p-6 shadow">
 
       <h2 className="font-bold text-lg mb-4">
-        Record Egg Production
+        Record Medication
       </h2>
 
       <div className="space-y-3">
@@ -100,11 +104,38 @@ export default function AddEggForm({
         </select>
 
         <input
-          type="number"
-          placeholder="Egg Count"
-          value={eggCount}
+          placeholder="Medication Name"
+          value={medicationName}
           onChange={(e) =>
-            setEggCount(
+            setMedicationName(
+              e.target.value
+            )
+          }
+          className="w-full border p-3 rounded"
+        />
+
+        <select
+          value={category}
+          onChange={(e) =>
+            setCategory(
+              e.target.value
+            )
+          }
+          className="w-full border p-3 rounded"
+        >
+          <option>Vaccine</option>
+          <option>Antibiotic</option>
+          <option>Vitamin</option>
+          <option>Supplement</option>
+          <option>Treatment</option>
+        </select>
+
+        <input
+          type="number"
+          placeholder="Cost"
+          value={cost}
+          onChange={(e) =>
+            setCost(
               e.target.value
             )
           }
@@ -112,11 +143,10 @@ export default function AddEggForm({
         />
 
         <input
-          type="number"
-          placeholder="Cracked Eggs"
-          value={crackedEggs}
+          placeholder="Notes"
+          value={notes}
           onChange={(e) =>
-            setCrackedEggs(
+            setNotes(
               e.target.value
             )
           }
@@ -130,11 +160,10 @@ export default function AddEggForm({
         >
           {loading
             ? "Saving..."
-            : "Save Production"}
+            : "Save Medication"}
         </button>
 
       </div>
-
     </div>
   );
 }

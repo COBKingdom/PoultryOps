@@ -58,6 +58,11 @@ export function useDashboardStats(
     setProfit,
   ] = useState(0);
 
+  const [
+    productionPercentage,
+    setProductionPercentage,
+  ] = useState(0);
+
   useEffect(() => {
     async function load() {
       try {
@@ -88,8 +93,11 @@ export function useDashboardStats(
             farmId
           );
 
+        const birdsAlive =
+          birds - mortality;
+
         setCurrentBirds(
-          birds - mortality
+          birdsAlive
         );
 
         setTodayEggs(
@@ -113,6 +121,21 @@ export function useDashboardStats(
             expenses
         );
 
+        const production =
+          birdsAlive > 0
+            ? (
+                (eggs /
+                  birdsAlive) *
+                100
+              ).toFixed(2)
+            : 0;
+
+        setProductionPercentage(
+          Number(
+            production
+          )
+        );
+
       } catch (error) {
         console.error(error);
       }
@@ -128,5 +151,6 @@ export function useDashboardStats(
     totalExpenses,
     totalRevenue,
     profit,
+    productionPercentage,
   };
 }

@@ -25,8 +25,16 @@ export default function Sidebar() {
       href: "/feed",
     },
     {
+      name: "Feed Inventory",
+      href: "/feed-inventory",
+    },
+    {
       name: "Mortality",
       href: "/mortality",
+    },
+    {
+      name: "Medication",
+      href: "/medication",
     },
     {
       name: "Expenses",

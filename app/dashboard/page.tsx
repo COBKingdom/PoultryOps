@@ -26,15 +26,16 @@ export default function DashboardPage() {
   const subscription =
     data?.subscription;
 
-  const {
-    currentBirds,
-    todayEggs,
-    totalRevenue,
-    totalExpenses,
-    profit,
-  } = useDashboardStats(
-    farm?.id
-  );
+const {
+  currentBirds,
+  todayEggs,
+  totalRevenue,
+  totalExpenses,
+  profit,
+  productionPercentage,
+} = useDashboardStats(
+  farm?.id
+);
 
   if (loading) {
     return (
@@ -127,6 +128,10 @@ export default function DashboardPage() {
             <KpiCard
               title="Profit"
               value={profit}
+            />
+            <KpiCard
+              title="Production %"
+              value={`${productionPercentage}%`}
             />
 
           </div>
