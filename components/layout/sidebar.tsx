@@ -41,6 +41,10 @@ export default function Sidebar() {
       href: "/reports",
     },
     {
+      name: "Analytics",
+      href: "/analytics",
+    },
+    {
       name: "Settings",
       href: "/settings",
     },
