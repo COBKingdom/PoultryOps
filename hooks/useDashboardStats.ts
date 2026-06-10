@@ -14,6 +14,10 @@ import {
   getTodayEggs,
 } from "@/lib/eggs";
 
+import {
+  getTotalMortality,
+} from "@/lib/mortality";
+
 export function useDashboardStats(
   farmId?: string
 ) {
@@ -32,36 +36,67 @@ export function useDashboardStats(
     setTodayEggs,
   ] = useState(0);
 
+  const [
+    totalMortality,
+    setTotalMortality,
+  ] = useState(0);
+
+  const [
+    currentBirds,
+    setCurrentBirds,
+  ] = useState(0);
+
   useEffect(() => {
     async function load() {
-      if (!farmId) return;
+      try {
+        if (!farmId) return;
 
-      const birds =
-        await getTotalBirds(
-          farmId
+        const birds =
+          await getTotalBirds(
+            farmId
+          );
+
+        const flocks =
+          await getTotalFlocks(
+            farmId
+          );
+
+        const eggs =
+          await getTodayEggs(
+            farmId
+          );
+
+        const mortality =
+          await getTotalMortality(
+            farmId
+          );
+
+        setTotalBirds(
+          birds
         );
 
-      const flocks =
-        await getTotalFlocks(
-          farmId
+        setTotalFlocks(
+          flocks
         );
 
-      const eggs =
-        await getTodayEggs(
-          farmId
+        setTodayEggs(
+          eggs
         );
 
-      setTotalBirds(
-        birds
-      );
+        setTotalMortality(
+          mortality
+        );
 
-      setTotalFlocks(
-        flocks
-      );
+        setCurrentBirds(
+          birds - mortality
+        );
 
-      setTodayEggs(
-        eggs
-      );
+      } catch (error) {
+        console.error(
+          "Dashboard Stats Error:",
+          error
+        );
+      }
     }
 
     load();
@@ -71,5 +106,7 @@ export function useDashboardStats(
     totalBirds,
     totalFlocks,
     todayEggs,
+    totalMortality,
+    currentBirds,
   };
 }

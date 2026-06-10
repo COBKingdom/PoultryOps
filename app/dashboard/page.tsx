@@ -31,6 +31,8 @@ const {
   totalBirds,
   totalFlocks,
   todayEggs,
+  totalMortality,
+  currentBirds,
 } = useDashboardStats(
   farm?.id
 );
@@ -109,25 +111,29 @@ if (loading) {
 
           <div className="grid md:grid-cols-4 gap-6">
 
-            <KpiCard
-             title="Total Birds"
-             value={totalBirds}
-            />
+<div className="grid md:grid-cols-4 gap-6">
 
-             <KpiCard
-              title="Total Flocks"
-               value={totalFlocks}
-            />
+  <KpiCard
+    title="Current Birds"
+    value={currentBirds}
+  />
 
-             <KpiCard
-              title="Today's Eggs"
-               value={todayEggs}
-            />
+  <KpiCard
+    title="Total Flocks"
+    value={totalFlocks}
+  />
 
-            <KpiCard
-              title="Mortality"
-              value="0"
-            />
+  <KpiCard
+    title="Today's Eggs"
+    value={todayEggs}
+  />
+
+  <KpiCard
+    title="Mortality"
+    value={totalMortality}
+  />
+
+</div>
 
           </div>
 
