@@ -1,8 +1,8 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
-
 import { useDashboard } from "@/hooks/useDashboard";
+import { useDashboardStats } from "@/hooks/useDashboardStats";
 
 import Sidebar from "@/components/layout/sidebar";
 import Topbar from "@/components/layout/topbar";
@@ -11,45 +11,42 @@ import FarmCard from "@/components/dashboard/farm-card";
 import SubscriptionCard from "@/components/dashboard/subscription-card";
 import KpiCard from "@/components/dashboard/kpi-card";
 import QuickActions from "@/components/dashboard/quick-actions";
-import { useDashboardStats } from "@/hooks/useDashboardStats";
 
 export default function DashboardPage() {
   const { user } = useAuth();
 
-const {
-  loading,
-  data,
-} = useDashboard();
+  const {
+    loading,
+    data,
+  } = useDashboard();
 
-const farm =
-  data?.farm;
+  const farm =
+    data?.farm;
 
-const subscription =
-  data?.subscription;
+  const subscription =
+    data?.subscription;
 
-const {
-  totalBirds,
-  totalFlocks,
-  todayEggs,
-  totalMortality,
-  currentBirds,
-} = useDashboardStats(
-  farm?.id
-);
-
-if (loading) {
-  return (
-    <div className="p-10">
-      Loading Dashboard...
-    </div>
+  const {
+    currentBirds,
+    todayEggs,
+    todayFeed,
+    totalMortality,
+    totalExpenses,
+  } = useDashboardStats(
+    farm?.id
   );
-}
+
+  if (loading) {
+    return (
+      <div className="p-10">
+        Loading Dashboard...
+      </div>
+    );
+  }
 
   let daysRemaining = 0;
 
-  if (
-    subscription?.trial_end
-  ) {
+  if (subscription?.trial_end) {
     const end =
       new Date(
         subscription.trial_end
@@ -80,19 +77,14 @@ if (loading) {
 
       <main className="flex-1">
         <Topbar
-          email={
-            user?.email
-          }
+          email={user?.email}
         />
 
         <div className="p-6 space-y-6">
 
           <div className="grid md:grid-cols-2 gap-6">
-
             <FarmCard
-              farmName={
-                farm?.name
-              }
+              farmName={farm?.name}
             />
 
             <SubscriptionCard
@@ -106,34 +98,34 @@ if (loading) {
                 daysRemaining
               }
             />
-
           </div>
 
-          <div className="grid md:grid-cols-4 gap-6">
+          <div className="grid md:grid-cols-5 gap-6">
 
-<div className="grid md:grid-cols-4 gap-6">
+            <KpiCard
+              title="Current Birds"
+              value={currentBirds}
+            />
 
-  <KpiCard
-    title="Current Birds"
-    value={currentBirds}
-  />
+            <KpiCard
+              title="Today's Eggs"
+              value={todayEggs}
+            />
 
-  <KpiCard
-    title="Total Flocks"
-    value={totalFlocks}
-  />
+            <KpiCard
+              title="Today's Feed"
+              value={`${todayFeed}kg`}
+            />
 
-  <KpiCard
-    title="Today's Eggs"
-    value={todayEggs}
-  />
+            <KpiCard
+              title="Mortality"
+              value={totalMortality}
+            />
 
-  <KpiCard
-    title="Mortality"
-    value={totalMortality}
-  />
-
-</div>
+            <KpiCard
+              title="Expenses"
+              value={totalExpenses}
+            />
 
           </div>
 

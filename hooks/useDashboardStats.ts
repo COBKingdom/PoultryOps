@@ -7,7 +7,6 @@ import {
 
 import {
   getTotalBirds,
-  getTotalFlocks,
 } from "@/lib/flocks";
 
 import {
@@ -18,23 +17,25 @@ import {
   getTotalMortality,
 } from "@/lib/mortality";
 
+import {
+  getTodayFeed,
+} from "@/lib/feed";
+
+import {
+  getTotalExpenses,
+} from "@/lib/expenses";
+
 export function useDashboardStats(
   farmId?: string
 ) {
-  const [
-    totalBirds,
-    setTotalBirds,
-  ] = useState(0);
+  const [currentBirds, setCurrentBirds] =
+    useState(0);
 
-  const [
-    totalFlocks,
-    setTotalFlocks,
-  ] = useState(0);
+  const [todayEggs, setTodayEggs] =
+    useState(0);
 
-  const [
-    todayEggs,
-    setTodayEggs,
-  ] = useState(0);
+  const [todayFeed, setTodayFeed] =
+    useState(0);
 
   const [
     totalMortality,
@@ -42,8 +43,8 @@ export function useDashboardStats(
   ] = useState(0);
 
   const [
-    currentBirds,
-    setCurrentBirds,
+    totalExpenses,
+    setTotalExpenses,
   ] = useState(0);
 
   useEffect(() => {
@@ -56,8 +57,8 @@ export function useDashboardStats(
             farmId
           );
 
-        const flocks =
-          await getTotalFlocks(
+        const mortality =
+          await getTotalMortality(
             farmId
           );
 
@@ -66,36 +67,38 @@ export function useDashboardStats(
             farmId
           );
 
-        const mortality =
-          await getTotalMortality(
+        const feed =
+          await getTodayFeed(
             farmId
           );
 
-        setTotalBirds(
-          birds
-        );
+        const expenses =
+          await getTotalExpenses(
+            farmId
+          );
 
-        setTotalFlocks(
-          flocks
+        setCurrentBirds(
+          birds - mortality
         );
 
         setTodayEggs(
           eggs
         );
 
+        setTodayFeed(
+          feed
+        );
+
         setTotalMortality(
           mortality
         );
 
-        setCurrentBirds(
-          birds - mortality
+        setTotalExpenses(
+          expenses
         );
 
       } catch (error) {
-        console.error(
-          "Dashboard Stats Error:",
-          error
-        );
+        console.error(error);
       }
     }
 
@@ -103,10 +106,10 @@ export function useDashboardStats(
   }, [farmId]);
 
   return {
-    totalBirds,
-    totalFlocks,
-    todayEggs,
-    totalMortality,
     currentBirds,
+    todayEggs,
+    todayFeed,
+    totalMortality,
+    totalExpenses,
   };
 }
