@@ -4,8 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useDashboard } from "@/hooks/useDashboard";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 
-import Sidebar from "@/components/layout/sidebar";
-import Topbar from "@/components/layout/topbar";
+import AppShell from "@/components/layout/app-shell";
 
 import FarmCard from "@/components/dashboard/farm-card";
 import SubscriptionCard from "@/components/dashboard/subscription-card";
@@ -21,6 +20,7 @@ export default function DashboardPage() {
   } = useDashboard();
 
   const farm = data?.farm;
+
   const subscription =
     data?.subscription;
 
@@ -46,9 +46,10 @@ export default function DashboardPage() {
   let daysRemaining = 0;
 
   if (subscription?.trial_end) {
-    const end = new Date(
-      subscription.trial_end
-    );
+    const end =
+      new Date(
+        subscription.trial_end
+      );
 
     const today =
       new Date();
@@ -72,95 +73,79 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-100">
+    <AppShell
+      email={user?.email}
+    >
+      <div className="space-y-6">
 
-      <Sidebar />
+        <div
+          className="
+            grid
+            grid-cols-2
+            lg:grid-cols-3
+            xl:grid-cols-6
+            gap-4
+          "
+        >
+          <KpiCard
+            title="Current Birds"
+            value={currentBirds}
+          />
 
-      <main className="flex-1 min-w-0">
+          <KpiCard
+            title="Today's Eggs"
+            value={todayEggs}
+          />
 
-        <Topbar
-          email={user?.email}
-        />
+          <KpiCard
+            title="Revenue"
+            value={totalRevenue}
+          />
 
-        <div className="p-4 md:p-6 space-y-6">
+          <KpiCard
+            title="Expenses"
+            value={totalExpenses}
+          />
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <KpiCard
+            title="Profit"
+            value={profit}
+          />
 
-            <FarmCard
-              farmName={
-                farm?.name
-              }
-            />
-
-            <SubscriptionCard
-              plan={
-                subscription?.plan
-              }
-              status={
-                subscription?.status
-              }
-              daysRemaining={
-                daysRemaining
-              }
-            />
-
-          </div>
-
-          <div
-            className="
-              grid
-              grid-cols-1
-              sm:grid-cols-2
-              lg:grid-cols-3
-              xl:grid-cols-6
-              gap-4
-            "
-          >
-
-            <KpiCard
-              title="Current Birds"
-              value={
-                currentBirds
-              }
-            />
-
-            <KpiCard
-              title="Today's Eggs"
-              value={todayEggs}
-            />
-
-            <KpiCard
-              title="Revenue"
-              value={
-                totalRevenue
-              }
-            />
-
-            <KpiCard
-              title="Expenses"
-              value={
-                totalExpenses
-              }
-            />
-
-            <KpiCard
-              title="Profit"
-              value={profit}
-            />
-
-            <KpiCard
-              title="Production %"
-              value={`${productionPercentage}%`}
-            />
-
-          </div>
-
-          <QuickActions />
-
+          <KpiCard
+            title="Production %"
+            value={`${productionPercentage}%`}
+          />
         </div>
 
-      </main>
+        <div
+          className="
+            grid
+            grid-cols-1
+            lg:grid-cols-2
+            gap-4
+          "
+        >
+          <FarmCard
+            farmName={farm?.name}
+          />
 
-    </div>
+          <SubscriptionCard
+            plan={
+              subscription?.plan
+            }
+            status={
+              subscription?.status
+            }
+            daysRemaining={
+              daysRemaining
+            }
+          />
+        </div>
+
+        <QuickActions />
+
+      </div>
+    </AppShell>
   );
 }
