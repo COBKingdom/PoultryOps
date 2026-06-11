@@ -10,11 +10,12 @@ import MobileSidebar from "./mobile-sidebar";
 
 type Props = {
   email?: string;
+  farmName?: string;
   children: ReactNode;
 };
-
 export default function AppShell({
   email,
+  farmName,
   children,
 }: Props) {
   const [open, setOpen] =
@@ -49,7 +50,8 @@ export default function AppShell({
         </div>
 
         <Topbar
-          email={email}
+         email={email}
+         farmName={farmName}
         />
 
         <div className="p-4 md:p-6">

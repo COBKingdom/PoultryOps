@@ -1,9 +1,11 @@
 type Props = {
   email?: string;
+  farmName?: string;
 };
 
 export default function Topbar({
   email,
+  farmName,
 }: Props) {
   const hour =
     new Date().getHours();
@@ -29,92 +31,92 @@ export default function Topbar({
         border-slate-200
         px-4
         md:px-6
-        py-3
+        py-4
+        flex
+        items-center
+        justify-between
         sticky
         top-0
         z-20
       "
     >
-      <div className="flex items-center justify-between">
+      <div>
 
-        <div>
+        <p
+          className="
+            text-sm
+            text-slate-500
+          "
+        >
+          {greeting}
+        </p>
 
+        <h1
+          className="
+            text-2xl
+            md:text-3xl
+            font-bold
+            text-slate-900
+          "
+        >
+          {farmName ||
+            "My Poultry Farm"}
+        </h1>
+
+      </div>
+
+      <div
+        className="
+          flex
+          items-center
+          gap-4
+        "
+      >
+        <div
+          className="
+            hidden
+            lg:block
+            text-right
+          "
+        >
           <p
             className="
               text-xs
-              md:text-sm
               text-slate-500
             "
           >
-            {greeting}
+            Signed in as
           </p>
 
-          <h1
+          <p
             className="
-              text-xl
-              md:text-2xl
-              font-bold
+              text-sm
+              font-medium
               text-slate-900
             "
           >
-            PoultryOps
-          </h1>
+            {email}
+          </p>
 
         </div>
 
         <div
           className="
+            w-12
+            h-12
+            rounded-full
+            bg-blue-600
+            text-white
             flex
             items-center
-            gap-3
+            justify-center
+            font-semibold
+            text-lg
           "
         >
-
-          <div
-            className="
-              hidden
-              lg:block
-              text-right
-            "
-          >
-
-            <p
-              className="
-                text-xs
-                text-slate-500
-              "
-            >
-              Signed in as
-            </p>
-
-            <p
-              className="
-                text-sm
-                font-medium
-                text-slate-900
-              "
-            >
-              {email}
-            </p>
-
-          </div>
-
-          <div
-            className="
-              w-10
-              h-10
-              rounded-full
-              bg-blue-600
-              text-white
-              flex
-              items-center
-              justify-center
-              font-semibold
-            "
-          >
-            {email?.charAt(0).toUpperCase()}
-          </div>
-
+          {email
+            ?.charAt(0)
+            .toUpperCase()}
         </div>
 
       </div>

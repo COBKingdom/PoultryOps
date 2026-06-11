@@ -8,6 +8,7 @@ import {
   Wheat,
   AlertTriangle,
   Receipt,
+  ShoppingCart,
 } from "lucide-react";
 
 export default function QuickActions() {
@@ -36,6 +37,11 @@ export default function QuickActions() {
       title: "Expense",
       href: "/expenses",
       icon: Receipt,
+    },
+    {
+      title: "Record Sale",
+      href: "/sales",
+      icon: ShoppingCart,
     },
   ];
 
