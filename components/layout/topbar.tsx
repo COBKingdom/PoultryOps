@@ -1,11 +1,9 @@
 type Props = {
   email?: string;
-  title?: string;
 };
 
 export default function Topbar({
   email,
-  title,
 }: Props) {
   const hour =
     new Date().getHours();
@@ -39,7 +37,7 @@ export default function Topbar({
     >
       <div className="flex items-center justify-between">
 
-        <div className="min-w-0">
+        <div>
 
           <p
             className="
@@ -53,14 +51,13 @@ export default function Topbar({
 
           <h1
             className="
-              text-2xl
-              md:text-3xl
+              text-xl
+              md:text-2xl
               font-bold
               text-slate-900
-              truncate
             "
           >
-            {title || "PoultryOps"}
+            PoultryOps
           </h1>
 
         </div>
@@ -70,7 +67,6 @@ export default function Topbar({
             flex
             items-center
             gap-3
-            shrink-0
           "
         >
 
@@ -105,8 +101,8 @@ export default function Topbar({
 
           <div
             className="
-              w-11
-              h-11
+              w-10
+              h-10
               rounded-full
               bg-blue-600
               text-white
@@ -114,12 +110,9 @@ export default function Topbar({
               items-center
               justify-center
               font-semibold
-              text-lg
             "
           >
-            {email
-              ?.charAt(0)
-              .toUpperCase()}
+            {email?.charAt(0).toUpperCase()}
           </div>
 
         </div>
