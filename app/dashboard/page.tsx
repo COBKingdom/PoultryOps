@@ -72,13 +72,12 @@ export default function DashboardPage() {
   }
 
   return (
-         <AppShell
-          email={user?.email}
-          farmName={farm?.name}
-         >
+    <AppShell
+      email={user?.email}
+    >
       <div className="space-y-6">
 
-        {/* Farm Name Banner */}
+        {/* Farm Banner */}
 
         <div
           className="
@@ -153,6 +152,10 @@ export default function DashboardPage() {
           />
         </div>
 
+        {/* Quick Actions */}
+
+        <QuickActions />
+
         {/* Subscription */}
 
         <SubscriptionCard
@@ -166,10 +169,6 @@ export default function DashboardPage() {
             daysRemaining
           }
         />
-
-        {/* Quick Actions */}
-
-        <QuickActions />
 
       </div>
     </AppShell>
