@@ -6,7 +6,6 @@ import { useDashboardStats } from "@/hooks/useDashboardStats";
 
 import AppShell from "@/components/layout/app-shell";
 
-import FarmCard from "@/components/dashboard/farm-card";
 import SubscriptionCard from "@/components/dashboard/subscription-card";
 import KpiCard from "@/components/dashboard/kpi-card";
 import QuickActions from "@/components/dashboard/quick-actions";
@@ -78,6 +77,41 @@ export default function DashboardPage() {
     >
       <div className="space-y-6">
 
+        {/* Farm Name Banner */}
+
+        <div
+          className="
+            bg-white
+            border
+            border-slate-200
+            rounded-2xl
+            p-5
+            shadow-sm
+          "
+        >
+          <p
+            className="
+              text-sm
+              text-slate-500
+            "
+          >
+            Active Farm
+          </p>
+
+          <h2
+            className="
+              text-2xl
+              font-bold
+              text-slate-900
+              mt-1
+            "
+          >
+            {farm?.name}
+          </h2>
+        </div>
+
+        {/* KPI Cards */}
+
         <div
           className="
             grid
@@ -118,30 +152,21 @@ export default function DashboardPage() {
           />
         </div>
 
-        <div
-          className="
-            grid
-            grid-cols-1
-            lg:grid-cols-2
-            gap-4
-          "
-        >
-          <FarmCard
-            farmName={farm?.name}
-          />
+        {/* Subscription */}
 
-          <SubscriptionCard
-            plan={
-              subscription?.plan
-            }
-            status={
-              subscription?.status
-            }
-            daysRemaining={
-              daysRemaining
-            }
-          />
-        </div>
+        <SubscriptionCard
+          plan={
+            subscription?.plan
+          }
+          status={
+            subscription?.status
+          }
+          daysRemaining={
+            daysRemaining
+          }
+        />
+
+        {/* Quick Actions */}
 
         <QuickActions />
 
