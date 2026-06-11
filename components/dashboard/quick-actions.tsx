@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-
 import {
   Plus,
   Egg,
@@ -39,101 +38,60 @@ export default function QuickActions() {
       icon: Receipt,
     },
     {
-      title: "Record Sale",
+      title: "Sales",
       href: "/sales",
       icon: ShoppingCart,
     },
   ];
 
   return (
-    <div
-      className="
-        bg-white
-        rounded-2xl
-        border
-        border-slate-200
-        p-5
-        shadow-sm
-      "
-    >
-      <div className="mb-4">
+    <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
 
-        <h2
-          className="
-            text-lg
-            font-bold
-            text-slate-900
-          "
-        >
+      <div className="mb-6">
+        <h2 className="text-xl font-bold text-slate-900">
           Quick Actions
         </h2>
 
+        <p className="text-sm text-slate-500 mt-1">
+          Frequently used farm operations
+        </p>
       </div>
 
-      <div
-        className="
-          grid
-          grid-cols-2
-          lg:grid-cols-5
-          gap-3
-        "
-      >
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
 
-        {actions.map(
-          (action) => {
-            const Icon =
-              action.icon;
+        {actions.map((action) => {
+          const Icon = action.icon;
 
-            return (
-              <Link
-                key={
-                  action.href
-                }
-                href={
-                  action.href
-                }
-                className="
-                  rounded-xl
-                  border
-                  border-slate-200
-                  p-4
-                  hover:border-blue-500
-                  hover:bg-blue-50
-                  transition-all
-                "
-              >
-                <div
-                  className="
-                    flex
-                    flex-col
-                    items-center
-                    justify-center
-                    text-center
-                    gap-2
-                  "
-                >
-                  <Icon
-                    size={22}
-                    className="
-                      text-blue-600
-                    "
-                  />
+          return (
+            <Link
+              key={action.href}
+              href={action.href}
+              className="
+                rounded-2xl
+                border
+                border-slate-200
+                p-6
+                flex
+                flex-col
+                items-center
+                justify-center
+                gap-3
+                hover:border-blue-500
+                hover:shadow-md
+                transition-all
+              "
+            >
+              <Icon
+                size={34}
+                className="text-blue-600"
+              />
 
-                  <span
-                    className="
-                      text-sm
-                      font-medium
-                      text-slate-900
-                    "
-                  >
-                    {action.title}
-                  </span>
-
-                </div>
-              </Link>
-            );
-          }
-        )}
+              <span className="font-semibold text-slate-900 text-center">
+                {action.title}
+              </span>
+            </Link>
+          );
+        })}
 
       </div>
 
