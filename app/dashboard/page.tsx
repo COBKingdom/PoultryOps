@@ -20,22 +20,20 @@ export default function DashboardPage() {
     data,
   } = useDashboard();
 
-  const farm =
-    data?.farm;
-
+  const farm = data?.farm;
   const subscription =
     data?.subscription;
 
-const {
-  currentBirds,
-  todayEggs,
-  totalRevenue,
-  totalExpenses,
-  profit,
-  productionPercentage,
-} = useDashboardStats(
-  farm?.id
-);
+  const {
+    currentBirds,
+    todayEggs,
+    totalRevenue,
+    totalExpenses,
+    profit,
+    productionPercentage,
+  } = useDashboardStats(
+    farm?.id
+  );
 
   if (loading) {
     return (
@@ -48,10 +46,9 @@ const {
   let daysRemaining = 0;
 
   if (subscription?.trial_end) {
-    const end =
-      new Date(
-        subscription.trial_end
-      );
+    const end = new Date(
+      subscription.trial_end
+    );
 
     const today =
       new Date();
@@ -64,29 +61,35 @@ const {
             end.getTime() -
             today.getTime()
           ) /
-            (1000 *
+            (
+              1000 *
               60 *
               60 *
-              24)
+              24
+            )
         )
       );
   }
 
   return (
     <div className="flex min-h-screen bg-slate-100">
+
       <Sidebar />
 
-      <main className="flex-1">
+      <main className="flex-1 min-w-0">
+
         <Topbar
           email={user?.email}
         />
 
-        <div className="p-6 space-y-6">
+        <div className="p-4 md:p-6 space-y-6">
 
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
             <FarmCard
-              farmName={farm?.name}
+              farmName={
+                farm?.name
+              }
             />
 
             <SubscriptionCard
@@ -103,11 +106,22 @@ const {
 
           </div>
 
-          <div className="grid md:grid-cols-5 gap-6">
+          <div
+            className="
+              grid
+              grid-cols-1
+              sm:grid-cols-2
+              lg:grid-cols-3
+              xl:grid-cols-6
+              gap-4
+            "
+          >
 
             <KpiCard
               title="Current Birds"
-              value={currentBirds}
+              value={
+                currentBirds
+              }
             />
 
             <KpiCard
@@ -117,18 +131,23 @@ const {
 
             <KpiCard
               title="Revenue"
-              value={totalRevenue}
+              value={
+                totalRevenue
+              }
             />
 
             <KpiCard
               title="Expenses"
-              value={totalExpenses}
+              value={
+                totalExpenses
+              }
             />
 
             <KpiCard
               title="Profit"
               value={profit}
             />
+
             <KpiCard
               title="Production %"
               value={`${productionPercentage}%`}
@@ -141,6 +160,7 @@ const {
         </div>
 
       </main>
+
     </div>
   );
 }

@@ -22,27 +22,82 @@ export default function Topbar({
   }
 
   return (
-    <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+    <div className="
+      bg-white
+      border-b
+      border-slate-200
+      px-6
+      py-4
+      flex
+      items-center
+      justify-between
+      sticky
+      top-0
+      z-20
+    ">
 
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">
-          Dashboard
-        </h1>
 
-        <p className="text-sm text-slate-500 mt-1">
+        <p className="
+          text-sm
+          text-slate-500
+        ">
           {greeting}
         </p>
+
+        <h1 className="
+          text-2xl
+          font-bold
+          text-slate-900
+        ">
+          Poultry Dashboard
+        </h1>
+
       </div>
 
-      <div className="text-right">
+      <div className="
+        flex
+        items-center
+        gap-4
+      ">
 
-        <p className="text-sm text-slate-500">
-          Signed in as
-        </p>
+        <div className="
+          hidden
+          md:block
+          text-right
+        ">
 
-        <p className="font-medium text-slate-900">
-          {email}
-        </p>
+          <p className="
+            text-xs
+            text-slate-500
+          ">
+            Signed in as
+          </p>
+
+          <p className="
+            text-sm
+            font-medium
+            text-slate-900
+          ">
+            {email}
+          </p>
+
+        </div>
+
+        <div className="
+          w-10
+          h-10
+          rounded-full
+          bg-blue-600
+          text-white
+          flex
+          items-center
+          justify-center
+          font-semibold
+        ">
+          {email?.charAt(0)
+            .toUpperCase()}
+        </div>
 
       </div>
 
