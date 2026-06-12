@@ -74,43 +74,9 @@ export default function DashboardPage() {
   return (
     <AppShell
       email={user?.email}
+      farmName={farm?.name}
     >
       <div className="space-y-6">
-
-        {/* Farm Banner */}
-
-        <div
-          className="
-            bg-white
-            border
-            border-slate-200
-            rounded-2xl
-            p-5
-            shadow-sm
-          "
-        >
-          <p
-            className="
-              text-sm
-              text-slate-500
-            "
-          >
-            Active Farm
-          </p>
-
-          <h2
-            className="
-              text-2xl
-              font-bold
-              text-slate-900
-              mt-1
-            "
-          >
-            {farm?.name}
-          </h2>
-        </div>
-
-        {/* KPI Cards */}
 
         <div
           className="
@@ -152,11 +118,7 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* Quick Actions */}
-
         <QuickActions />
-
-        {/* Subscription */}
 
         <SubscriptionCard
           plan={

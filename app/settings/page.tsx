@@ -1,77 +1,135 @@
+"use client";
+
+import Link from "next/link";
+
+import AppShell from "@/components/layout/app-shell";
+
 export default function SettingsPage() {
   return (
-    <div className="space-y-6">
+    <AppShell>
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-6">
+      <div className="space-y-6">
 
-        <h1 className="text-3xl font-bold">
-          Settings
-        </h1>
+        <div>
+          <h1 className="text-3xl font-bold">
+            Settings
+          </h1>
 
-        <p className="text-slate-500 mt-2">
-          Manage your farm preferences and account settings.
-        </p>
+          <p className="text-slate-500 mt-2">
+            Manage your farm preferences and account.
+          </p>
+        </div>
 
-      </div>
-
-      <div className="bg-white rounded-2xl border border-slate-200 p-6">
-
-        <h2 className="text-xl font-semibold mb-4">
-          Farm Preferences
-        </h2>
-
-        <label className="block text-sm font-medium mb-2">
-          Currency
-        </label>
-
-        <select
+        <div
           className="
-            w-full
-            border
-            rounded-lg
-            p-3
+            grid
+            grid-cols-1
+            md:grid-cols-2
+            gap-4
           "
-          defaultValue="NGN"
         >
-          <option value="NGN">
-            Nigerian Naira (₦)
-          </option>
 
-          <option value="USD">
-            US Dollar ($)
-          </option>
+          <div className="bg-white rounded-2xl border border-slate-200 p-6">
 
-          <option value="EUR">
-            Euro (€)
-          </option>
+            <h2 className="text-xl font-semibold mb-2">
+              Farm Settings
+            </h2>
 
-          <option value="GBP">
-            British Pound (£)
-          </option>
+            <p className="text-slate-500">
+              Configure farm details and preferences.
+            </p>
 
-          <option value="CAD">
-            Canadian Dollar (C$)
-          </option>
+          </div>
 
-          <option value="AUD">
-            Australian Dollar (A$)
-          </option>
+          <div className="bg-white rounded-2xl border border-slate-200 p-6">
 
-          <option value="ZAR">
-            South African Rand (R)
-          </option>
+            <h2 className="text-xl font-semibold mb-4">
+              Currency
+            </h2>
 
-          <option value="GHS">
-            Ghanaian Cedi (GH₵)
-          </option>
+            <select
+              className="
+                w-full
+                border
+                rounded-lg
+                p-3
+              "
+            >
+              <option value="NGN">
+                Nigerian Naira (₦)
+              </option>
 
-          <option value="KES">
-            Kenyan Shilling (KSh)
-          </option>
-        </select>
+              <option value="USD">
+                US Dollar ($)
+              </option>
+
+              <option value="EUR">
+                Euro (€)
+              </option>
+
+              <option value="GBP">
+                British Pound (£)
+              </option>
+
+              <option value="CAD">
+                Canadian Dollar (C$)
+              </option>
+
+              <option value="AUD">
+                Australian Dollar (A$)
+              </option>
+
+              <option value="ZAR">
+                South African Rand (R)
+              </option>
+
+              <option value="GHS">
+                Ghanaian Cedi (GH₵)
+              </option>
+
+              <option value="KES">
+                Kenyan Shilling (KSh)
+              </option>
+            </select>
+
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200 p-6">
+
+            <h2 className="text-xl font-semibold mb-2">
+              Account
+            </h2>
+
+            <p className="text-slate-500">
+              Manage your profile and login information.
+            </p>
+
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200 p-6">
+
+            <h2 className="text-xl font-semibold mb-2">
+              Subscription
+            </h2>
+
+            <p className="mb-2">
+              Plan: Starter
+            </p>
+
+            <p className="mb-2">
+              Status: Trial
+            </p>
+
+            <p>
+              Trial Active
+            </p>
+
+          </div>
+
+        </div>
 
       </div>
 
-    </div>
+    </AppShell>
   );
 }
