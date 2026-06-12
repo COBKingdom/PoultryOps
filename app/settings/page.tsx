@@ -1,55 +1,57 @@
-"use client";
+<div className="bg-white rounded-2xl border border-slate-200 p-6">
 
-import { useAuth } from "@/contexts/AuthContext";
-import AppShell from "@/components/layout/app-shell";
+  <h2 className="text-xl font-semibold mb-4">
+    Farm Preferences
+  </h2>
 
-export default function SettingsPage() {
-  const { user } = useAuth();
+  <label className="block text-sm font-medium mb-2">
+    Currency
+  </label>
 
-  return (
-    <AppShell email={user?.email}>
-      <div className="space-y-6">
+  <select
+    className="
+      w-full
+      border
+      rounded-lg
+      p-3
+    "
+  >
+    <option value="NGN">
+      Nigerian Naira (₦)
+    </option>
 
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">
-            Account Settings
-          </h1>
+    <option value="USD">
+      US Dollar ($)
+    </option>
 
-          <p className="text-slate-500 mt-2">
-            Manage your PoultryOps account.
-          </p>
-        </div>
+    <option value="EUR">
+      Euro (€)
+    </option>
 
-        <div className="bg-white rounded-2xl border border-slate-200 p-6">
+    <option value="GBP">
+      British Pound (£)
+    </option>
 
-          <h2 className="text-xl font-semibold mb-4">
-            Account Information
-          </h2>
+    <option value="CAD">
+      Canadian Dollar (C$)
+    </option>
 
-          <p className="text-slate-700">
-            <strong>Email:</strong>{" "}
-            {user?.email}
-          </p>
+    <option value="AUD">
+      Australian Dollar (A$)
+    </option>
 
-        </div>
+    <option value="ZAR">
+      South African Rand (R)
+    </option>
 
-        <div className="bg-white rounded-2xl border border-slate-200 p-6">
+    <option value="GHS">
+      Ghanaian Cedi (GH₵)
+    </option>
 
-          <h2 className="text-xl font-semibold mb-4">
-            Subscription
-          </h2>
+    <option value="KES">
+      Kenyan Shilling (KSh)
+    </option>
 
-          <p className="text-slate-700">
-            Trial Subscription Active
-          </p>
+  </select>
 
-          <p className="text-slate-500 mt-2">
-            Subscription management will be available in a future release.
-          </p>
-
-        </div>
-
-      </div>
-    </AppShell>
-  );
-}
+</div>
