@@ -6,9 +6,9 @@ import { useDashboardStats } from "@/hooks/useDashboardStats";
 
 import AppShell from "@/components/layout/app-shell";
 
-import SubscriptionCard from "@/components/dashboard/subscription-card";
 import KpiCard from "@/components/dashboard/kpi-card";
 import QuickActions from "@/components/dashboard/quick-actions";
+import FarmHero from "@/components/dashboard/farm-hero";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -19,9 +19,6 @@ export default function DashboardPage() {
   } = useDashboard();
 
   const farm = data?.farm;
-
-  const subscription =
-    data?.subscription;
 
   const {
     currentBirds,
@@ -42,41 +39,20 @@ export default function DashboardPage() {
     );
   }
 
-  let daysRemaining = 0;
-
-  if (subscription?.trial_end) {
-    const end =
-      new Date(
-        subscription.trial_end
-      );
-
-    const today =
-      new Date();
-
-    daysRemaining =
-      Math.max(
-        0,
-        Math.ceil(
-          (
-            end.getTime() -
-            today.getTime()
-          ) /
-            (
-              1000 *
-              60 *
-              60 *
-              24
-            )
-        )
-      );
-  }
-
   return (
     <AppShell
       email={user?.email}
       farmName={farm?.name}
     >
       <div className="space-y-6">
+
+        <FarmHero
+          farmName={farm?.name}
+          currentBirds={currentBirds}
+          productionPercentage={
+            productionPercentage
+          }
+        />
 
         <div
           className="
@@ -119,18 +95,6 @@ export default function DashboardPage() {
         </div>
 
         <QuickActions />
-
-        <SubscriptionCard
-          plan={
-            subscription?.plan
-          }
-          status={
-            subscription?.status
-          }
-          daysRemaining={
-            daysRemaining
-          }
-        />
 
       </div>
     </AppShell>
