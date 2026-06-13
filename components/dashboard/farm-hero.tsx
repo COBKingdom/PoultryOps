@@ -1,3 +1,8 @@
+import {
+  Bird,
+  Egg,
+} from "lucide-react";
+
 type Props = {
   farmName?: string;
   currentBirds: number;
@@ -13,44 +18,116 @@ export default function FarmHero({
     <div
       className="
         rounded-3xl
-        bg-gradient-to-r
+        bg-gradient-to-br
         from-blue-600
-        to-blue-800
+        via-blue-700
+        to-slate-900
         text-white
-        p-8
-        shadow-lg
+        overflow-hidden
+        shadow-xl
       "
     >
-      <div className="space-y-3">
+      <div className="p-6 md:p-8">
 
-        <p className="text-blue-100 text-sm uppercase tracking-wider">
-          PoultryOps Dashboard
+        <p
+          className="
+            text-blue-100
+            text-xs
+            uppercase
+            tracking-[0.2em]
+            font-semibold
+          "
+        >
+          PoultryOps
         </p>
 
-        <h2 className="text-3xl md:text-4xl font-bold">
-          {farmName || "My Poultry Farm"}
+        <h2
+          className="
+            mt-3
+            text-3xl
+            md:text-5xl
+            font-bold
+            leading-tight
+          "
+        >
+          {farmName ||
+            "My Poultry Farm"}
         </h2>
 
-        <div className="flex flex-wrap gap-6 pt-2">
+        <p
+          className="
+            mt-2
+            text-blue-100
+          "
+        >
+          Poultry Farm Management
+        </p>
 
-          <div>
-            <p className="text-blue-200 text-sm">
-              Active Birds
-            </p>
+        <div
+          className="
+            mt-8
+            grid
+            grid-cols-2
+            gap-4
+          "
+        >
 
-            <p className="text-2xl font-bold">
+          <div
+            className="
+              rounded-2xl
+              bg-white/10
+              backdrop-blur
+              p-4
+            "
+          >
+            <div className="flex items-center gap-2">
+
+              <Bird size={18} />
+
+              <span className="text-sm">
+                Active Birds
+              </span>
+
+            </div>
+
+            <div
+              className="
+                mt-3
+                text-3xl
+                font-bold
+              "
+            >
               {currentBirds}
-            </p>
+            </div>
           </div>
 
-          <div>
-            <p className="text-blue-200 text-sm">
-              Production Today
-            </p>
+          <div
+            className="
+              rounded-2xl
+              bg-white/10
+              backdrop-blur
+              p-4
+            "
+          >
+            <div className="flex items-center gap-2">
 
-            <p className="text-2xl font-bold">
+              <Egg size={18} />
+
+              <span className="text-sm">
+                Production
+              </span>
+
+            </div>
+
+            <div
+              className="
+                mt-3
+                text-3xl
+                font-bold
+              "
+            >
               {productionPercentage}%
-            </p>
+            </div>
           </div>
 
         </div>
