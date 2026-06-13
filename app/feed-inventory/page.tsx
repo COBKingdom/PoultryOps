@@ -55,14 +55,14 @@ export default function FeedInventoryPage() {
         }
       />
 
-      <AddFeedStockForm
-        farmId={farmId}
-      />
-
       <FeedStockList
         records={
           inventoryRecords
         }
+      />
+
+      <AddFeedStockForm
+        farmId={farmId}
       />
 
     </div>
