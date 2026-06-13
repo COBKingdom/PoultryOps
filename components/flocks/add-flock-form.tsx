@@ -40,23 +40,32 @@ export default function AddFlockForm({
       setFlockName("");
       setQuantity("");
 
+      alert(
+        "Flock created successfully"
+      );
+
       onCreated?.();
 
     } catch (error) {
       console.error(error);
-      alert("Failed to save flock");
+
+      alert(
+        "Failed to save flock"
+      );
+
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="bg-white rounded-xl p-6 shadow">
-      <h2 className="font-bold text-lg mb-4">
-        Add Flock
+    <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+
+      <h2 className="text-2xl font-bold mb-6">
+        Add New Flock
       </h2>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
 
         <input
           placeholder="Flock Name"
@@ -66,7 +75,7 @@ export default function AddFlockForm({
               e.target.value
             )
           }
-          className="w-full border p-3 rounded"
+          className="w-full border rounded-xl p-4"
         />
 
         <select
@@ -76,7 +85,7 @@ export default function AddFlockForm({
               e.target.value
             )
           }
-          className="w-full border p-3 rounded"
+          className="w-full border rounded-xl p-4"
         >
           <option>
             Layers
@@ -92,28 +101,35 @@ export default function AddFlockForm({
         </select>
 
         <input
-          placeholder="Quantity"
           type="number"
+          placeholder="Bird Quantity"
           value={quantity}
           onChange={(e) =>
             setQuantity(
               e.target.value
             )
           }
-          className="w-full border p-3 rounded"
+          className="w-full border rounded-xl p-4"
         />
 
         <button
           onClick={handleSave}
           disabled={loading}
-          className="w-full bg-slate-900 text-white p-3 rounded"
+          className="
+            w-full
+            bg-slate-900
+            text-white
+            rounded-xl
+            p-4
+          "
         >
           {loading
             ? "Saving..."
-            : "Save Flock"}
+            : "Create Flock"}
         </button>
 
       </div>
+
     </div>
   );
 }
