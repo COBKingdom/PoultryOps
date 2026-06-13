@@ -1,71 +1,47 @@
-export const currencies = {
-  NGN: {
-    code: "NGN",
-    symbol: "₦",
-    name: "Nigerian Naira",
-  },
+export function getCurrencySymbol(
+  currency?: string
+) {
+  switch (currency) {
+    case "USD":
+      return "$";
 
-  USD: {
-    code: "USD",
-    symbol: "$",
-    name: "US Dollar",
-  },
+    case "EUR":
+      return "€";
 
-  EUR: {
-    code: "EUR",
-    symbol: "€",
-    name: "Euro",
-  },
+    case "GBP":
+      return "£";
 
-  GBP: {
-    code: "GBP",
-    symbol: "£",
-    name: "British Pound",
-  },
+    case "CAD":
+      return "C$";
 
-  CAD: {
-    code: "CAD",
-    symbol: "C$",
-    name: "Canadian Dollar",
-  },
+    case "AUD":
+      return "A$";
 
-  AUD: {
-    code: "AUD",
-    symbol: "A$",
-    name: "Australian Dollar",
-  },
+    case "ZAR":
+      return "R";
 
-  ZAR: {
-    code: "ZAR",
-    symbol: "R",
-    name: "South African Rand",
-  },
+    case "GHS":
+      return "GH₵";
 
-  GHS: {
-    code: "GHS",
-    symbol: "GH₵",
-    name: "Ghanaian Cedi",
-  },
+    case "KES":
+      return "KSh";
 
-  KES: {
-    code: "KES",
-    symbol: "KSh",
-    name: "Kenyan Shilling",
-  },
-};
+    case "NGN":
+    default:
+      return "₦";
+  }
+}
 
 export function formatCurrency(
   amount: number,
-  currency: string = "NGN"
+  currency?: string
 ) {
-  const selected =
-    currencies[
-      currency as keyof typeof currencies
-    ];
+  const symbol =
+    getCurrencySymbol(
+      currency
+    );
 
-  if (!selected) {
-    return amount.toLocaleString();
-  }
-
-  return `${selected.symbol}${amount.toLocaleString()}`;
+  return `${symbol}${Number(
+    amount || 0
+  ).toLocaleString()}`;
 }

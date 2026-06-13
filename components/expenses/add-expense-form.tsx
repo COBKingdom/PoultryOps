@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 
-import { createExpense } from "@/lib/expenses";
+import {
+  createExpense,
+} from "@/lib/expenses";
 
 type Props = {
   farmId: string;
@@ -34,7 +36,8 @@ export default function AddExpenseForm({
             .toISOString()
             .split("T")[0],
         category,
-        amount: Number(amount),
+        amount:
+          Number(amount),
         notes,
       });
 
@@ -42,7 +45,7 @@ export default function AddExpenseForm({
       setNotes("");
 
       alert(
-        "Expense saved"
+        "Expense saved successfully"
       );
 
     } catch (error) {
@@ -58,13 +61,13 @@ export default function AddExpenseForm({
   }
 
   return (
-    <div className="bg-white rounded-xl p-6 shadow">
+    <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
 
-      <h2 className="font-bold text-lg mb-4">
+      <h2 className="text-2xl font-bold mb-6">
         Record Expense
       </h2>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
 
         <select
           value={category}
@@ -73,14 +76,16 @@ export default function AddExpenseForm({
               e.target.value
             )
           }
-          className="w-full border p-3 rounded"
+          className="w-full border rounded-xl p-4"
         >
           <option>Feed</option>
           <option>Medication</option>
-          <option>Fuel</option>
+          <option>Vaccination</option>
           <option>Transport</option>
+          <option>Fuel</option>
           <option>Utilities</option>
           <option>Labour</option>
+          <option>Maintenance</option>
           <option>Other</option>
         </select>
 
@@ -93,24 +98,30 @@ export default function AddExpenseForm({
               e.target.value
             )
           }
-          className="w-full border p-3 rounded"
+          className="w-full border rounded-xl p-4"
         />
 
         <input
-          placeholder="Notes"
+          placeholder="Description / Notes"
           value={notes}
           onChange={(e) =>
             setNotes(
               e.target.value
             )
           }
-          className="w-full border p-3 rounded"
+          className="w-full border rounded-xl p-4"
         />
 
         <button
           onClick={handleSave}
           disabled={loading}
-          className="w-full bg-slate-900 text-white p-3 rounded"
+          className="
+            w-full
+            bg-slate-900
+            text-white
+            rounded-xl
+            p-4
+          "
         >
           {loading
             ? "Saving..."
@@ -118,6 +129,7 @@ export default function AddExpenseForm({
         </button>
 
       </div>
+
     </div>
   );
 }

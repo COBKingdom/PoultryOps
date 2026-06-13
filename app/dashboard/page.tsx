@@ -12,15 +12,21 @@ import FarmHero from "@/components/dashboard/farm-hero";
 import FarmHealth from "@/components/dashboard/farm-health";
 import RecentActivity from "@/components/dashboard/recent-activity";
 
+import {
+  formatCurrency,
+} from "@/lib/currency";
+
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user } =
+    useAuth();
 
   const {
     loading,
     data,
   } = useDashboard();
 
-  const farm = data?.farm;
+  const farm =
+    data?.farm;
 
   const {
     currentBirds,
@@ -49,7 +55,9 @@ export default function DashboardPage() {
       <div className="space-y-6">
 
         <FarmHero
-          currentBirds={currentBirds}
+          currentBirds={
+            currentBirds
+          }
           productionPercentage={
             productionPercentage
           }
@@ -116,28 +124,42 @@ export default function DashboardPage() {
 
           <KpiCard
             title="Revenue"
-            value={totalRevenue}
+            value={formatCurrency(
+              totalRevenue,
+              farm?.currency
+            )}
           />
 
           <KpiCard
             title="Expenses"
-            value={totalExpenses}
+            value={formatCurrency(
+              totalExpenses,
+              farm?.currency
+            )}
           />
 
           <KpiCard
             title="Profit"
-            value={profit}
+            value={formatCurrency(
+              profit,
+              farm?.currency
+            )}
           />
         </div>
+
         <QuickActions />
+
         <FarmHealth
-          currentBirds={currentBirds}
+          currentBirds={
+            currentBirds
+          }
           productionPercentage={
             productionPercentage
           }
         />
+
         <RecentActivity />
-        
+
       </div>
     </AppShell>
   );

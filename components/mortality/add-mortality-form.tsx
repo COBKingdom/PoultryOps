@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { createMortality } from "@/lib/mortality";
+
+import {
+  createMortality,
+} from "@/lib/mortality";
 
 type Props = {
   farmId: string;
@@ -19,7 +22,7 @@ export default function AddMortalityForm({
     useState("");
 
   const [reason, setReason] =
-    useState("");
+    useState("Disease");
 
   const [loading, setLoading] =
     useState(false);
@@ -27,7 +30,10 @@ export default function AddMortalityForm({
   async function handleSave() {
     try {
       if (!flockId) {
-        alert("Select a flock");
+        alert(
+          "Select a flock"
+        );
+
         return;
       }
 
@@ -46,10 +52,9 @@ export default function AddMortalityForm({
       });
 
       setQuantity("");
-      setReason("");
 
       alert(
-        "Mortality recorded"
+        "Mortality recorded successfully"
       );
 
     } catch (error) {
@@ -65,12 +70,13 @@ export default function AddMortalityForm({
   }
 
   return (
-    <div className="bg-white rounded-xl p-6 shadow">
-      <h2 className="font-bold text-lg mb-4">
+    <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+
+      <h2 className="text-2xl font-bold mb-6">
         Record Mortality
       </h2>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
 
         <select
           value={flockId}
@@ -79,7 +85,7 @@ export default function AddMortalityForm({
               e.target.value
             )
           }
-          className="w-full border p-3 rounded"
+          className="w-full border rounded-xl p-4"
         >
           <option value="">
             Select Flock
@@ -99,31 +105,44 @@ export default function AddMortalityForm({
 
         <input
           type="number"
-          placeholder="Mortality Quantity"
+          placeholder="Number of Birds"
           value={quantity}
           onChange={(e) =>
             setQuantity(
               e.target.value
             )
           }
-          className="w-full border p-3 rounded"
+          className="w-full border rounded-xl p-4"
         />
 
-        <input
-          placeholder="Reason"
+        <select
           value={reason}
           onChange={(e) =>
             setReason(
               e.target.value
             )
           }
-          className="w-full border p-3 rounded"
-        />
+          className="w-full border rounded-xl p-4"
+        >
+          <option>Disease</option>
+          <option>Heat Stress</option>
+          <option>Predator Attack</option>
+          <option>Injury</option>
+          <option>Culled</option>
+          <option>Unknown</option>
+          <option>Other</option>
+        </select>
 
         <button
           onClick={handleSave}
           disabled={loading}
-          className="w-full bg-slate-900 text-white p-3 rounded"
+          className="
+            w-full
+            bg-slate-900
+            text-white
+            rounded-xl
+            p-4
+          "
         >
           {loading
             ? "Saving..."
@@ -131,6 +150,7 @@ export default function AddMortalityForm({
         </button>
 
       </div>
+
     </div>
   );
 }

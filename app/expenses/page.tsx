@@ -21,6 +21,46 @@ export default function ExpensesPage() {
     farmId
   );
 
+  const today =
+    new Date()
+      .toISOString()
+      .split("T")[0];
+
+  const todayExpenses =
+    records
+      .filter(
+        (record) =>
+          record.expense_date ===
+          today
+      )
+      .reduce(
+        (
+          sum,
+          record
+        ) =>
+          sum +
+          Number(
+            record.amount
+          ),
+        0
+      );
+
+  const totalExpenses =
+    records.reduce(
+      (
+        sum,
+        record
+      ) =>
+        sum +
+        Number(
+          record.amount
+        ),
+      0
+    );
+
+  const transactionCount =
+    records.length;
+
   if (loading) {
     return (
       <div className="p-6">
@@ -32,16 +72,55 @@ export default function ExpensesPage() {
   return (
     <div className="p-6 space-y-6">
 
-      <h1 className="text-3xl font-bold">
-        Expenses
+      <h1 className="text-4xl font-bold">
+        Expenses Management
       </h1>
 
-      <AddExpenseForm
-        farmId={farmId}
-      />
+      <div
+        className="
+          grid
+          grid-cols-2
+          lg:grid-cols-3
+          gap-4
+        "
+      >
+        <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm">
+          <p className="text-slate-500 text-sm">
+            Today
+          </p>
+
+          <p className="text-4xl font-bold mt-2 text-red-600">
+            {todayExpenses}
+          </p>
+        </div>
+
+        <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm">
+          <p className="text-slate-500 text-sm">
+            Total Expenses
+          </p>
+
+          <p className="text-4xl font-bold mt-2 text-red-600">
+            {totalExpenses}
+          </p>
+        </div>
+
+        <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm">
+          <p className="text-slate-500 text-sm">
+            Transactions
+          </p>
+
+          <p className="text-4xl font-bold mt-2">
+            {transactionCount}
+          </p>
+        </div>
+      </div>
 
       <ExpenseList
         records={records}
+      />
+
+      <AddExpenseForm
+        farmId={farmId}
       />
 
     </div>
