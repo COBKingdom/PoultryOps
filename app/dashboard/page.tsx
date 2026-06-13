@@ -54,20 +54,60 @@ export default function DashboardPage() {
           }
         />
 
+        <div className="flex flex-wrap gap-3">
+
+          <div
+            className="
+              px-4
+              py-2
+              rounded-full
+              bg-green-100
+              text-green-700
+              text-sm
+              font-medium
+            "
+          >
+            Trial Active
+          </div>
+
+          <div
+            className="
+              px-4
+              py-2
+              rounded-full
+              bg-blue-100
+              text-blue-700
+              text-sm
+              font-medium
+            "
+          >
+            {currentBirds} Birds
+          </div>
+
+          <div
+            className="
+              px-4
+              py-2
+              rounded-full
+              bg-purple-100
+              text-purple-700
+              text-sm
+              font-medium
+            "
+          >
+            Production {productionPercentage}%
+          </div>
+
+        </div>
+
         <div
           className="
             grid
             grid-cols-2
-            lg:grid-cols-3
-            xl:grid-cols-6
+            lg:grid-cols-4
             gap-4
           "
         >
-          <KpiCard
-            title="Current Birds"
-            value={currentBirds}
-          />
-
           <KpiCard
             title="Today's Eggs"
             value={todayEggs}
@@ -86,11 +126,6 @@ export default function DashboardPage() {
           <KpiCard
             title="Profit"
             value={profit}
-          />
-
-          <KpiCard
-            title="Production %"
-            value={`${productionPercentage}%`}
           />
         </div>
 

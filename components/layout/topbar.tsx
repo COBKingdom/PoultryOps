@@ -5,7 +5,6 @@ type Props = {
 
 export default function Topbar({
   email,
-  farmName,
 }: Props) {
   const hour =
     new Date().getHours();
@@ -22,6 +21,16 @@ export default function Topbar({
     greeting =
       "Good Evening";
   }
+
+  const today =
+    new Date().toLocaleDateString(
+      undefined,
+      {
+        weekday: "long",
+        month: "short",
+        day: "numeric",
+      }
+    );
 
   return (
     <div
@@ -59,9 +68,18 @@ export default function Topbar({
             text-slate-900
           "
         >
-          {farmName ||
-            "My Poultry Farm"}
+          PoultryOps Dashboard
         </h1>
+
+        <p
+          className="
+            text-xs
+            text-slate-400
+            mt-1
+          "
+        >
+          {today}
+        </p>
 
       </div>
 

@@ -50,17 +50,18 @@ export default function FarmHero({
             leading-tight
           "
         >
-          {farmName ||
-            "My Poultry Farm"}
+          {farmName || "My Poultry Farm"}
         </h2>
 
         <p
           className="
             mt-2
             text-blue-100
+            text-sm
+            md:text-base
           "
         >
-          Poultry Farm Management
+          Real-time farm performance overview
         </p>
 
         <div
