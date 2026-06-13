@@ -12,6 +12,7 @@ import { getFarmFlocks } from "@/lib/flocks";
 
 import AddFeedForm from "@/components/feed/add-feed-form";
 import FeedList from "@/components/feed/feed-list";
+import FeedSummary from "@/components/feed/feed-summary";
 
 export default function FeedPage() {
   const {
@@ -61,13 +62,17 @@ export default function FeedPage() {
         Feed Management
       </h1>
 
-      <AddFeedForm
-        farmId={farmId}
-        flocks={flocks}
+      <FeedSummary
+        records={records}
       />
 
       <FeedList
         records={records}
+      />
+
+      <AddFeedForm
+        farmId={farmId}
+        flocks={flocks}
       />
 
     </div>
