@@ -2,9 +2,11 @@
 
 import { useDashboard } from "@/hooks/useDashboard";
 import { useFeedInventory } from "@/hooks/useFeedInventory";
+import { useFeed } from "@/hooks/useFeed";
 
 import AddFeedStockForm from "@/components/feed-inventory/add-feed-stock-form";
 import FeedStockList from "@/components/feed-inventory/feed-stock-list";
+import FeedStockSummary from "@/components/feed-inventory/feed-stock-summary";
 
 export default function FeedInventoryPage() {
   const {
@@ -16,8 +18,16 @@ export default function FeedInventoryPage() {
     data?.farm?.id;
 
   const {
-    records,
+    records:
+      inventoryRecords,
   } = useFeedInventory(
+    farmId
+  );
+
+  const {
+    records:
+      feedRecords,
+  } = useFeed(
     farmId
   );
 
@@ -36,12 +46,23 @@ export default function FeedInventoryPage() {
         Feed Inventory
       </h1>
 
+      <FeedStockSummary
+        inventoryRecords={
+          inventoryRecords
+        }
+        feedRecords={
+          feedRecords
+        }
+      />
+
       <AddFeedStockForm
         farmId={farmId}
       />
 
       <FeedStockList
-        records={records}
+        records={
+          inventoryRecords
+        }
       />
 
     </div>

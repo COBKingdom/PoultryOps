@@ -4,13 +4,11 @@ import {
 } from "lucide-react";
 
 type Props = {
-  farmName?: string;
   currentBirds: number;
   productionPercentage: number;
 };
 
 export default function FarmHero({
-  farmName,
   currentBirds,
   productionPercentage,
 }: Props) {
@@ -50,7 +48,7 @@ export default function FarmHero({
             leading-tight
           "
         >
-          {farmName || "My Poultry Farm"}
+          Dashboard Overview
         </h2>
 
         <p

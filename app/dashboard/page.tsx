@@ -9,6 +9,8 @@ import AppShell from "@/components/layout/app-shell";
 import KpiCard from "@/components/dashboard/kpi-card";
 import QuickActions from "@/components/dashboard/quick-actions";
 import FarmHero from "@/components/dashboard/farm-hero";
+import FarmHealth from "@/components/dashboard/farm-health";
+import RecentActivity from "@/components/dashboard/recent-activity";
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -47,7 +49,6 @@ export default function DashboardPage() {
       <div className="space-y-6">
 
         <FarmHero
-          farmName={farm?.name}
           currentBirds={currentBirds}
           productionPercentage={
             productionPercentage
@@ -128,9 +129,15 @@ export default function DashboardPage() {
             value={profit}
           />
         </div>
-
         <QuickActions />
-
+        <FarmHealth
+          currentBirds={currentBirds}
+          productionPercentage={
+            productionPercentage
+          }
+        />
+        <RecentActivity />
+        
       </div>
     </AppShell>
   );
