@@ -9,6 +9,7 @@ import { getFarmFlocks } from "@/lib/flocks";
 
 import AddEggForm from "@/components/eggs/add-egg-form";
 import EggProductionList from "@/components/eggs/egg-production-list";
+import EggProductionSummary from "@/components/eggs/egg-production-summary";
 
 export default function EggsPage() {
   const {
@@ -58,13 +59,17 @@ export default function EggsPage() {
         Egg Production
       </h1>
 
-      <AddEggForm
-        farmId={farmId}
-        flocks={flocks}
+      <EggProductionSummary
+        records={records}
       />
 
       <EggProductionList
         records={records}
+      />
+
+      <AddEggForm
+        farmId={farmId}
+        flocks={flocks}
       />
 
     </div>
