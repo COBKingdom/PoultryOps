@@ -6,10 +6,10 @@ import {
 } from "react";
 
 import {
-  getMedications,
-} from "@/lib/medication";
+  getHealthRecords,
+} from "@/lib/health";
 
-export function useMedication(
+export function useHealth(
   farmId?: string
 ) {
   const [records, setRecords] =
@@ -23,7 +23,7 @@ export function useMedication(
       if (!farmId) return;
 
       const result =
-        await getMedications(
+        await getHealthRecords(
           farmId
         );
 

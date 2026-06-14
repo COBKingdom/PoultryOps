@@ -1,11 +1,11 @@
 import { supabase } from "@/lib/supabase";
 
-export async function createMedication(
+export async function createHealthRecord(
   record: any
 ) {
   const { data, error } =
     await supabase
-      .from("medications")
+      .from("health")
       .insert(record)
       .select()
       .single();
@@ -15,12 +15,12 @@ export async function createMedication(
   return data;
 }
 
-export async function getMedications(
+export async function getHealthRecords(
   farmId: string
 ) {
   const { data, error } =
     await supabase
-      .from("medications")
+      .from("health")
       .select(`
         *,
         flocks (
@@ -29,8 +29,10 @@ export async function getMedications(
       `)
       .eq("farm_id", farmId)
       .order(
-        "medication_date",
-        { ascending: false }
+        "health_date",
+        {
+          ascending: false,
+        }
       );
 
   if (error) throw error;

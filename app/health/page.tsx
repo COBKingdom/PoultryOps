@@ -1,13 +1,13 @@
 "use client";
 
 import { useDashboard } from "@/hooks/useDashboard";
-import { useMedication } from "@/hooks/useMedication";
+import { useHealth } from "@/hooks/useHealth";
 import { useFlocks } from "@/hooks/useFlocks";
 
-import AddMedicationForm from "@/components/medication/add-medication-form";
-import MedicationList from "@/components/medication/medication-list";
+import AddHealthForm from "@/components/health/add-health-form";
+import HealthList from "@/components/health/health-list";
 
-export default function MedicationPage() {
+export default function HealthPage() {
   const {
     data,
     loading,
@@ -24,7 +24,7 @@ export default function MedicationPage() {
 
   const {
     records,
-  } = useMedication(
+  } = useHealth(
     farmId
   );
 
@@ -40,15 +40,15 @@ export default function MedicationPage() {
     <div className="p-6 space-y-6">
 
       <h1 className="text-3xl font-bold">
-        Medication
+        Health & Treatments
       </h1>
 
-      <AddMedicationForm
+      <AddHealthForm
         farmId={farmId}
         flocks={flocks}
       />
 
-      <MedicationList
+      <HealthList
         records={records}
       />
 

@@ -11,7 +11,7 @@ import {
   Wheat,
   Package,
   AlertTriangle,
-  Pill,
+  HeartPulse,
   Receipt,
   ShoppingCart,
   FileBarChart,
@@ -60,9 +60,9 @@ export default function MobileSidebar({
       icon: AlertTriangle,
     },
     {
-      name: "Medication",
-      href: "/medication",
-      icon: Pill,
+      name: "Health",
+      href: "/health",
+      icon: HeartPulse,
     },
   ];
 
@@ -119,16 +119,18 @@ export default function MobileSidebar({
 
             <div className="flex items-center gap-3">
 
-              <div className="
-                w-10
-                h-10
-                rounded-xl
-                bg-blue-600
-                flex
-                items-center
-                justify-center
-                font-bold
-              ">
+              <div
+                className="
+                  w-10
+                  h-10
+                  rounded-xl
+                  bg-blue-600
+                  flex
+                  items-center
+                  justify-center
+                  font-bold
+                "
+              >
                 P
               </div>
 
@@ -202,13 +204,15 @@ export default function MobileSidebar({
 
         <div className="p-4 border-t border-slate-800">
 
-          <div className="
-            rounded-2xl
-            bg-slate-900
-            border
-            border-slate-800
-            p-4
-          ">
+          <div
+            className="
+              rounded-2xl
+              bg-slate-900
+              border
+              border-slate-800
+              p-4
+            "
+          >
 
             <p className="text-xs text-slate-400">
               PoultryOps SaaS
@@ -240,13 +244,15 @@ function MenuSection({
   return (
     <div>
 
-      <p className="
-        text-xs
-        text-slate-500
-        font-semibold
-        tracking-wider
-        mb-2
-      ">
+      <p
+        className="
+          text-xs
+          text-slate-500
+          font-semibold
+          tracking-wider
+          mb-2
+        "
+      >
         {title}
       </p>
 

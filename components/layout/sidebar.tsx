@@ -10,7 +10,7 @@ import {
   Wheat,
   Package,
   AlertTriangle,
-  Pill,
+  HeartPulse,
   Receipt,
   ShoppingCart,
   FileBarChart,
@@ -49,9 +49,9 @@ export default function Sidebar() {
       icon: AlertTriangle,
     },
     {
-      name: "Medication",
-      href: "/medication",
-      icon: Pill,
+      name: "Health",
+      href: "/health",
+      icon: HeartPulse,
     },
   ];
 

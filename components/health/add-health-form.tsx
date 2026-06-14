@@ -1,21 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { createMedication } from "@/lib/medication";
+
+import { createHealthRecord } from "@/lib/health";
 
 type Props = {
   farmId: string;
   flocks: any[];
 };
 
-export default function AddMedicationForm({
+export default function AddHealthForm({
   farmId,
   flocks,
 }: Props) {
   const [flockId, setFlockId] =
     useState("");
 
-  const [medicationName, setMedicationName] =
+  const [treatmentName, setTreatmentName] =
     useState("");
 
   const [category, setCategory] =
@@ -32,36 +33,41 @@ export default function AddMedicationForm({
 
   async function handleSave() {
     try {
+      if (!flockId) {
+        alert("Select a flock");
+        return;
+      }
+
       setLoading(true);
 
-      await createMedication({
+      await createHealthRecord({
         farm_id: farmId,
         flock_id: flockId,
-        medication_date:
+        health_date:
           new Date()
             .toISOString()
             .split("T")[0],
-        medication_name:
-          medicationName,
+        treatment_name:
+          treatmentName,
         category,
         cost:
           Number(cost || 0),
         notes,
       });
 
-      setMedicationName("");
+      setTreatmentName("");
       setCost("");
       setNotes("");
 
       alert(
-        "Medication record saved"
+        "Health record saved"
       );
 
     } catch (error) {
       console.error(error);
 
       alert(
-        "Failed to save medication"
+        "Failed to save health record"
       );
 
     } finally {
@@ -73,7 +79,7 @@ export default function AddMedicationForm({
     <div className="bg-white rounded-xl p-6 shadow">
 
       <h2 className="font-bold text-lg mb-4">
-        Record Medication
+        Record Health Activity
       </h2>
 
       <div className="space-y-3">
@@ -104,10 +110,10 @@ export default function AddMedicationForm({
         </select>
 
         <input
-          placeholder="Medication Name"
-          value={medicationName}
+          placeholder="Treatment Name"
+          value={treatmentName}
           onChange={(e) =>
-            setMedicationName(
+            setTreatmentName(
               e.target.value
             )
           }
@@ -128,6 +134,8 @@ export default function AddMedicationForm({
           <option>Vitamin</option>
           <option>Supplement</option>
           <option>Treatment</option>
+          <option>Deworming</option>
+          <option>Biosecurity</option>
         </select>
 
         <input
@@ -160,10 +168,11 @@ export default function AddMedicationForm({
         >
           {loading
             ? "Saving..."
-            : "Save Medication"}
+            : "Save Health Record"}
         </button>
 
       </div>
+
     </div>
   );
 }

@@ -2,14 +2,14 @@ type Props = {
   records: any[];
 };
 
-export default function MedicationList({
+export default function HealthList({
   records,
 }: Props) {
   return (
     <div className="bg-white rounded-xl p-6 shadow">
 
       <h2 className="font-bold text-lg mb-4">
-        Medication Records
+        Health Records
       </h2>
 
       <div className="space-y-3">
@@ -22,16 +22,14 @@ export default function MedicationList({
             >
               <div className="font-semibold">
                 {
-                  record.medication_name
+                  record.treatment_name
                 }
               </div>
 
               <div>
                 Category:
                 {" "}
-                {
-                  record.category
-                }
+                {record.category}
               </div>
 
               <div>
@@ -51,9 +49,10 @@ export default function MedicationList({
 
               <div>
                 {
-                  record.medication_date
+                  record.health_date
                 }
               </div>
+
             </div>
           )
         )}
