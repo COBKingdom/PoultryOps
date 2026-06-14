@@ -6,6 +6,7 @@ import { useFlocks } from "@/hooks/useFlocks";
 
 import AddHealthForm from "@/components/health/add-health-form";
 import HealthList from "@/components/health/health-list";
+import HealthStats from "@/components/health/health-stats";
 
 export default function HealthPage() {
   const {
@@ -43,13 +44,17 @@ export default function HealthPage() {
         Health & Treatments
       </h1>
 
-      <AddHealthForm
-        farmId={farmId}
-        flocks={flocks}
+      <HealthStats
+        records={records}
       />
 
       <HealthList
         records={records}
+      />
+
+      <AddHealthForm
+        farmId={farmId}
+        flocks={flocks}
       />
 
     </div>
