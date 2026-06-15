@@ -2,8 +2,8 @@ export function getCurrencySymbol(
   currency?: string
 ) {
   switch (currency) {
-    case "USD":
-      return "$";
+    case "NGN":
+      return "₦";
 
     case "EUR":
       return "€";
@@ -11,24 +11,11 @@ export function getCurrencySymbol(
     case "GBP":
       return "£";
 
-    case "CAD":
-      return "C$";
+    case "USD":
+      return "$";
 
-    case "AUD":
-      return "A$";
-
-    case "ZAR":
-      return "R";
-
-    case "GHS":
-      return "GH₵";
-
-    case "KES":
-      return "KSh";
-
-    case "NGN":
     default:
-      return "₦";
+      return "";
   }
 }
 
@@ -41,7 +28,17 @@ export function formatCurrency(
       currency
     );
 
-  return `${symbol}${Number(
-    amount || 0
-  ).toLocaleString()}`;
+  const absolute =
+    Math.abs(amount);
+
+  const formatted =
+    absolute.toLocaleString(
+      undefined,
+      {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      }
+    );
+
+  return `${symbol}${formatted}`;
 }

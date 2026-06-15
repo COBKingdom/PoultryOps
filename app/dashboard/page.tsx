@@ -12,10 +12,6 @@ import FarmHero from "@/components/dashboard/farm-hero";
 import FarmHealth from "@/components/dashboard/farm-health";
 import RecentActivity from "@/components/dashboard/recent-activity";
 
-import {
-  formatCurrency,
-} from "@/lib/currency";
-
 export default function DashboardPage() {
   const { user } =
     useAuth();
@@ -46,7 +42,11 @@ export default function DashboardPage() {
       </div>
     );
   }
-
+console.log({
+  revenue: totalRevenue,
+  expenses: totalExpenses,
+  profit: profit,
+});
   return (
     <AppShell
       email={user?.email}
@@ -124,26 +124,20 @@ export default function DashboardPage() {
 
           <KpiCard
             title="Revenue"
-            value={formatCurrency(
-              totalRevenue,
-              farm?.currency
-            )}
+            value={totalRevenue}
+            currency={farm?.currency}
           />
 
           <KpiCard
             title="Expenses"
-            value={formatCurrency(
-              totalExpenses,
-              farm?.currency
-            )}
+            value={totalExpenses}
+            currency={farm?.currency}
           />
 
           <KpiCard
             title="Profit"
-            value={formatCurrency(
-              profit,
-              farm?.currency
-            )}
+            value={profit}
+            currency={farm?.currency}
           />
         </div>
 

@@ -3,8 +3,10 @@
 import { useDashboard } from "@/hooks/useDashboard";
 import { useReports } from "@/hooks/useReports";
 
+import ReportKpis from "@/components/reports/report-kpis";
 import ProductionSummary from "@/components/reports/production-summary";
-import FinancialSummary from "@/components/reports/financial-summary";
+import OperationsSummary from "@/components/reports/operations-summary";
+import FarmHealthSummary from "@/components/reports/farm-health-summary";
 import ExportButtons from "@/components/reports/export-buttons";
 
 export default function ReportsPage() {
@@ -38,21 +40,42 @@ export default function ReportsPage() {
   return (
     <div className="p-6 space-y-6">
 
-      <h1 className="text-3xl font-bold">
-        Reports
-      </h1>
+      <div>
 
-      <div className="grid md:grid-cols-2 gap-6">
+        <h1 className="text-3xl font-bold">
+          Reports Center
+        </h1>
+
+        <p className="text-slate-500 mt-1">
+          Farm Performance & Business Intelligence
+        </p>
+
+      </div>
+
+      <ReportKpis
+        report={report}
+      />
+
+      <div className="grid lg:grid-cols-2 gap-6">
 
         <ProductionSummary
           report={report}
         />
 
-        <FinancialSummary
+        <OperationsSummary
           report={report}
         />
+
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-6">
+
+        <FarmHealthSummary
+          report={report}
+        />
+
         <ExportButtons
-         report={report}
+          report={report}
         />
 
       </div>

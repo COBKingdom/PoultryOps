@@ -3,8 +3,10 @@
 import { useDashboard } from "@/hooks/useDashboard";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 
+import AnalyticsKpis from "@/components/analytics/analytics-kpis";
 import RevenueChart from "@/components/analytics/revenue-chart";
 import ProductionChart from "@/components/analytics/production-chart";
+import FarmInsights from "@/components/analytics/farm-insights";
 
 export default function AnalyticsPage() {
   const {
@@ -31,11 +33,37 @@ export default function AnalyticsPage() {
   return (
     <div className="p-6 space-y-6">
 
-      <h1 className="text-3xl font-bold">
-        Analytics
-      </h1>
+      <div>
 
-      <div className="grid md:grid-cols-2 gap-6">
+        <h1 className="text-3xl font-bold">
+          Analytics Center
+        </h1>
+
+        <p className="text-slate-500 mt-1">
+          Track production, profitability and farm health
+        </p>
+
+      </div>
+
+      <AnalyticsKpis
+        currentBirds={
+          stats.currentBirds
+        }
+        productionPercentage={
+          stats.productionPercentage
+        }
+        totalMortality={
+          stats.totalMortality
+        }
+        totalRevenue={
+          stats.totalRevenue
+        }
+        totalExpenses={
+          stats.totalExpenses
+        }
+      />
+
+      <div className="grid lg:grid-cols-2 gap-6">
 
         <RevenueChart
           revenue={
@@ -56,6 +84,24 @@ export default function AnalyticsPage() {
         />
 
       </div>
+
+      <FarmInsights
+        productionPercentage={
+          stats.productionPercentage
+        }
+        totalMortality={
+          stats.totalMortality
+        }
+        currentBirds={
+          stats.currentBirds
+        }
+        totalRevenue={
+          stats.totalRevenue
+        }
+        totalExpenses={
+          stats.totalExpenses
+        }
+      />
 
     </div>
   );

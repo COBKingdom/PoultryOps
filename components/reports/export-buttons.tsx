@@ -59,10 +59,7 @@ Profit,${report.profit}`;
       );
 
     a.href = url;
-
-    a.download =
-      filename;
-
+    a.download = filename;
     a.click();
 
     URL.revokeObjectURL(
@@ -73,17 +70,17 @@ Profit,${report.profit}`;
   return (
     <div className="bg-white rounded-2xl border p-6 shadow-sm">
 
-      <h2 className="text-xl font-bold mb-4">
+      <h2 className="text-xl font-bold mb-6">
         Export Reports
       </h2>
 
-      <div className="flex gap-4">
+      <div className="grid grid-cols-2 gap-3">
 
         <button
           onClick={
             exportProduction
           }
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg"
+          className="bg-blue-600 text-white p-3 rounded-xl"
         >
           Export Production
         </button>
@@ -92,12 +89,30 @@ Profit,${report.profit}`;
           onClick={
             exportFinancial
           }
-          className="bg-green-600 text-white px-4 py-2 rounded-lg"
+          className="bg-green-600 text-white p-3 rounded-xl"
         >
           Export Financial
         </button>
 
+        <button
+          disabled
+          className="bg-slate-200 text-slate-500 p-3 rounded-xl"
+        >
+          Email Report
+        </button>
+
+        <button
+          disabled
+          className="bg-slate-200 text-slate-500 p-3 rounded-xl"
+        >
+          WhatsApp Report
+        </button>
+
       </div>
+
+      <p className="text-xs text-slate-500 mt-4">
+        Email and WhatsApp delivery coming soon.
+      </p>
 
     </div>
   );

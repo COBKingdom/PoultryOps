@@ -1,12 +1,5 @@
 "use client";
 
-import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Tooltip,
-} from "recharts";
-
 type Props = {
   eggs: number;
   birds: number;
@@ -16,40 +9,78 @@ export default function ProductionChart({
   eggs,
   birds,
 }: Props) {
-  const data = [
-    {
-      name: "Eggs",
-      value: eggs,
-    },
-    {
-      name: "Birds",
-      value: birds,
-    },
-  ];
+  const productionPercentage =
+    birds > 0
+      ? (
+          (eggs / birds) *
+          100
+        ).toFixed(1)
+      : "0";
 
   return (
-    <div className="bg-white rounded-2xl border p-6 shadow-sm">
+    <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
 
-      <h2 className="text-xl font-bold mb-6">
-        Production Overview
-      </h2>
+      <div className="mb-6">
+        <h2 className="text-xl font-bold text-slate-900">
+          Production Performance
+        </h2>
 
-      <div className="h-80">
+        <p className="text-sm text-slate-500 mt-1">
+          Daily flock productivity
+        </p>
+      </div>
 
-        <ResponsiveContainer
-          width="100%"
-          height="100%"
-        >
-          <PieChart>
-            <Pie
-              data={data}
-              dataKey="value"
-              nameKey="name"
+      <div className="space-y-6">
+
+        <div>
+          <div className="flex justify-between text-sm mb-2">
+            <span>
+              Production Rate
+            </span>
+
+            <span className="font-semibold">
+              {productionPercentage}%
+            </span>
+          </div>
+
+          <div className="w-full h-4 bg-slate-200 rounded-full overflow-hidden">
+            <div
+              className="
+                h-full
+                bg-gradient-to-r
+                from-blue-600
+                to-indigo-700
+              "
+              style={{
+                width: `${productionPercentage}%`,
+              }}
             />
+          </div>
+        </div>
 
-            <Tooltip />
-          </PieChart>
-        </ResponsiveContainer>
+        <div className="grid grid-cols-2 gap-4">
+
+          <div className="bg-slate-50 rounded-2xl p-4">
+            <p className="text-sm text-slate-500">
+              Current Birds
+            </p>
+
+            <h3 className="text-3xl font-bold text-slate-900 mt-2">
+              {birds}
+            </h3>
+          </div>
+
+          <div className="bg-slate-50 rounded-2xl p-4">
+            <p className="text-sm text-slate-500">
+              Today's Eggs
+            </p>
+
+            <h3 className="text-3xl font-bold text-blue-600 mt-2">
+              {eggs}
+            </h3>
+          </div>
+
+        </div>
 
       </div>
 

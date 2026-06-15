@@ -4,17 +4,24 @@ import {
   DollarSign,
   Receipt,
   TrendingUp,
+  TrendingDown,
   Activity,
 } from "lucide-react";
+
+import {
+  formatCurrency,
+} from "@/lib/currency";
 
 type Props = {
   title: string;
   value: string | number;
+  currency?: string;
 };
 
 export default function KpiCard({
   title,
   value,
+  currency,
 }: Props) {
   let Icon = Activity;
 
@@ -24,8 +31,20 @@ export default function KpiCard({
   let iconColor =
     "text-slate-600";
 
+  let valueColor =
+    "text-slate-900";
+
   let subtitle =
     "";
+
+  let displayTitle =
+    title;
+
+  let displayValue =
+    value;
+
+  const numericValue =
+    Number(value);
 
   if (
     title.includes("Bird")
@@ -68,8 +87,17 @@ export default function KpiCard({
     iconColor =
       "text-green-600";
 
+    valueColor =
+      "text-green-600";
+
     subtitle =
       "Income generated";
+
+    displayValue =
+      formatCurrency(
+        numericValue,
+        currency
+      );
   }
 
   if (
@@ -83,23 +111,64 @@ export default function KpiCard({
     iconColor =
       "text-red-600";
 
+    valueColor =
+      "text-red-600";
+
     subtitle =
       "Operating costs";
+
+    displayValue =
+      formatCurrency(
+        numericValue,
+        currency
+      );
   }
 
   if (
     title.includes("Profit")
   ) {
-    Icon = TrendingUp;
-
-    iconBg =
-      "bg-purple-100";
-
-    iconColor =
-      "text-purple-600";
-
     subtitle =
       "Net performance";
+
+    displayValue =
+      formatCurrency(
+        numericValue,
+        currency
+      );
+
+    if (
+      numericValue >= 0
+    ) {
+      displayTitle =
+        "Profit";
+
+      Icon =
+        TrendingUp;
+
+      iconBg =
+        "bg-green-100";
+
+      iconColor =
+        "text-green-600";
+
+      valueColor =
+        "text-green-600";
+    } else {
+      displayTitle =
+        "Loss";
+
+      Icon =
+        TrendingDown;
+
+      iconBg =
+        "bg-red-100";
+
+      iconColor =
+        "text-red-600";
+
+      valueColor =
+        "text-red-600";
+    }
   }
 
   if (
@@ -145,19 +214,19 @@ export default function KpiCard({
               text-slate-500
             "
           >
-            {title}
+            {displayTitle}
           </p>
 
           <h3
-            className="
+            className={`
               mt-3
               text-3xl
               md:text-4xl
               font-bold
-              text-slate-900
-            "
+              ${valueColor}
+            `}
           >
-            {value}
+            {displayValue}
           </h3>
 
           <p
