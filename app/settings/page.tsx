@@ -1,10 +1,80 @@
 "use client";
 
-import Link from "next/link";
+import { useState, useEffect } from "react";
 
 import AppShell from "@/components/layout/app-shell";
 
+import { useDashboard } from "@/hooks/useDashboard";
+
+import { updateFarm } from "@/lib/farm";
+
 export default function SettingsPage() {
+  const {
+    data,
+    loading,
+  } = useDashboard();
+
+  const farm =
+    data?.farm;
+
+  const [farmName, setFarmName] =
+    useState("");
+
+  const [currency, setCurrency] =
+    useState("NGN");
+
+  const [saving, setSaving] =
+    useState(false);
+
+  useEffect(() => {
+    if (!farm) return;
+
+    setFarmName(
+      farm.name || ""
+    );
+
+    setCurrency(
+      farm.currency ||
+        "NGN"
+    );
+  }, [farm]);
+
+  async function handleSave() {
+    try {
+      if (!farm?.id) return;
+
+      setSaving(true);
+
+      await updateFarm(
+        farm.id,
+        {
+          name: farmName,
+          currency,
+        }
+      );
+
+      alert(
+        "Settings saved successfully"
+      );
+    } catch (error) {
+      console.error(error);
+
+      alert(
+        "Failed to save settings"
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        Loading...
+      </div>
+    );
+  }
+
   return (
     <AppShell>
 
@@ -16,113 +86,112 @@ export default function SettingsPage() {
           </h1>
 
           <p className="text-slate-500 mt-2">
-            Manage your farm preferences and account.
+            Manage farm preferences
           </p>
         </div>
 
-        <div
-          className="
-            grid
-            grid-cols-1
-            md:grid-cols-2
-            gap-4
-          "
-        >
+        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-6">
+          <h2 className="text-xl font-semibold mb-6">
+            Farm Settings
+          </h2>
 
-            <h2 className="text-xl font-semibold mb-2">
-              Farm Settings
-            </h2>
+          <div className="space-y-4">
 
-            <p className="text-slate-500">
-              Configure farm details and preferences.
-            </p>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Farm Name
+              </label>
 
-          </div>
+              <input
+                value={farmName}
+                onChange={(e) =>
+                  setFarmName(
+                    e.target.value
+                  )
+                }
+                className="
+                  w-full
+                  border
+                  rounded-xl
+                  p-3
+                "
+              />
+            </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-6">
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Currency
+              </label>
 
-            <h2 className="text-xl font-semibold mb-4">
-              Currency
-            </h2>
+              <select
+                value={currency}
+                onChange={(e) =>
+                  setCurrency(
+                    e.target.value
+                  )
+                }
+                className="
+                  w-full
+                  border
+                  rounded-xl
+                  p-3
+                "
+              >
+                <option value="NGN">
+                  Nigerian Naira (₦)
+                </option>
 
-            <select
+                <option value="USD">
+                  US Dollar ($)
+                </option>
+
+                <option value="EUR">
+                  Euro (€)
+                </option>
+
+                <option value="GBP">
+                  British Pound (£)
+                </option>
+
+                <option value="CAD">
+                  Canadian Dollar (C$)
+                </option>
+
+                <option value="AUD">
+                  Australian Dollar (A$)
+                </option>
+
+                <option value="ZAR">
+                  South African Rand (R)
+                </option>
+
+                <option value="GHS">
+                  Ghanaian Cedi (GH₵)
+                </option>
+
+                <option value="KES">
+                  Kenyan Shilling (KSh)
+                </option>
+              </select>
+            </div>
+
+            <button
+              onClick={handleSave}
+              disabled={saving}
               className="
-                w-full
-                border
-                rounded-lg
-                p-3
+                bg-blue-600
+                text-white
+                px-6
+                py-3
+                rounded-xl
+                font-medium
               "
             >
-              <option value="NGN">
-                Nigerian Naira (₦)
-              </option>
-
-              <option value="USD">
-                US Dollar ($)
-              </option>
-
-              <option value="EUR">
-                Euro (€)
-              </option>
-
-              <option value="GBP">
-                British Pound (£)
-              </option>
-
-              <option value="CAD">
-                Canadian Dollar (C$)
-              </option>
-
-              <option value="AUD">
-                Australian Dollar (A$)
-              </option>
-
-              <option value="ZAR">
-                South African Rand (R)
-              </option>
-
-              <option value="GHS">
-                Ghanaian Cedi (GH₵)
-              </option>
-
-              <option value="KES">
-                Kenyan Shilling (KSh)
-              </option>
-            </select>
-
-          </div>
-
-          <div className="bg-white rounded-2xl border border-slate-200 p-6">
-
-            <h2 className="text-xl font-semibold mb-2">
-              Account
-            </h2>
-
-            <p className="text-slate-500">
-              Manage your profile and login information.
-            </p>
-
-          </div>
-
-          <div className="bg-white rounded-2xl border border-slate-200 p-6">
-
-            <h2 className="text-xl font-semibold mb-2">
-              Subscription
-            </h2>
-
-            <p className="mb-2">
-              Plan: Starter
-            </p>
-
-            <p className="mb-2">
-              Status: Trial
-            </p>
-
-            <p>
-              Trial Active
-            </p>
+              {saving
+                ? "Saving..."
+                : "Save Settings"}
+            </button>
 
           </div>
 

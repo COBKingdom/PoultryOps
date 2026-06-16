@@ -1,16 +1,21 @@
 import { supabase } from "@/lib/supabase";
 
-export async function getCurrentFarm(
-  userId: string
+export async function updateFarm(
+  farmId: string,
+  updates: {
+    name?: string;
+    currency?: string;
+  }
 ) {
-  const { data } = await supabase
-    .from("profiles")
-    .select(`
-      farm_id,
-      farms (*)
-    `)
-    .eq("id", userId)
-    .single();
+  const { data, error } =
+    await supabase
+      .from("farms")
+      .update(updates)
+      .eq("id", farmId)
+      .select()
+      .single();
+
+  if (error) throw error;
 
   return data;
 }

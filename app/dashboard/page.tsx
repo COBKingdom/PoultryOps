@@ -42,11 +42,6 @@ export default function DashboardPage() {
       </div>
     );
   }
-console.log({
-  revenue: totalRevenue,
-  expenses: totalExpenses,
-  profit: profit,
-});
   return (
     <AppShell
       email={user?.email}
