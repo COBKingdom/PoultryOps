@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+
 import { supabase } from "@/lib/supabase";
 
 export default function LoginForm() {
@@ -28,17 +29,58 @@ export default function LoginForm() {
       setLoading(true);
       setMessage("");
 
-      const { error } =
+      const {
+        data,
+        error,
+      } =
         await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
-      router.push("/dashboard");
+      const user =
+        data.user;
+
+      const {
+        data: profile,
+        error: profileError,
+      } =
+        await supabase
+          .from("profiles")
+          .select("farm_id")
+          .eq("id", user.id)
+          .single();
+
+      if (profileError) {
+        throw profileError;
+      }
+
+      if (
+        !profile?.farm_id
+      ) {
+        router.push(
+          "/onboarding"
+        );
+
+        return;
+      }
+
+      router.push(
+        "/dashboard"
+      );
+
     } catch (error: any) {
-      setMessage(error.message);
+      console.error(error);
+
+      setMessage(
+        error.message ||
+          "Login failed"
+      );
+
     } finally {
       setLoading(false);
     }
@@ -54,9 +96,17 @@ export default function LoginForm() {
         placeholder="Email"
         value={email}
         onChange={(e) =>
-          setEmail(e.target.value)
+          setEmail(
+            e.target.value
+          )
         }
-        className="w-full border p-3 rounded"
+        className="
+          w-full
+          border
+          p-3
+          rounded-lg
+        "
+        required
       />
 
       <input
@@ -64,14 +114,29 @@ export default function LoginForm() {
         placeholder="Password"
         value={password}
         onChange={(e) =>
-          setPassword(e.target.value)
+          setPassword(
+            e.target.value
+          )
         }
-        className="w-full border p-3 rounded"
+        className="
+          w-full
+          border
+          p-3
+          rounded-lg
+        "
+        required
       />
 
       <button
         disabled={loading}
-        className="w-full bg-slate-900 text-white p-3 rounded"
+        className="
+          w-full
+          bg-blue-600
+          text-white
+          p-3
+          rounded-lg
+          font-semibold
+        "
       >
         {loading
           ? "Signing In..."
