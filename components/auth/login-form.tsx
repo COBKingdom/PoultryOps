@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -78,7 +79,7 @@ export default function LoginForm() {
 
       setMessage(
         error.message ||
-          "Login failed"
+          "Invalid login credentials"
       );
 
     } finally {
@@ -126,6 +127,19 @@ export default function LoginForm() {
         "
         required
       />
+
+      <div className="flex justify-end">
+        <Link
+          href="/forgot-password"
+          className="
+            text-sm
+            text-blue-600
+            hover:underline
+          "
+        >
+          Forgot Password?
+        </Link>
+      </div>
 
       <button
         disabled={loading}

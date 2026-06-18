@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 import { supabase } from "@/lib/supabase";
@@ -37,7 +38,7 @@ export function RegisterForm() {
       }
 
       setMessage(
-        "Account created successfully. Please check your email and verify your account before signing in."
+        "Check your email to verify your account, or sign in if you're already registered."
       );
 
     } catch (error: any) {
@@ -131,15 +132,32 @@ export function RegisterForm() {
         </button>
 
         {message && (
-          <p
-            className="
-              text-sm
-              text-slate-600
-            "
-          >
-            {message}
-          </p>
+          <>
+            <p
+              className="
+                text-sm
+                text-slate-600
+              "
+            >
+              {message}
+            </p>
+
+            <div className="mt-4">
+              <Link
+                href="/login"
+                className="
+                  text-sm
+                  font-medium
+                  text-blue-600
+                  hover:underline
+                "
+              >
+                Already have an account? Login
+              </Link>
+            </div>
+          </>
         )}
+
       </form>
     </div>
   );
