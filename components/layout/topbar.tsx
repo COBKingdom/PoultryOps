@@ -1,3 +1,16 @@
+"use client";
+
+import {
+  useState,
+  useRef,
+  useEffect,
+} from "react";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+
+import { supabase } from "@/lib/supabase";
+
 type Props = {
   email?: string;
   farmName?: string;
@@ -7,6 +20,15 @@ export default function Topbar({
   email,
   farmName,
 }: Props) {
+  const router =
+    useRouter();
+
+  const [menuOpen, setMenuOpen] =
+    useState(false);
+
+  const menuRef =
+    useRef<HTMLDivElement>(null);
+
   const hour =
     new Date().getHours();
 
@@ -32,6 +54,39 @@ export default function Topbar({
         day: "numeric",
       }
     );
+
+  useEffect(() => {
+    function handleClickOutside(
+      event: MouseEvent
+    ) {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(
+          event.target as Node
+        )
+      ) {
+        setMenuOpen(false);
+      }
+    }
+
+    document.addEventListener(
+      "mousedown",
+      handleClickOutside
+    );
+
+    return () => {
+      document.removeEventListener(
+        "mousedown",
+        handleClickOutside
+      );
+    };
+  }, []);
+
+  async function handleSignOut() {
+    await supabase.auth.signOut();
+
+    router.push("/login");
+  }
 
   return (
     <div
@@ -86,12 +141,46 @@ export default function Topbar({
       </div>
 
       <div
+        ref={menuRef}
         className="
           flex
           items-center
           gap-4
+          relative
         "
       >
+<div
+  className="
+    hidden
+    md:flex
+    flex-col
+    items-end
+  "
+>
+  <span
+    className="
+      px-3
+      py-1
+      rounded-full
+      bg-green-100
+      text-green-700
+      text-xs
+      font-semibold
+    "
+  >
+    Trial Active
+  </span>
+
+  <span
+    className="
+      text-xs
+      text-slate-500
+      mt-1
+    "
+  >
+    59 Days Left
+  </span>
+</div>
         <div
           className="
             hidden
@@ -117,10 +206,14 @@ export default function Topbar({
           >
             {email}
           </p>
-
         </div>
 
-        <div
+        <button
+          onClick={() =>
+            setMenuOpen(
+              !menuOpen
+            )
+          }
           className="
             w-12
             h-12
@@ -132,12 +225,129 @@ export default function Topbar({
             justify-center
             font-semibold
             text-lg
+            hover:bg-blue-700
+            transition
           "
         >
           {email
             ?.charAt(0)
             .toUpperCase()}
-        </div>
+        </button>
+
+        {menuOpen && (
+          <div
+            className="
+              absolute
+              right-0
+              top-14
+              w-64
+              bg-white
+              border
+              border-slate-200
+              rounded-2xl
+              shadow-xl
+              overflow-hidden
+              z-50
+            "
+          >
+
+            <div
+              className="
+                px-4
+                py-3
+                border-b
+                border-slate-100
+              "
+            >
+              <p
+                className="
+                  text-xs
+                  text-slate-500
+                "
+              >
+                Signed in as
+              </p>
+
+              <p
+                className="
+                  text-sm
+                  font-medium
+                "
+              >
+                {email}
+              </p>
+            </div>
+
+            <Link
+              href="/profile"
+              onClick={() =>
+                setMenuOpen(false)
+              }
+              className="
+                block
+                px-4
+                py-3
+                hover:bg-slate-50
+              "
+            >
+              Profile
+            </Link>
+
+            <Link
+              href="/settings"
+              onClick={() =>
+                setMenuOpen(false)
+              }
+              className="
+                block
+                px-4
+                py-3
+                hover:bg-slate-50
+              "
+            >
+              Settings
+            </Link>
+
+            <Link
+              href="/settings"
+              onClick={() =>
+                setMenuOpen(false)
+              }
+              className="
+                block
+                px-4
+                py-3
+                hover:bg-slate-50
+              "
+            >
+              Subscription
+            </Link>
+
+            <div
+              className="
+                border-t
+                border-slate-100
+              "
+            >
+              <button
+                onClick={
+                  handleSignOut
+                }
+                className="
+                  w-full
+                  text-left
+                  px-4
+                  py-3
+                  text-red-600
+                  hover:bg-red-50
+                "
+              >
+                Sign Out
+              </button>
+            </div>
+
+          </div>
+        )}
 
       </div>
     </div>

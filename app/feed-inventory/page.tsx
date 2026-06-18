@@ -1,14 +1,21 @@
 "use client";
 
+import { useAuth } from "@/contexts/AuthContext";
+
 import { useDashboard } from "@/hooks/useDashboard";
 import { useFeedInventory } from "@/hooks/useFeedInventory";
 import { useFeed } from "@/hooks/useFeed";
+
+import AppShell from "@/components/layout/app-shell";
 
 import AddFeedStockForm from "@/components/feed-inventory/add-feed-stock-form";
 import FeedStockList from "@/components/feed-inventory/feed-stock-list";
 import FeedStockSummary from "@/components/feed-inventory/feed-stock-summary";
 
 export default function FeedInventoryPage() {
+  const { user } =
+    useAuth();
+
   const {
     data,
     loading,
@@ -40,31 +47,38 @@ export default function FeedInventoryPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <AppShell
+      email={user?.email}
+      farmName={
+        data?.farm?.name
+      }
+    >
+      <div className="p-6 space-y-6">
 
-      <h1 className="text-3xl font-bold">
-        Feed Inventory
-      </h1>
+        <h1 className="text-3xl font-bold">
+          Feed Inventory
+        </h1>
 
-      <FeedStockSummary
-        inventoryRecords={
-          inventoryRecords
-        }
-        feedRecords={
-          feedRecords
-        }
-      />
+        <FeedStockSummary
+          inventoryRecords={
+            inventoryRecords
+          }
+          feedRecords={
+            feedRecords
+          }
+        />
 
-      <FeedStockList
-        records={
-          inventoryRecords
-        }
-      />
+        <FeedStockList
+          records={
+            inventoryRecords
+          }
+        />
 
-      <AddFeedStockForm
-        farmId={farmId}
-      />
+        <AddFeedStockForm
+          farmId={farmId}
+        />
 
-    </div>
+      </div>
+    </AppShell>
   );
 }

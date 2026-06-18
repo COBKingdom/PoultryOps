@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
+
+import { supabase } from "@/lib/supabase";
 
 import {
   LayoutDashboard,
@@ -16,11 +19,22 @@ import {
   FileBarChart,
   BarChart3,
   Settings,
+  User,
+  LogOut,
 } from "lucide-react";
 
 export default function Sidebar() {
   const pathname =
     usePathname();
+
+  const router =
+    useRouter();
+
+  async function handleSignOut() {
+    await supabase.auth.signOut();
+
+    router.push("/login");
+  }
 
   const operations = [
     {
@@ -93,6 +107,7 @@ export default function Sidebar() {
           </div>
 
           <div>
+
             <h1 className="text-xl font-bold">
               PoultryOps
             </h1>
@@ -100,6 +115,7 @@ export default function Sidebar() {
             <p className="text-xs text-slate-400">
               Poultry Farm Management
             </p>
+
           </div>
 
         </div>
@@ -142,21 +158,86 @@ export default function Sidebar() {
 
       </nav>
 
-      <div className="p-4 border-t border-slate-800">
+      <div className="border-t border-slate-800 p-4 space-y-2">
 
-        <div className="rounded-2xl bg-slate-900 border border-slate-800 p-4">
+        <Link
+          href="/profile"
+          className="
+            flex
+            items-center
+            gap-3
+            rounded-xl
+            px-4
+            py-3
+            text-slate-300
+            hover:bg-slate-800
+            hover:text-white
+            transition-all
+          "
+        >
+          <User size={18} />
 
-          <p className="text-xs text-slate-400">
-            PoultryOps SaaS
+          <span>
+            Profile
+          </span>
+
+        </Link>
+
+        <Link
+          href="/settings"
+          className="
+            flex
+            items-center
+            gap-3
+            rounded-xl
+            px-4
+            py-3
+            text-slate-300
+            hover:bg-slate-800
+            hover:text-white
+            transition-all
+          "
+        >
+          <Settings size={18} />
+
+          <span>
+            Settings
+          </span>
+
+        </Link>
+
+        <button
+          onClick={handleSignOut}
+          className="
+            w-full
+            flex
+            items-center
+            gap-3
+            rounded-xl
+            px-4
+            py-3
+            text-red-400
+            hover:bg-red-950
+            transition-all
+          "
+        >
+          <LogOut size={18} />
+
+          <span>
+            Sign Out
+          </span>
+
+        </button>
+
+        <div className="pt-4 border-t border-slate-800">
+
+          <p className="text-xs text-slate-500">
+            PoultryOps
           </p>
 
-          <p className="text-sm font-semibold mt-1">
-            Trial Version
+          <p className="text-xs text-slate-400 mt-1">
+            Version 1.0.1
           </p>
-
-          <div className="mt-3 h-2 rounded-full bg-slate-800">
-            <div className="h-2 rounded-full bg-blue-500 w-2/3" />
-          </div>
 
         </div>
 
@@ -222,7 +303,9 @@ function MenuItem({
     >
       <Icon size={18} />
 
-      <span>{name}</span>
+      <span>
+        {name}
+      </span>
 
     </Link>
   );

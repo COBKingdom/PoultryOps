@@ -4,6 +4,8 @@ import { useState } from "react";
 
 import { createFlock } from "@/lib/flocks";
 
+import SaveButton from "@/components/ui/save-button";
+
 type Props = {
   farmId: string;
   onCreated?: () => void;
@@ -25,6 +27,9 @@ export default function AddFlockForm({
   const [loading, setLoading] =
     useState(false);
 
+  const [success, setSuccess] =
+    useState(false);
+
   async function handleSave() {
     try {
       setLoading(true);
@@ -40,18 +45,16 @@ export default function AddFlockForm({
       setFlockName("");
       setQuantity("");
 
-      alert(
-        "Flock created successfully"
-      );
+      setSuccess(true);
+
+      setTimeout(() => {
+        setSuccess(false);
+      }, 2000);
 
       onCreated?.();
 
     } catch (error) {
       console.error(error);
-
-      alert(
-        "Failed to save flock"
-      );
 
     } finally {
       setLoading(false);
@@ -65,7 +68,13 @@ export default function AddFlockForm({
         Add New Flock
       </h2>
 
-      <div className="space-y-4">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSave();
+        }}
+        className="space-y-4"
+      >
 
         <input
           placeholder="Flock Name"
@@ -76,6 +85,7 @@ export default function AddFlockForm({
             )
           }
           className="w-full border rounded-xl p-4"
+          required
         />
 
         <select
@@ -98,6 +108,10 @@ export default function AddFlockForm({
           <option>
             Cockerels
           </option>
+
+          <option>
+            Growers
+          </option>
         </select>
 
         <input
@@ -110,25 +124,16 @@ export default function AddFlockForm({
             )
           }
           className="w-full border rounded-xl p-4"
+          required
         />
 
-        <button
-          onClick={handleSave}
-          disabled={loading}
-          className="
-            w-full
-            bg-slate-900
-            text-white
-            rounded-xl
-            p-4
-          "
-        >
-          {loading
-            ? "Saving..."
-            : "Create Flock"}
-        </button>
+        <SaveButton
+          loading={loading}
+          success={success}
+          label="Create Flock"
+        />
 
-      </div>
+      </form>
 
     </div>
   );

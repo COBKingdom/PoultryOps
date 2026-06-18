@@ -2,25 +2,47 @@ import {
   Egg,
   Wheat,
   Receipt,
+  ShoppingCart,
+  AlertTriangle,
   CheckCircle,
 } from "lucide-react";
 
 export default function RecentActivity() {
   const activities = [
     {
-      title: "Egg production recorded",
-      detail: "0 eggs recorded today",
+      title:
+        "Egg Production",
+      detail:
+        "Track daily egg collection and flock productivity.",
       icon: Egg,
     },
     {
-      title: "Feed usage updated",
-      detail: "Feed consumption logged",
+      title:
+        "Feed Management",
+      detail:
+        "Monitor feed consumption and inventory levels.",
       icon: Wheat,
     },
     {
-      title: "Expense recorded",
-      detail: "Latest farm expense saved",
+      title:
+        "Expenses",
+      detail:
+        "Record and review operational spending.",
       icon: Receipt,
+    },
+    {
+      title:
+        "Sales",
+      detail:
+        "Track farm revenue and customer transactions.",
+      icon: ShoppingCart,
+    },
+    {
+      title:
+        "Mortality",
+      detail:
+        "Monitor bird losses and flock health trends.",
+      icon: AlertTriangle,
     },
   ];
 
@@ -28,19 +50,24 @@ export default function RecentActivity() {
     <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
 
       <div className="mb-6">
+
         <h2 className="text-xl font-bold text-slate-900">
-          Recent Activity
+          Farm Operations
         </h2>
 
         <p className="text-sm text-slate-500 mt-1">
-          Latest farm operations
+          Key areas being monitored within your farm
         </p>
+
       </div>
 
       <div className="space-y-4">
 
         {activities.map(
-          (activity, index) => {
+          (
+            activity,
+            index
+          ) => {
             const Icon =
               activity.icon;
 
@@ -54,8 +81,11 @@ export default function RecentActivity() {
                   p-4
                   rounded-2xl
                   bg-slate-50
+                  hover:bg-slate-100
+                  transition-all
                 "
               >
+
                 <div
                   className="
                     w-12
@@ -89,6 +119,7 @@ export default function RecentActivity() {
                   size={18}
                   className="text-green-500"
                 />
+
               </div>
             );
           }

@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { createEggProduction } from "@/lib/eggs";
+
+import {
+  createEggProduction,
+} from "@/lib/eggs";
+
+import SaveButton from "@/components/ui/save-button";
 
 type Props = {
   farmId: string;
@@ -24,10 +29,12 @@ export default function AddEggForm({
   const [loading, setLoading] =
     useState(false);
 
+  const [success, setSuccess] =
+    useState(false);
+
   async function handleSave() {
     try {
       if (!flockId) {
-        alert("Select a flock");
         return;
       }
 
@@ -49,16 +56,14 @@ export default function AddEggForm({
       setEggCount("");
       setCrackedEggs("");
 
-      alert(
-        "Egg production saved"
-      );
+      setSuccess(true);
+
+      setTimeout(() => {
+        setSuccess(false);
+      }, 2000);
 
     } catch (error) {
       console.error(error);
-
-      alert(
-        "Failed to save"
-      );
 
     } finally {
       setLoading(false);
@@ -66,13 +71,19 @@ export default function AddEggForm({
   }
 
   return (
-    <div className="bg-white rounded-xl p-6 shadow">
+    <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
 
-      <h2 className="font-bold text-lg mb-4">
+      <h2 className="text-2xl font-bold mb-6">
         Record Egg Production
       </h2>
 
-      <div className="space-y-3">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSave();
+        }}
+        className="space-y-4"
+      >
 
         <select
           value={flockId}
@@ -81,7 +92,8 @@ export default function AddEggForm({
               e.target.value
             )
           }
-          className="w-full border p-3 rounded"
+          className="w-full border rounded-xl p-4"
+          required
         >
           <option value="">
             Select Flock
@@ -108,7 +120,8 @@ export default function AddEggForm({
               e.target.value
             )
           }
-          className="w-full border p-3 rounded"
+          className="w-full border rounded-xl p-4"
+          required
         />
 
         <input
@@ -120,20 +133,16 @@ export default function AddEggForm({
               e.target.value
             )
           }
-          className="w-full border p-3 rounded"
+          className="w-full border rounded-xl p-4"
         />
 
-        <button
-          onClick={handleSave}
-          disabled={loading}
-          className="w-full bg-slate-900 text-white p-3 rounded"
-        >
-          {loading
-            ? "Saving..."
-            : "Save Production"}
-        </button>
+        <SaveButton
+          loading={loading}
+          success={success}
+          label="Save Production"
+        />
 
-      </div>
+      </form>
 
     </div>
   );

@@ -1,14 +1,21 @@
 "use client";
 
+import { useAuth } from "@/contexts/AuthContext";
+
 import { useDashboard } from "@/hooks/useDashboard";
 import { useHealth } from "@/hooks/useHealth";
 import { useFlocks } from "@/hooks/useFlocks";
+
+import AppShell from "@/components/layout/app-shell";
 
 import AddHealthForm from "@/components/health/add-health-form";
 import HealthList from "@/components/health/health-list";
 import HealthStats from "@/components/health/health-stats";
 
 export default function HealthPage() {
+  const { user } =
+    useAuth();
+
   const {
     data,
     loading,
@@ -38,25 +45,32 @@ export default function HealthPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <AppShell
+      email={user?.email}
+      farmName={
+        data?.farm?.name
+      }
+    >
+      <div className="p-6 space-y-6">
 
-      <h1 className="text-3xl font-bold">
-        Health & Treatments
-      </h1>
+        <h1 className="text-3xl font-bold">
+          Health & Treatments
+        </h1>
 
-      <HealthStats
-        records={records}
-      />
+        <HealthStats
+          records={records}
+        />
 
-      <HealthList
-        records={records}
-      />
+        <HealthList
+          records={records}
+        />
 
-      <AddHealthForm
-        farmId={farmId}
-        flocks={flocks}
-      />
+        <AddHealthForm
+          farmId={farmId}
+          flocks={flocks}
+        />
 
-    </div>
+      </div>
+    </AppShell>
   );
 }

@@ -4,6 +4,8 @@ import { useState } from "react";
 
 import { createSale } from "@/lib/sales";
 
+import SaveButton from "@/components/ui/save-button";
+
 type Props = {
   farmId: string;
 };
@@ -12,7 +14,7 @@ export default function AddSaleForm({
   farmId,
 }: Props) {
   const [itemType, setItemType] =
-    useState("Eggs");
+    useState("Egg Sales");
 
   const [quantity, setQuantity] =
     useState("");
@@ -24,6 +26,9 @@ export default function AddSaleForm({
     useState("");
 
   const [loading, setLoading] =
+    useState(false);
+
+  const [success, setSuccess] =
     useState(false);
 
   async function handleSave() {
@@ -54,14 +59,14 @@ export default function AddSaleForm({
       setUnitPrice("");
       setNotes("");
 
-      alert("Sale saved");
+      setSuccess(true);
+
+      setTimeout(() => {
+        setSuccess(false);
+      }, 2000);
 
     } catch (error) {
       console.error(error);
-
-      alert(
-        "Failed to save sale"
-      );
 
     } finally {
       setLoading(false);
@@ -69,13 +74,19 @@ export default function AddSaleForm({
   }
 
   return (
-    <div className="bg-white rounded-xl p-6 shadow">
+    <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
 
-      <h2 className="font-bold text-lg mb-4">
+      <h2 className="text-2xl font-bold mb-6">
         Record Sale
       </h2>
 
-      <div className="space-y-3">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSave();
+        }}
+        className="space-y-4"
+      >
 
         <select
           value={itemType}
@@ -84,12 +95,43 @@ export default function AddSaleForm({
               e.target.value
             )
           }
-          className="w-full border p-3 rounded"
+          className="w-full border rounded-xl p-4"
         >
-          <option>Eggs</option>
-          <option>Birds</option>
-          <option>Manure</option>
-          <option>Other</option>
+          <option>
+            Egg Sales
+          </option>
+
+          <option>
+            Live Bird Sales
+          </option>
+
+          <option>
+            Spent Layer Sales
+          </option>
+
+          <option>
+            Broiler Sales
+          </option>
+
+          <option>
+            Cockerel Sales
+          </option>
+
+          <option>
+            Manure Sales
+          </option>
+
+          <option>
+            Feed Sales
+          </option>
+
+          <option>
+            Equipment Sales
+          </option>
+
+          <option>
+            Other Income
+          </option>
         </select>
 
         <input
@@ -101,7 +143,8 @@ export default function AddSaleForm({
               e.target.value
             )
           }
-          className="w-full border p-3 rounded"
+          className="w-full border rounded-xl p-4"
+          required
         />
 
         <input
@@ -113,7 +156,8 @@ export default function AddSaleForm({
               e.target.value
             )
           }
-          className="w-full border p-3 rounded"
+          className="w-full border rounded-xl p-4"
+          required
         />
 
         <input
@@ -124,20 +168,17 @@ export default function AddSaleForm({
               e.target.value
             )
           }
-          className="w-full border p-3 rounded"
+          className="w-full border rounded-xl p-4"
         />
 
-        <button
-          onClick={handleSave}
-          disabled={loading}
-          className="w-full bg-slate-900 text-white p-3 rounded"
-        >
-          {loading
-            ? "Saving..."
-            : "Save Sale"}
-        </button>
+        <SaveButton
+          loading={loading}
+          success={success}
+          label="Save Sale"
+        />
 
-      </div>
+      </form>
+
     </div>
   );
 }

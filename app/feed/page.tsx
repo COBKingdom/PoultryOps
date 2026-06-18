@@ -5,16 +5,23 @@ import {
   useState,
 } from "react";
 
+import { useAuth } from "@/contexts/AuthContext";
+
 import { useDashboard } from "@/hooks/useDashboard";
 import { useFeed } from "@/hooks/useFeed";
 
 import { getFarmFlocks } from "@/lib/flocks";
+
+import AppShell from "@/components/layout/app-shell";
 
 import AddFeedForm from "@/components/feed/add-feed-form";
 import FeedList from "@/components/feed/feed-list";
 import FeedSummary from "@/components/feed/feed-summary";
 
 export default function FeedPage() {
+  const { user } =
+    useAuth();
+
   const {
     data,
     loading,
@@ -56,25 +63,32 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <AppShell
+      email={user?.email}
+      farmName={
+        data?.farm?.name
+      }
+    >
+      <div className="p-6 space-y-6">
 
-      <h1 className="text-3xl font-bold">
-        Feed Management
-      </h1>
+        <h1 className="text-3xl font-bold">
+          Feed Management
+        </h1>
 
-      <FeedSummary
-        records={records}
-      />
+        <FeedSummary
+          records={records}
+        />
 
-      <FeedList
-        records={records}
-      />
+        <FeedList
+          records={records}
+        />
 
-      <AddFeedForm
-        farmId={farmId}
-        flocks={flocks}
-      />
+        <AddFeedForm
+          farmId={farmId}
+          flocks={flocks}
+        />
 
-    </div>
+      </div>
+    </AppShell>
   );
 }

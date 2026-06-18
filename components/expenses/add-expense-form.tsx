@@ -6,6 +6,8 @@ import {
   createExpense,
 } from "@/lib/expenses";
 
+import SaveButton from "@/components/ui/save-button";
+
 type Props = {
   farmId: string;
 };
@@ -14,7 +16,7 @@ export default function AddExpenseForm({
   farmId,
 }: Props) {
   const [category, setCategory] =
-    useState("Feed");
+    useState("Feed Purchase");
 
   const [amount, setAmount] =
     useState("");
@@ -23,6 +25,9 @@ export default function AddExpenseForm({
     useState("");
 
   const [loading, setLoading] =
+    useState(false);
+
+  const [success, setSuccess] =
     useState(false);
 
   async function handleSave() {
@@ -44,16 +49,14 @@ export default function AddExpenseForm({
       setAmount("");
       setNotes("");
 
-      alert(
-        "Expense saved successfully"
-      );
+      setSuccess(true);
+
+      setTimeout(() => {
+        setSuccess(false);
+      }, 2000);
 
     } catch (error) {
       console.error(error);
-
-      alert(
-        "Failed to save expense"
-      );
 
     } finally {
       setLoading(false);
@@ -67,7 +70,13 @@ export default function AddExpenseForm({
         Record Expense
       </h2>
 
-      <div className="space-y-4">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSave();
+        }}
+        className="space-y-4"
+      >
 
         <select
           value={category}
@@ -78,15 +87,53 @@ export default function AddExpenseForm({
           }
           className="w-full border rounded-xl p-4"
         >
-          <option>Feed</option>
-          <option>Medication</option>
-          <option>Vaccination</option>
-          <option>Transport</option>
-          <option>Fuel</option>
-          <option>Utilities</option>
-          <option>Labour</option>
-          <option>Maintenance</option>
-          <option>Other</option>
+          <option>
+            Feed Purchase
+          </option>
+
+          <option>
+            Staff Salaries
+          </option>
+
+          <option>
+            Medication & Vaccines
+          </option>
+
+          <option>
+            Transportation
+          </option>
+
+          <option>
+            Fuel & Generator
+          </option>
+
+          <option>
+            Electricity
+          </option>
+
+          <option>
+            Water Supply
+          </option>
+
+          <option>
+            Maintenance & Repairs
+          </option>
+
+          <option>
+            Equipment Purchase
+          </option>
+
+          <option>
+            Marketing
+          </option>
+
+          <option>
+            Professional Services
+          </option>
+
+          <option>
+            Miscellaneous
+          </option>
         </select>
 
         <input
@@ -99,6 +146,7 @@ export default function AddExpenseForm({
             )
           }
           className="w-full border rounded-xl p-4"
+          required
         />
 
         <input
@@ -112,23 +160,13 @@ export default function AddExpenseForm({
           className="w-full border rounded-xl p-4"
         />
 
-        <button
-          onClick={handleSave}
-          disabled={loading}
-          className="
-            w-full
-            bg-slate-900
-            text-white
-            rounded-xl
-            p-4
-          "
-        >
-          {loading
-            ? "Saving..."
-            : "Save Expense"}
-        </button>
+        <SaveButton
+          loading={loading}
+          success={success}
+          label="Save Expense"
+        />
 
-      </div>
+      </form>
 
     </div>
   );

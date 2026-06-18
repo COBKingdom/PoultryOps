@@ -6,6 +6,8 @@ import {
   createMortality,
 } from "@/lib/mortality";
 
+import SaveButton from "@/components/ui/save-button";
+
 type Props = {
   farmId: string;
   flocks: any[];
@@ -27,13 +29,12 @@ export default function AddMortalityForm({
   const [loading, setLoading] =
     useState(false);
 
+  const [success, setSuccess] =
+    useState(false);
+
   async function handleSave() {
     try {
       if (!flockId) {
-        alert(
-          "Select a flock"
-        );
-
         return;
       }
 
@@ -53,16 +54,14 @@ export default function AddMortalityForm({
 
       setQuantity("");
 
-      alert(
-        "Mortality recorded successfully"
-      );
+      setSuccess(true);
+
+      setTimeout(() => {
+        setSuccess(false);
+      }, 2000);
 
     } catch (error) {
       console.error(error);
-
-      alert(
-        "Failed to save mortality"
-      );
 
     } finally {
       setLoading(false);
@@ -76,7 +75,13 @@ export default function AddMortalityForm({
         Record Mortality
       </h2>
 
-      <div className="space-y-4">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSave();
+        }}
+        className="space-y-4"
+      >
 
         <select
           value={flockId}
@@ -86,6 +91,7 @@ export default function AddMortalityForm({
             )
           }
           className="w-full border rounded-xl p-4"
+          required
         >
           <option value="">
             Select Flock
@@ -113,6 +119,7 @@ export default function AddMortalityForm({
             )
           }
           className="w-full border rounded-xl p-4"
+          required
         />
 
         <select
@@ -124,32 +131,50 @@ export default function AddMortalityForm({
           }
           className="w-full border rounded-xl p-4"
         >
-          <option>Disease</option>
-          <option>Heat Stress</option>
-          <option>Predator Attack</option>
-          <option>Injury</option>
-          <option>Culled</option>
-          <option>Unknown</option>
-          <option>Other</option>
+          <option>
+            Disease
+          </option>
+
+          <option>
+            Heat Stress
+          </option>
+
+          <option>
+            Predator Attack
+          </option>
+
+          <option>
+            Injury
+          </option>
+
+          <option>
+            Culled
+          </option>
+
+          <option>
+            Feed Poisoning
+          </option>
+
+          <option>
+            Water Contamination
+          </option>
+
+          <option>
+            Unknown
+          </option>
+
+          <option>
+            Other
+          </option>
         </select>
 
-        <button
-          onClick={handleSave}
-          disabled={loading}
-          className="
-            w-full
-            bg-slate-900
-            text-white
-            rounded-xl
-            p-4
-          "
-        >
-          {loading
-            ? "Saving..."
-            : "Save Mortality"}
-        </button>
+        <SaveButton
+          loading={loading}
+          success={success}
+          label="Save Mortality"
+        />
 
-      </div>
+      </form>
 
     </div>
   );
