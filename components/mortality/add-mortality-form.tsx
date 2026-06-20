@@ -11,11 +11,13 @@ import SaveButton from "@/components/ui/save-button";
 type Props = {
   farmId: string;
   flocks: any[];
+  onSaved?: () => Promise<void> | void;
 };
 
 export default function AddMortalityForm({
   farmId,
   flocks,
+  onSaved,
 }: Props) {
   const [flockId, setFlockId] =
     useState("");
@@ -25,6 +27,13 @@ export default function AddMortalityForm({
 
   const [reason, setReason] =
     useState("Disease");
+
+  const [recordDate, setRecordDate] =
+    useState(
+      new Date()
+        .toISOString()
+        .split("T")[0]
+    );
 
   const [loading, setLoading] =
     useState(false);
@@ -44,13 +53,12 @@ export default function AddMortalityForm({
         farm_id: farmId,
         flock_id: flockId,
         mortality_date:
-          new Date()
-            .toISOString()
-            .split("T")[0],
+          recordDate,
         quantity:
           Number(quantity),
         reason,
       });
+      await onSaved?.();
 
       setQuantity("");
 
@@ -82,6 +90,18 @@ export default function AddMortalityForm({
         }}
         className="space-y-4"
       >
+
+        <input
+          type="date"
+          value={recordDate}
+          onChange={(e) =>
+            setRecordDate(
+              e.target.value
+            )
+          }
+          className="w-full border rounded-xl p-4"
+          required
+        />
 
         <select
           value={flockId}

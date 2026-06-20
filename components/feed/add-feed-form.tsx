@@ -11,11 +11,13 @@ import SaveButton from "@/components/ui/save-button";
 type Props = {
   farmId: string;
   flocks: any[];
+  onSaved?: () => Promise<void> | void;
 };
 
 export default function AddFeedForm({
   farmId,
   flocks,
+   onSaved,
 }: Props) {
   const [flockId, setFlockId] =
     useState("");
@@ -25,6 +27,13 @@ export default function AddFeedForm({
 
   const [quantityKg, setQuantityKg] =
     useState("");
+
+  const [recordDate, setRecordDate] =
+    useState(
+      new Date()
+        .toISOString()
+        .split("T")[0]
+    );
 
   const [loading, setLoading] =
     useState(false);
@@ -44,9 +53,7 @@ export default function AddFeedForm({
         farm_id: farmId,
         flock_id: flockId,
         feed_date:
-          new Date()
-            .toISOString()
-            .split("T")[0],
+          recordDate,
         feed_type:
           feedType,
         quantity_kg:
@@ -54,6 +61,7 @@ export default function AddFeedForm({
             quantityKg
           ),
       });
+      await onSaved?.();
 
       setFeedType("");
       setQuantityKg("");
@@ -86,6 +94,18 @@ export default function AddFeedForm({
         }}
         className="space-y-4"
       >
+
+        <input
+          type="date"
+          value={recordDate}
+          onChange={(e) =>
+            setRecordDate(
+              e.target.value
+            )
+          }
+          className="w-full border rounded-xl p-4"
+          required
+        />
 
         <select
           value={flockId}

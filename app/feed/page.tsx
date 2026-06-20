@@ -35,6 +35,7 @@ export default function FeedPage() {
 
   const {
     records,
+    refresh,
   } = useFeed(
     farmId
   );
@@ -86,6 +87,7 @@ export default function FeedPage() {
         <AddFeedForm
           farmId={farmId}
           flocks={flocks}
+           onSaved={refresh}
         />
 
       </div>

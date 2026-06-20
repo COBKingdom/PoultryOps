@@ -24,6 +24,7 @@ export default function ExpensesPage() {
 
   const {
     records,
+    refresh,
   } = useExpenses(
     farm?.id
   );
@@ -117,6 +118,7 @@ export default function ExpensesPage() {
 
         <AddExpenseForm
           farmId={farm?.id}
+           onSaved={refresh}
         />
 
       </div>

@@ -30,11 +30,12 @@ export default function EggsPage() {
   const [flocks, setFlocks] =
     useState<any[]>([]);
 
-  const {
-    records,
-  } = useEggProduction(
-    farmId
-  );
+const {
+  records,
+  refresh,
+} = useEggProduction(
+  farmId
+);
 
   useEffect(() => {
     async function load() {
@@ -80,9 +81,10 @@ export default function EggsPage() {
           records={records}
         />
 
-        <AddEggForm
+         <AddEggForm
           farmId={farmId}
           flocks={flocks}
+          onSaved={refresh}
         />
 
       </div>

@@ -30,11 +30,12 @@ export default function HealthPage() {
     farmId
   );
 
-  const {
-    records,
-  } = useHealth(
-    farmId
-  );
+const {
+  records,
+  refresh,
+} = useHealth(
+  farmId
+);
 
   if (loading) {
     return (
@@ -65,10 +66,11 @@ export default function HealthPage() {
           records={records}
         />
 
-        <AddHealthForm
-          farmId={farmId}
-          flocks={flocks}
-        />
+<AddHealthForm
+  farmId={farmId}
+  flocks={flocks}
+  onSaved={refresh}
+/>
 
       </div>
     </AppShell>

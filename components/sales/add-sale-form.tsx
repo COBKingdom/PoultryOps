@@ -8,10 +8,12 @@ import SaveButton from "@/components/ui/save-button";
 
 type Props = {
   farmId: string;
+  onSaved?: () => Promise<void> | void;
 };
 
 export default function AddSaleForm({
   farmId,
+  onSaved,
 }: Props) {
   const [itemType, setItemType] =
     useState("Egg Sales");
@@ -24,6 +26,13 @@ export default function AddSaleForm({
 
   const [notes, setNotes] =
     useState("");
+
+  const [recordDate, setRecordDate] =
+    useState(
+      new Date()
+        .toISOString()
+        .split("T")[0]
+    );
 
   const [loading, setLoading] =
     useState(false);
@@ -42,9 +51,7 @@ export default function AddSaleForm({
       await createSale({
         farm_id: farmId,
         sale_date:
-          new Date()
-            .toISOString()
-            .split("T")[0],
+          recordDate,
         item_type: itemType,
         quantity:
           Number(quantity),
@@ -54,6 +61,7 @@ export default function AddSaleForm({
           totalAmount,
         notes,
       });
+      await onSaved?.();
 
       setQuantity("");
       setUnitPrice("");
@@ -87,6 +95,18 @@ export default function AddSaleForm({
         }}
         className="space-y-4"
       >
+
+        <input
+          type="date"
+          value={recordDate}
+          onChange={(e) =>
+            setRecordDate(
+              e.target.value
+            )
+          }
+          className="w-full border rounded-xl p-4"
+          required
+        />
 
         <select
           value={itemType}

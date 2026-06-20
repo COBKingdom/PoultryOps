@@ -10,19 +10,29 @@ import SaveButton from "@/components/ui/save-button";
 
 type Props = {
   farmId: string;
+  onSaved?: () => Promise<void> | void;
+  
 };
 
 export default function AddExpenseForm({
   farmId,
+  onSaved,
 }: Props) {
   const [category, setCategory] =
-    useState("Feed Purchase");
+    useState("Staff Salaries");
 
   const [amount, setAmount] =
     useState("");
 
   const [notes, setNotes] =
     useState("");
+
+  const [recordDate, setRecordDate] =
+    useState(
+      new Date()
+        .toISOString()
+        .split("T")[0]
+    );
 
   const [loading, setLoading] =
     useState(false);
@@ -37,14 +47,13 @@ export default function AddExpenseForm({
       await createExpense({
         farm_id: farmId,
         expense_date:
-          new Date()
-            .toISOString()
-            .split("T")[0],
+          recordDate,
         category,
         amount:
           Number(amount),
         notes,
       });
+      await onSaved?.();
 
       setAmount("");
       setNotes("");
@@ -78,6 +87,18 @@ export default function AddExpenseForm({
         className="space-y-4"
       >
 
+        <input
+          type="date"
+          value={recordDate}
+          onChange={(e) =>
+            setRecordDate(
+              e.target.value
+            )
+          }
+          className="w-full border rounded-xl p-4"
+          required
+        />
+
         <select
           value={category}
           onChange={(e) =>
@@ -88,15 +109,7 @@ export default function AddExpenseForm({
           className="w-full border rounded-xl p-4"
         >
           <option>
-            Feed Purchase
-          </option>
-
-          <option>
             Staff Salaries
-          </option>
-
-          <option>
-            Medication & Vaccines
           </option>
 
           <option>

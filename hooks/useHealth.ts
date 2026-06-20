@@ -18,25 +18,26 @@ export function useHealth(
   const [loading, setLoading] =
     useState(true);
 
+  async function refresh() {
+    if (!farmId) return;
+
+    const result =
+      await getHealthRecords(
+        farmId
+      );
+
+    setRecords(result);
+
+    setLoading(false);
+  }
+
   useEffect(() => {
-    async function load() {
-      if (!farmId) return;
-
-      const result =
-        await getHealthRecords(
-          farmId
-        );
-
-      setRecords(result);
-
-      setLoading(false);
-    }
-
-    load();
+    refresh();
   }, [farmId]);
 
   return {
     records,
     loading,
+    refresh,
   };
 }

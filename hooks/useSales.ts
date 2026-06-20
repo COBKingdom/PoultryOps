@@ -18,31 +18,26 @@ export function useSales(
   const [loading, setLoading] =
     useState(true);
 
+  async function refresh() {
+    if (!farmId) return;
+
+    const result =
+      await getSales(
+        farmId
+      );
+
+    setRecords(result);
+
+    setLoading(false);
+  }
+
   useEffect(() => {
-    async function load() {
-      try {
-        if (!farmId) return;
-
-        const result =
-          await getSales(
-            farmId
-          );
-
-        setRecords(result);
-
-      } catch (error) {
-        console.error(error);
-
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    load();
+    refresh();
   }, [farmId]);
 
   return {
     records,
     loading,
+    refresh,
   };
 }

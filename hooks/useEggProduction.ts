@@ -1,8 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
 
-import { getEggProduction } from "@/lib/eggs";
+import {
+  getEggProduction,
+} from "@/lib/eggs";
 
 export function useEggProduction(
   farmId?: string
@@ -13,25 +18,26 @@ export function useEggProduction(
   const [loading, setLoading] =
     useState(true);
 
+  async function refresh() {
+    if (!farmId) return;
+
+    const result =
+      await getEggProduction(
+        farmId
+      );
+
+    setRecords(result);
+
+    setLoading(false);
+  }
+
   useEffect(() => {
-    async function load() {
-      if (!farmId) return;
-
-      const result =
-        await getEggProduction(
-          farmId
-        );
-
-      setRecords(result);
-
-      setLoading(false);
-    }
-
-    load();
+    refresh();
   }, [farmId]);
 
   return {
     records,
     loading,
+    refresh,
   };
 }

@@ -11,11 +11,13 @@ import SaveButton from "@/components/ui/save-button";
 type Props = {
   farmId: string;
   flocks: any[];
+  onSaved?: () => void;
 };
 
 export default function AddEggForm({
   farmId,
   flocks,
+  onSaved,
 }: Props) {
   const [flockId, setFlockId] =
     useState("");
@@ -25,6 +27,13 @@ export default function AddEggForm({
 
   const [crackedEggs, setCrackedEggs] =
     useState("");
+
+  const [recordDate, setRecordDate] =
+    useState(
+      new Date()
+        .toISOString()
+        .split("T")[0]
+    );
 
   const [loading, setLoading] =
     useState(false);
@@ -44,14 +53,14 @@ export default function AddEggForm({
         farm_id: farmId,
         flock_id: flockId,
         production_date:
-          new Date()
-            .toISOString()
-            .split("T")[0],
+          recordDate,
         egg_count:
           Number(eggCount),
         cracked_eggs:
           Number(crackedEggs || 0),
       });
+
+      await onSaved?.();
 
       setEggCount("");
       setCrackedEggs("");
@@ -84,6 +93,18 @@ export default function AddEggForm({
         }}
         className="space-y-4"
       >
+
+        <input
+          type="date"
+          value={recordDate}
+          onChange={(e) =>
+            setRecordDate(
+              e.target.value
+            )
+          }
+          className="w-full border rounded-xl p-4"
+          required
+        />
 
         <select
           value={flockId}

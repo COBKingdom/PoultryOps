@@ -25,6 +25,7 @@ export default function SalesPage() {
 
   const {
     records,
+    refresh,
   } = useSales(
     farm?.id
   );
@@ -58,6 +59,7 @@ export default function SalesPage() {
 
         <AddSaleForm
           farmId={farm?.id}
+           onSaved={refresh}
         />
 
       </div>

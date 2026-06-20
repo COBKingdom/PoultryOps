@@ -11,11 +11,13 @@ import SaveButton from "@/components/ui/save-button";
 type Props = {
   farmId: string;
   flocks: any[];
+  onSaved?: () => Promise<void> | void;
 };
 
 export default function AddHealthForm({
   farmId,
   flocks,
+  onSaved,
 }: Props) {
   const [flockId, setFlockId] =
     useState("");
@@ -32,6 +34,13 @@ export default function AddHealthForm({
   const [notes, setNotes] =
     useState("");
 
+  const [recordDate, setRecordDate] =
+    useState(
+      new Date()
+        .toISOString()
+        .split("T")[0]
+    );
+
   const [loading, setLoading] =
     useState(false);
 
@@ -40,19 +49,14 @@ export default function AddHealthForm({
 
   async function handleSave() {
     try {
-      if (!flockId) {
-        return;
-      }
+      if (!flockId) return;
 
       setLoading(true);
 
       await createHealthRecord({
         farm_id: farmId,
         flock_id: flockId,
-        health_date:
-          new Date()
-            .toISOString()
-            .split("T")[0],
+        health_date: recordDate,
         treatment_name:
           treatmentName,
         category,
@@ -60,6 +64,8 @@ export default function AddHealthForm({
           Number(cost || 0),
         notes,
       });
+
+      await onSaved?.();
 
       setTreatmentName("");
       setCost("");
@@ -82,9 +88,13 @@ export default function AddHealthForm({
   return (
     <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
 
-      <h2 className="text-2xl font-bold mb-6">
+      <h2 className="text-2xl font-bold mb-2">
         Record Health Activity
       </h2>
+
+      <p className="text-sm text-slate-500 mb-4">
+        Medication and treatment costs should be recorded here rather than under Expenses.
+      </p>
 
       <form
         onSubmit={(e) => {
@@ -93,6 +103,18 @@ export default function AddHealthForm({
         }}
         className="space-y-4"
       >
+
+        <input
+          type="date"
+          value={recordDate}
+          onChange={(e) =>
+            setRecordDate(
+              e.target.value
+            )
+          }
+          className="w-full border rounded-xl p-4"
+          required
+        />
 
         <select
           value={flockId}
@@ -141,41 +163,15 @@ export default function AddHealthForm({
           }
           className="w-full border rounded-xl p-4"
         >
-          <option>
-            Vaccine
-          </option>
-
-          <option>
-            Antibiotic
-          </option>
-
-          <option>
-            Vitamin
-          </option>
-
-          <option>
-            Supplement
-          </option>
-
-          <option>
-            Treatment
-          </option>
-
-          <option>
-            Deworming
-          </option>
-
-          <option>
-            Biosecurity
-          </option>
-
-          <option>
-            Disinfectant
-          </option>
-
-          <option>
-            Health Inspection
-          </option>
+          <option>Vaccine</option>
+          <option>Antibiotic</option>
+          <option>Vitamin</option>
+          <option>Supplement</option>
+          <option>Treatment</option>
+          <option>Deworming</option>
+          <option>Biosecurity</option>
+          <option>Disinfectant</option>
+          <option>Health Inspection</option>
         </select>
 
         <input

@@ -34,6 +34,7 @@ export default function MortalityPage() {
 
   const {
     records,
+    refresh,
   } = useMortality(
     farmId
   );
@@ -163,6 +164,7 @@ export default function MortalityPage() {
         <AddMortalityForm
           farmId={farmId}
           flocks={flocks}
+          onSaved={refresh}
         />
 
       </div>
