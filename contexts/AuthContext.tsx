@@ -10,7 +10,6 @@ import {
 import type { User } from "@supabase/supabase-js";
 
 import { supabase } from "@/lib/supabase";
-import { useAuth } from "@/contexts/AuthContext";
 
 type AuthContextType = {
   user: User | null;
