@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
-
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 
 import {
@@ -29,6 +29,10 @@ export default function Sidebar() {
 
   const router =
     useRouter();
+    const { profile } = useAuth();
+
+const isOwner =
+  profile?.role === "owner";
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -124,12 +128,14 @@ export default function Sidebar() {
 
       <nav className="flex-1 overflow-y-auto p-4 space-y-6">
 
-        <MenuItem
-          pathname={pathname}
-          name="Dashboard"
-          href="/dashboard"
-          icon={LayoutDashboard}
-        />
+         {isOwner && (
+       <MenuItem
+         pathname={pathname}
+         name="Dashboard"
+         href="/dashboard"
+         icon={LayoutDashboard}
+         />
+       )}
 
         <MenuSection
           title="OPERATIONS"
@@ -143,18 +149,22 @@ export default function Sidebar() {
           pathname={pathname}
         />
 
-        <MenuSection
-          title="INSIGHTS"
-          items={insights}
-          pathname={pathname}
-        />
+      {isOwner && (
+      <MenuSection
+      title="INSIGHTS"
+      items={insights}
+      pathname={pathname}
+     />
+     )}
 
-        <MenuItem
-          pathname={pathname}
-          name="Settings"
-          href="/settings"
-          icon={Settings}
-        />
+{isOwner && (
+  <MenuItem
+    pathname={pathname}
+    name="Settings"
+    href="/settings"
+    icon={Settings}
+  />
+)}
 
       </nav>
 
@@ -183,7 +193,8 @@ export default function Sidebar() {
 
         </Link>
 
-        <Link
+        {isOwner && (
+         <Link
           href="/settings"
           className="
             flex
@@ -205,7 +216,7 @@ export default function Sidebar() {
           </span>
 
         </Link>
-
+       )}
         <button
           onClick={handleSignOut}
           className="

@@ -10,14 +10,17 @@ import {
 import type { User } from "@supabase/supabase-js";
 
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
 type AuthContextType = {
   user: User | null;
+  profile: any | null;
   loading: boolean;
 };
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
+  profile: null,
   loading: true,
 });
 
@@ -29,59 +32,79 @@ export function AuthProvider({
   const [user, setUser] =
     useState<User | null>(null);
 
+  const [profile, setProfile] =
+    useState<any>(null);
+
   const [loading, setLoading] =
     useState(true);
 
-useEffect(() => {
-  async function loadUser() {
-    try {
-      const {
-        data: { user },
-        error,
-      } = await supabase.auth.getUser();
+  useEffect(() => {
+    async function loadUser() {
+      try {
+        const {
+          data: { user },
+        } =
+          await supabase.auth.getUser();
 
-      console.log("AUTH USER:", user);
-      console.log("AUTH ERROR:", error);
+        setUser(user ?? null);
 
-      setUser(user ?? null);
+        if (user) {
+          const { data: profile } =
+            await supabase
+              .from("profiles")
+              .select("*")
+              .eq("id", user.id)
+              .single();
 
-    } catch (err) {
-      console.error(
-        "AuthContext loadUser error:",
-        err
-      );
-
-    } finally {
-      setLoading(false);
+          setProfile(profile);
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
     }
-  }
 
-  loadUser();
+    loadUser();
 
-  const {
-    data: { subscription },
-  } = supabase.auth.onAuthStateChange(
-    (_event, session) => {
-      console.log(
-        "AUTH STATE:",
-        session?.user?.email
+    const {
+      data: { subscription },
+    } =
+      supabase.auth.onAuthStateChange(
+        async (_event, session) => {
+          const authUser =
+            session?.user ?? null;
+
+          setUser(authUser);
+
+          if (authUser) {
+            const {
+              data: profile,
+            } = await supabase
+              .from("profiles")
+              .select("*")
+              .eq(
+                "id",
+                authUser.id
+              )
+              .single();
+
+            setProfile(profile);
+          } else {
+            setProfile(null);
+          }
+        }
       );
 
-      setUser(
-        session?.user ?? null
-      );
-    }
-  );
-
-  return () => {
-    subscription.unsubscribe();
-  };
-}, []);
+    return () =>
+      subscription.unsubscribe();
+  }, []);
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        profile,
         loading,
       }}
     >

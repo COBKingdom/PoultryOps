@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 
 import {
   X,
@@ -30,6 +31,11 @@ export default function MobileSidebar({
 }: Props) {
   const pathname =
     usePathname();
+    const { profile } =
+  useAuth();
+
+const isOwner =
+  profile?.role === "owner";
 
   if (!open) return null;
 
@@ -163,13 +169,15 @@ export default function MobileSidebar({
 
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
 
-          <MenuItem
-            pathname={pathname}
-            href="/dashboard"
-            name="Dashboard"
-            icon={LayoutDashboard}
-            onClose={onClose}
-          />
+{isOwner && (
+  <MenuItem
+    pathname={pathname}
+    href="/dashboard"
+    name="Dashboard"
+    icon={LayoutDashboard}
+    onClose={onClose}
+  />
+)}
 
           <MenuSection
             title="OPERATIONS"
@@ -185,20 +193,24 @@ export default function MobileSidebar({
             onClose={onClose}
           />
 
-          <MenuSection
-            title="INSIGHTS"
-            items={insights}
-            pathname={pathname}
-            onClose={onClose}
-          />
+{isOwner && (
+  <MenuSection
+    title="INSIGHTS"
+    items={insights}
+    pathname={pathname}
+    onClose={onClose}
+  />
+)}
 
-          <MenuItem
-            pathname={pathname}
-            href="/settings"
-            name="Settings"
-            icon={Settings}
-            onClose={onClose}
-          />
+          {isOwner && (
+  <MenuItem
+    pathname={pathname}
+    href="/settings"
+    name="Settings"
+    icon={Settings}
+    onClose={onClose}
+  />
+)}
 
         </div>
 
