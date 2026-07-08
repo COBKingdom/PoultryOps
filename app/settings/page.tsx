@@ -40,7 +40,7 @@ export default function SettingsPage() {
             Settings
           </h1>
 
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
 
             {/* Subscription */}
 
@@ -57,22 +57,26 @@ export default function SettingsPage() {
                     Current Plan
                   </p>
 
-<p className="text-xl font-bold">
-  {plan === "trial"
-    ? "14-Day Trial"
-    : plan.charAt(0).toUpperCase() + plan.slice(1)}
-</p>
+                  <p className="text-xl font-bold">
+                    {plan === "trial"
+                      ? "14-Day Trial"
+                      : plan.charAt(0).toUpperCase() +
+                        plan.slice(1)}
+                  </p>
                 </div>
 
-<div>
-  <p className="text-sm text-slate-500">
-    User Limit
-  </p>
+                <div>
+                  <p className="text-sm text-slate-500">
+                    User Limit
+                  </p>
 
-  <p className="font-medium">
-    {userLimit} {userLimit === 1 ? "User" : "Users"}
-  </p>
-</div>
+                  <p className="font-medium">
+                    {userLimit}{" "}
+                    {userLimit === 1
+                      ? "User"
+                      : "Users"}
+                  </p>
+                </div>
 
               </div>
 
@@ -85,7 +89,7 @@ export default function SettingsPage() {
 
             </div>
 
-            {/* User Management */}
+            {/* Users */}
 
             <div className="bg-white rounded-3xl p-6 border shadow-sm">
 
@@ -99,14 +103,14 @@ export default function SettingsPage() {
 
               <Link
                 href="/settings/users"
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-xl"
+                className="inline-flex px-4 py-2 bg-blue-600 text-white rounded-xl"
               >
                 Open User Management
               </Link>
 
             </div>
 
-            {/* Farm Settings */}
+            {/* Farm */}
 
             <div className="bg-white rounded-3xl p-6 border shadow-sm">
 
@@ -120,9 +124,30 @@ export default function SettingsPage() {
 
               <Link
                 href="/settings/farm"
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-xl"
+                className="inline-flex px-4 py-2 bg-blue-600 text-white rounded-xl"
               >
                 Open Farm Settings
+              </Link>
+
+            </div>
+
+            {/* Migration */}
+
+            <div className="bg-white rounded-3xl p-6 border shadow-sm">
+
+              <h2 className="text-2xl font-semibold mb-4">
+                Data Migration
+              </h2>
+
+              <p className="text-gray-600 mb-4">
+                Import historical records from Excel spreadsheets.
+              </p>
+
+              <Link
+                href="/settings/migration"
+                className="inline-flex px-4 py-2 bg-green-600 text-white rounded-xl"
+              >
+                Open Migration
               </Link>
 
             </div>
