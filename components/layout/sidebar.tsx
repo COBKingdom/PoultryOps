@@ -87,26 +87,26 @@ const isOwner =
     },
   ];
 
-  const insights = [
-    {
-      name: "Reports",
-      href: "/reports",
-      icon: FileBarChart,
-    },
+const insights = [
+  {
+    name: "Reports",
+    href: "/reports",
+    icon: FileBarChart,
+  },
+  {
+    name: "Analytics",
+    href: "/analytics",
+    icon: BarChart3,
+  },
+];
 
-    const tools = [
+const tools = [
   {
     name: "Migration",
     href: "/migration",
     icon: Upload,
   },
 ];
-    {
-      name: "Analytics",
-      href: "/analytics",
-      icon: BarChart3,
-    },
-  ];
 
   return (
     <aside className="w-72 bg-slate-950 text-white min-h-screen flex flex-col border-r border-slate-800">
