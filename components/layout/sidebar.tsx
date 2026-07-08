@@ -21,6 +21,7 @@ import {
   Settings,
   User,
   LogOut,
+  Upload,
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -92,6 +93,14 @@ const isOwner =
       href: "/reports",
       icon: FileBarChart,
     },
+
+    const tools = [
+  {
+    name: "Migration",
+    href: "/migration",
+    icon: Upload,
+  },
+];
     {
       name: "Analytics",
       href: "/analytics",
@@ -157,6 +166,13 @@ const isOwner =
      />
      )}
 
+     {isOwner && (
+      <MenuSection
+      title="TOOLS"
+      items={tools}
+      pathname={pathname}
+     />
+     )}
 {isOwner && (
   <MenuItem
     pathname={pathname}

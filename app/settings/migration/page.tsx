@@ -15,6 +15,13 @@ type Flock = {
   bird_type: string;
 };
 
+type SuccessData = {
+  workbook: string;
+  flock: string;
+  message: string;
+  importedAt: string;
+};
+
 export default function MigrationPage() {
   const { user } = useAuth();
 
@@ -39,22 +46,24 @@ export default function MigrationPage() {
   const [importing, setImporting] =
     useState(false);
 
+  const [error, setError] =
+    useState("");
+
+  const [success, setSuccess] =
+    useState<SuccessData | null>(null);
+
   useEffect(() => {
     loadFlocks();
   }, []);
 
   async function loadFlocks() {
-    const {
-      data,
-      error,
-    } = await supabase
-      .from("flocks")
-      .select(
-        "id, flock_name, bird_type"
-      )
-      .order(
-        "flock_name"
-      );
+    const { data, error } =
+      await supabase
+        .from("flocks")
+        .select(
+          "id, flock_name, bird_type"
+        )
+        .order("flock_name");
 
     if (!error && data) {
       setFlocks(data);
@@ -68,6 +77,9 @@ export default function MigrationPage() {
       event.target.files?.[0];
 
     if (!uploadedFile) return;
+
+    setError("");
+    setSuccess(null);
 
     setFile(uploadedFile);
 
@@ -134,16 +146,19 @@ export default function MigrationPage() {
 
   const handleImport =
     async () => {
+      setError("");
+      setSuccess(null);
+
       if (!file) {
-        alert(
-          "Please select a file"
+        setError(
+          "Please select a workbook."
         );
         return;
       }
 
       if (!selectedSheet) {
-        alert(
-          "Please select a sheet"
+        setError(
+          "Please select a worksheet."
         );
         return;
       }
@@ -153,8 +168,8 @@ export default function MigrationPage() {
           "receipts record" &&
         !selectedFlock
       ) {
-        alert(
-          "Please select a flock"
+        setError(
+          "Please select a flock."
         );
         return;
       }
@@ -206,13 +221,28 @@ export default function MigrationPage() {
         if (
           result.success
         ) {
-          alert(
-            `Import completed successfully.\n\n${result.message}`
-          );
+          const flock =
+            flocks.find(
+              (f) =>
+                f.id ===
+                selectedFlock
+            );
+
+          setSuccess({
+            workbook:
+              selectedSheet,
+            flock:
+              flock?.flock_name ||
+              "N/A",
+            message:
+              result.message,
+            importedAt:
+              new Date().toLocaleString(),
+          });
         } else {
-          alert(
+          setError(
             result.error ||
-              "Import failed"
+              "Import failed."
           );
         }
       } catch (error) {
@@ -220,8 +250,8 @@ export default function MigrationPage() {
           error
         );
 
-        alert(
-          "Import failed"
+        setError(
+          "Import failed."
         );
       } finally {
         setImporting(false);
@@ -262,7 +292,6 @@ export default function MigrationPage() {
           </div>
 
           {sheets.length > 0 && (
-
             <div className="bg-white border rounded-3xl p-6">
 
               <h2 className="text-xl font-semibold mb-4">
@@ -299,13 +328,11 @@ export default function MigrationPage() {
               </select>
 
             </div>
-
           )}
 
           {selectedSheet &&
             selectedSheet !==
               "receipts record" && (
-
               <div className="bg-white border rounded-3xl p-6">
 
                 <h2 className="text-xl font-semibold mb-4">
@@ -355,12 +382,106 @@ export default function MigrationPage() {
                 </select>
 
               </div>
-
             )}
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-3xl p-6">
+
+              <h3 className="font-semibold text-red-700">
+                Migration Error
+              </h3>
+
+              <p className="text-red-600 mt-2">
+                {error}
+              </p>
+
+            </div>
+          )}
+
+          {success && (
+            <div className="bg-green-50 border border-green-200 rounded-3xl p-6">
+
+              <div className="flex items-center gap-3 mb-4">
+
+                <div className="w-12 h-12 rounded-full bg-green-600 flex items-center justify-center text-white text-xl">
+                  ✓
+                </div>
+
+                <div>
+
+                  <h2 className="text-2xl font-bold text-green-700">
+                    Migration Completed Successfully
+                  </h2>
+
+                  <p className="text-green-600">
+                    Historical records imported into PoultryOps.
+                  </p>
+
+                </div>
+
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+
+                <div>
+                  <p className="text-sm text-gray-500">
+                    Workbook
+                  </p>
+
+                  <p className="font-semibold">
+                    {success.workbook}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-gray-500">
+                    Flock
+                  </p>
+
+                  <p className="font-semibold">
+                    {success.flock}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-gray-500">
+                    Imported At
+                  </p>
+
+                  <p className="font-semibold">
+                    {success.importedAt}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-gray-500">
+                    Status
+                  </p>
+
+                  <p className="font-semibold text-green-700">
+                    Completed
+                  </p>
+                </div>
+
+              </div>
+
+              <div className="mt-6 p-4 bg-white rounded-xl border">
+
+                <p className="font-medium">
+                  Import Summary
+                </p>
+
+                <p className="text-gray-600 mt-2">
+                  {success.message}
+                </p>
+
+              </div>
+
+            </div>
+          )}
 
           {previewData.length >
             0 && (
-
             <div className="bg-white border rounded-3xl p-6">
 
               <h2 className="text-xl font-semibold mb-4">
@@ -378,12 +499,10 @@ export default function MigrationPage() {
               </div>
 
             </div>
-
           )}
 
           {previewData.length >
             0 && (
-
             <button
               onClick={
                 handleImport
@@ -391,13 +510,12 @@ export default function MigrationPage() {
               disabled={
                 importing
               }
-              className="bg-green-600 text-white px-6 py-3 rounded-xl"
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl disabled:opacity-50"
             >
               {importing
                 ? "Importing..."
                 : "Start Import"}
             </button>
-
           )}
 
         </div>
