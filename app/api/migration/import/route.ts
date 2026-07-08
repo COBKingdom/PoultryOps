@@ -4,6 +4,54 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 function parseDate(value: any) {
   if (!value) return null;
 
+  // Excel serial date
+
+  if (typeof value === "number") {
+    const excelEpoch =
+      new Date(
+        Date.UTC(
+          1899,
+          11,
+          30
+        )
+      );
+
+    excelEpoch.setDate(
+      excelEpoch.getDate() +
+        value
+    );
+
+    return excelEpoch
+      .toISOString()
+      .split("T")[0];
+  }
+
+  // DD/MM/YYYY
+
+  if (
+    typeof value ===
+    "string"
+  ) {
+    const parts =
+      value.split("/");
+
+    if (
+      parts.length === 3
+    ) {
+      return `${parts[2]}-${parts[1].padStart(
+        2,
+        "0"
+      )}-${parts[0].padStart(
+        2,
+        "0"
+      )}`;
+    }
+  }
+
+  return null;
+} {
+  if (!value) return null;
+
   try {
     if (typeof value === "string") {
       const parts = value.split("/");
