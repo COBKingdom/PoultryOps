@@ -19,22 +19,8 @@ export default function SubscriptionPage() {
     billingCycle: "monthly" | "annual"
   ) => {
     try {
-      console.log("Button clicked");
-
-      console.log(
-        "Flutterwave object:",
-        window.FlutterwaveCheckout
-      );
-
-      console.log(
-        "Public key:",
-        process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY
-      );
-
       if (!window.FlutterwaveCheckout) {
-        alert(
-          "Flutterwave script not loaded. Check app/layout.tsx"
-        );
+        alert("Payment system is still loading. Please try again.");
         return;
       }
 
@@ -52,8 +38,7 @@ export default function SubscriptionPage() {
 
       window.FlutterwaveCheckout({
         public_key:
-          process.env
-            .NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY,
+          process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY,
 
         tx_ref: `POULTRYOPS-${Date.now()}`,
 
@@ -76,8 +61,8 @@ export default function SubscriptionPage() {
 
         customizations: {
           title: "PoultryOps Subscription",
-          description:
-            `${selectedPlan.name} Plan`,
+          description: `${selectedPlan.name} Plan`,
+          logo: "",
         },
 
         meta: {
@@ -86,27 +71,24 @@ export default function SubscriptionPage() {
           billing_cycle: billingCycle,
         },
 
-        callback: async (
-          response: any
-        ) => {
-          setLoading(true);
-
+        callback: async (response: any) => {
           try {
-            const verify =
-              await fetch(
-                "/api/payments/verify",
-                {
-                  method: "POST",
-                  headers: {
-                    "Content-Type":
-                      "application/json",
-                  },
-                  body: JSON.stringify({
-                    transaction_id:
-                      response.transaction_id,
-                  }),
-                }
-              );
+            setLoading(true);
+
+            const verify = await fetch(
+              "/api/payments/verify",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type":
+                    "application/json",
+                },
+                body: JSON.stringify({
+                  transaction_id:
+                    response.transaction_id,
+                }),
+              }
+            );
 
             const result =
               await verify.json();
@@ -122,130 +104,238 @@ export default function SubscriptionPage() {
                 "Payment verification failed"
               );
             }
-          } catch (err) {
-            console.error(err);
+          } catch (error) {
+            console.error(error);
             alert(
-              "Verification error"
+              "Verification failed"
             );
+          } finally {
+            setLoading(false);
           }
-
-          setLoading(false);
         },
 
-        onclose: () => {
-          console.log(
-            "Flutterwave popup closed"
-          );
-        },
+        onclose: () => {},
       });
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      console.error(error);
       alert(
-        "Check browser console for error"
+        "Unable to launch payment window"
       );
     }
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-8">
-        Subscription Plans
-      </h1>
+    <div className="max-w-7xl mx-auto p-6">
 
-      <div className="grid md:grid-cols-3 gap-6">
-        <div className="border rounded-lg p-6">
-          <h2 className="text-xl font-bold">
-            Solo
-          </h2>
+      {/* Header */}
 
-          <p className="mt-2">
-            ₦10,000/month
-          </p>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold">
+          Subscription Management
+        </h1>
 
-          <p>
-            ₦108,000/year
-          </p>
+        <p className="text-gray-500 mt-2">
+          Manage your PoultryOps subscription,
+          renew your plan and unlock additional users.
+        </p>
+      </div>
 
-          <p className="mt-2">
-            1 User
-          </p>
+      {/* Current Plan */}
 
-          <button
-            onClick={() =>
-              payNow(
-                "solo",
-                "monthly"
-              )
-            }
-            className="w-full bg-blue-600 text-white p-3 rounded mt-6"
-          >
-            Choose Solo
-          </button>
-        </div>
+      <div className="bg-white border rounded-xl p-6 mb-8">
+        <h2 className="text-lg font-semibold mb-4">
+          Current Subscription
+        </h2>
 
-        <div className="border rounded-lg p-6">
-          <h2 className="text-xl font-bold">
-            Team
-          </h2>
+        <div className="grid md:grid-cols-4 gap-4">
 
-          <p className="mt-2">
-            ₦15,000/month
-          </p>
+          <div>
+            <p className="text-sm text-gray-500">
+              Current Plan
+            </p>
+            <p className="font-semibold">
+              {profile?.role === "owner"
+                ? "Trial"
+                : "Active"}
+            </p>
+          </div>
 
-          <p>
-            ₦162,000/year
-          </p>
+          <div>
+            <p className="text-sm text-gray-500">
+              Status
+            </p>
+            <p className="font-semibold text-green-600">
+              Active
+            </p>
+          </div>
 
-          <p className="mt-2">
-            3 Users
-          </p>
+          <div>
+            <p className="text-sm text-gray-500">
+              Billing
+            </p>
+            <p className="font-semibold">
+              Trial Period
+            </p>
+          </div>
 
-          <button
-            onClick={() =>
-              payNow(
-                "team",
-                "monthly"
-              )
-            }
-            className="w-full bg-blue-600 text-white p-3 rounded mt-6"
-          >
-            Choose Team
-          </button>
-        </div>
+          <div>
+            <p className="text-sm text-gray-500">
+              Users
+            </p>
+            <p className="font-semibold">
+              Based on selected plan
+            </p>
+          </div>
 
-        <div className="border rounded-lg p-6">
-          <h2 className="text-xl font-bold">
-            Business
-          </h2>
-
-          <p className="mt-2">
-            ₦20,000/month
-          </p>
-
-          <p>
-            ₦216,000/year
-          </p>
-
-          <p className="mt-2">
-            6 Users
-          </p>
-
-          <button
-            onClick={() =>
-              payNow(
-                "business",
-                "monthly"
-              )
-            }
-            className="w-full bg-blue-600 text-white p-3 rounded mt-6"
-          >
-            Choose Business
-          </button>
         </div>
       </div>
 
+      {/* Plans */}
+
+      <div className="grid md:grid-cols-3 gap-6">
+
+        {/* SOLO */}
+
+        <div className="bg-white border rounded-xl p-6">
+          <h2 className="text-2xl font-bold mb-4">
+            Solo
+          </h2>
+
+          <p className="text-gray-600 mb-4">
+            Perfect for small poultry farms.
+          </p>
+
+          <div className="mb-6">
+            <p className="font-medium">
+              1 User
+            </p>
+          </div>
+
+          <div className="space-y-3">
+
+            <button
+              onClick={() =>
+                payNow(
+                  "solo",
+                  "monthly"
+                )
+              }
+              className="w-full bg-blue-600 text-white py-3 rounded-lg"
+            >
+              ₦10,000 / Month
+            </button>
+
+            <button
+              onClick={() =>
+                payNow(
+                  "solo",
+                  "annual"
+                )
+              }
+              className="w-full border py-3 rounded-lg"
+            >
+              ₦108,000 / Year
+            </button>
+
+          </div>
+        </div>
+
+        {/* TEAM */}
+
+        <div className="bg-white border rounded-xl p-6">
+          <h2 className="text-2xl font-bold mb-4">
+            Team
+          </h2>
+
+          <p className="text-gray-600 mb-4">
+            Ideal for growing poultry businesses.
+          </p>
+
+          <div className="mb-6">
+            <p className="font-medium">
+              3 Users
+            </p>
+          </div>
+
+          <div className="space-y-3">
+
+            <button
+              onClick={() =>
+                payNow(
+                  "team",
+                  "monthly"
+                )
+              }
+              className="w-full bg-blue-600 text-white py-3 rounded-lg"
+            >
+              ₦15,000 / Month
+            </button>
+
+            <button
+              onClick={() =>
+                payNow(
+                  "team",
+                  "annual"
+                )
+              }
+              className="w-full border py-3 rounded-lg"
+            >
+              ₦162,000 / Year
+            </button>
+
+          </div>
+        </div>
+
+        {/* BUSINESS */}
+
+        <div className="bg-white border rounded-xl p-6">
+          <h2 className="text-2xl font-bold mb-4">
+            Business
+          </h2>
+
+          <p className="text-gray-600 mb-4">
+            For larger poultry operations.
+          </p>
+
+          <div className="mb-6">
+            <p className="font-medium">
+              6 Users
+            </p>
+          </div>
+
+          <div className="space-y-3">
+
+            <button
+              onClick={() =>
+                payNow(
+                  "business",
+                  "monthly"
+                )
+              }
+              className="w-full bg-blue-600 text-white py-3 rounded-lg"
+            >
+              ₦20,000 / Month
+            </button>
+
+            <button
+              onClick={() =>
+                payNow(
+                  "business",
+                  "annual"
+                )
+              }
+              className="w-full border py-3 rounded-lg"
+            >
+              ₦216,000 / Year
+            </button>
+
+          </div>
+        </div>
+
+      </div>
+
       {loading && (
-        <div className="mt-6">
+        <div className="mt-6 text-center">
           Verifying payment...
         </div>
       )}
