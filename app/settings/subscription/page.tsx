@@ -22,23 +22,26 @@ export default function SubscriptionPage() {
   const currentPlan =
     data?.subscription?.plan;
 
-  const plans = [
-    {
-      name: "Solo",
-      price: "₦10,000/month",
-      users: "1 User",
-    },
-    {
-      name: "Team",
-      price: "₦15,000/month",
-      users: "3 Users",
-    },
-    {
-      name: "Business",
-      price: "₦20,000/month",
-      users: "6 Users",
-    },
-  ];
+const plans = [
+  {
+    name: "Solo",
+    monthly: "₦10,000/month",
+    yearly: "₦108,000/year",
+    users: "1 User",
+  },
+  {
+    name: "Team",
+    monthly: "₦15,000/month",
+    yearly: "₦162,000/year",
+    users: "3 Users",
+  },
+  {
+    name: "Business",
+    monthly: "₦20,000/month",
+    yearly: "₦216,000/year",
+    users: "6 Users",
+  },
+];
 
   return (
     <OwnerOnly>
@@ -64,28 +67,66 @@ export default function SubscriptionPage() {
                 </h2>
 
                 <p className="mt-2 text-lg">
-                  {plan.price}
+                  <div className="mt-2">
+  <p className="text-lg font-medium">
+    {plan.monthly}
+  </p>
+
+  <p className="text-sm text-slate-500">
+    {plan.yearly}
+  </p>
+</div>
                 </p>
 
                 <p className="mt-2 text-slate-500">
                   {plan.users}
                 </p>
 
-                {currentPlan?.toLowerCase() ===
-                plan.name.toLowerCase() ? (
-                  <button
-                    disabled
-                    className="mt-6 w-full bg-green-600 text-white rounded-xl py-3"
-                  >
-                    Current Plan
-                  </button>
-                ) : (
-                  <button
-                    className="mt-6 w-full bg-blue-600 text-white rounded-xl py-3"
-                  >
-                    Upgrade Plan
-                  </button>
-                )}
+{currentPlan === "trial" ? (
+  <button
+    className="
+      mt-6
+      w-full
+      bg-blue-600
+      text-white
+      rounded-xl
+      py-3
+      font-medium
+    "
+  >
+    Choose {plan.name}
+  </button>
+) : currentPlan?.toLowerCase() ===
+  plan.name.toLowerCase() ? (
+  <button
+    disabled
+    className="
+      mt-6
+      w-full
+      bg-green-600
+      text-white
+      rounded-xl
+      py-3
+      font-medium
+    "
+  >
+    Current Plan
+  </button>
+) : (
+  <button
+    className="
+      mt-6
+      w-full
+      bg-blue-600
+      text-white
+      rounded-xl
+      py-3
+      font-medium
+    "
+  >
+    Upgrade to {plan.name}
+  </button>
+)}
               </div>
             ))}
 

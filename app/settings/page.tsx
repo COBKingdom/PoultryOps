@@ -40,7 +40,9 @@ export default function SettingsPage() {
             Settings
           </h1>
 
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-3 gap-6">
+
+            {/* Subscription */}
 
             <div className="bg-white rounded-3xl p-6 border shadow-sm">
 
@@ -81,6 +83,8 @@ export default function SettingsPage() {
 
             </div>
 
+            {/* User Management */}
+
             <div className="bg-white rounded-3xl p-6 border shadow-sm">
 
               <h2 className="text-2xl font-semibold mb-4">
@@ -96,6 +100,27 @@ export default function SettingsPage() {
                 className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-xl"
               >
                 Open User Management
+              </Link>
+
+            </div>
+
+            {/* Farm Settings */}
+
+            <div className="bg-white rounded-3xl p-6 border shadow-sm">
+
+              <h2 className="text-2xl font-semibold mb-4">
+                Farm Settings
+              </h2>
+
+              <p className="text-gray-600 mb-4">
+                Manage farm information and currency.
+              </p>
+
+              <Link
+                href="/settings/farm"
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-xl"
+              >
+                Open Farm Settings
               </Link>
 
             </div>

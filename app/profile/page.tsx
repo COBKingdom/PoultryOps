@@ -226,7 +226,7 @@ export default function ProfilePage() {
               </a>
 
               <a
-                href="/settings"
+                href="/settings/farm"
                 className="block border rounded-xl p-3 hover:bg-slate-50"
               >
                 Farm Settings
