@@ -57,20 +57,22 @@ export default function SettingsPage() {
                     Current Plan
                   </p>
 
-                  <p className="text-xl font-bold capitalize">
-                    {plan}
-                  </p>
+<p className="text-xl font-bold">
+  {plan === "trial"
+    ? "14-Day Trial"
+    : plan.charAt(0).toUpperCase() + plan.slice(1)}
+</p>
                 </div>
 
-                <div>
-                  <p className="text-sm text-slate-500">
-                    User Limit
-                  </p>
+<div>
+  <p className="text-sm text-slate-500">
+    User Limit
+  </p>
 
-                  <p className="font-medium">
-                    {userLimit} Users
-                  </p>
-                </div>
+  <p className="font-medium">
+    {userLimit} {userLimit === 1 ? "User" : "Users"}
+  </p>
+</div>
 
               </div>
 
