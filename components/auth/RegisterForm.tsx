@@ -87,7 +87,7 @@ console.log("CURRENT SESSION:", session)
       const trialEnd = new Date()
 
       trialEnd.setDate(
-        trialEnd.getDate() + 30
+        trialEnd.getDate() + 14
       )
 
       const { error: subscriptionError } =
@@ -95,7 +95,7 @@ console.log("CURRENT SESSION:", session)
           .from("subscriptions")
           .insert({
             farm_id: farm.id,
-            plan: "starter",
+            plan: "trial",
             status: "trial",
             trial_start: trialStart,
             trial_end: trialEnd,

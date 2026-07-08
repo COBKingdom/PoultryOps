@@ -74,9 +74,9 @@ export async function createFarmAndTrial({
   const trialEnd =
     new Date();
 
-  trialEnd.setDate(
-    trialEnd.getDate() + 60
-  );
+trialEnd.setDate(
+  trialEnd.getDate() + 14
+);
 
   const {
     error: subscriptionError,
@@ -84,7 +84,7 @@ export async function createFarmAndTrial({
     .from("subscriptions")
     .insert({
       farm_id: farm.id,
-      plan: "starter",
+      plan: "trial",
       status: "trial",
       trial_start: trialStart,
       trial_end: trialEnd,

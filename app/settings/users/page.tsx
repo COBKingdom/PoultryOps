@@ -32,7 +32,10 @@ return (
           User Management
         </h1>
 
-        <UsersList users={users} />
+        <UsersList
+  users={users}
+  plan={data?.subscription?.plan}
+/>
 
         <CreateUserForm farmId={farmId} />
       </div>

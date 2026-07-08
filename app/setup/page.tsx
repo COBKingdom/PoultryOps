@@ -76,16 +76,16 @@ export default function SetupPage() {
 
       const trialEnd = new Date();
 
-      trialEnd.setDate(
-        trialEnd.getDate() + 30
-      );
+trialEnd.setDate(
+  trialEnd.getDate() + 14
+);
 
       const { error: subscriptionError } =
         await supabase
           .from("subscriptions")
           .insert({
             farm_id: farm.id,
-            plan: "starter",
+            plan: "trial",
             status: "trial",
             trial_start: trialStart,
             trial_end: trialEnd,
