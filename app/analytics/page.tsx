@@ -11,7 +11,7 @@ import AnalyticsKpis from "@/components/analytics/analytics-kpis";
 import RevenueChart from "@/components/analytics/revenue-chart";
 import ProductionChart from "@/components/analytics/production-chart";
 import FarmInsights from "@/components/analytics/farm-insights";
-
+import OwnerOnly from "@/components/auth/owner-only";
 export default function AnalyticsPage() {
   const { user } =
     useAuth();
@@ -38,6 +38,7 @@ export default function AnalyticsPage() {
   }
 
   return (
+  <OwnerOnly>
     <AppShell
       email={user?.email}
       farmName={farm?.name}
@@ -88,5 +89,6 @@ export default function AnalyticsPage() {
 
       </div>
     </AppShell>
-  );
+  </OwnerOnly>
+);
 }

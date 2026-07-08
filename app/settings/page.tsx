@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDashboard } from "@/hooks/useDashboard";
-
 import AppShell from "@/components/layout/app-shell";
+import OwnerOnly from "@/components/auth/owner-only";
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -15,7 +15,8 @@ export default function SettingsPage() {
     return <div>Loading...</div>;
   }
 
-  return (
+ return (
+  <OwnerOnly>
     <AppShell
       email={user?.email}
       farmName={data?.farm?.name}
@@ -45,5 +46,6 @@ export default function SettingsPage() {
 
       </div>
     </AppShell>
-  );
+  </OwnerOnly>
+);
 }

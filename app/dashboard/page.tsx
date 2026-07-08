@@ -11,6 +11,7 @@ import QuickActions from "@/components/dashboard/quick-actions";
 import FarmHero from "@/components/dashboard/farm-hero";
 import FarmHealth from "@/components/dashboard/farm-health";
 import RecentActivity from "@/components/dashboard/recent-activity";
+import OwnerOnly from "@/components/auth/owner-only";
 
 export default function DashboardPage() {
   const { user } =
@@ -42,7 +43,8 @@ export default function DashboardPage() {
       </div>
     );
   }
-  return (
+return (
+  <OwnerOnly>
     <AppShell
       email={user?.email}
       farmName={farm?.name}
@@ -151,5 +153,6 @@ export default function DashboardPage() {
 
       </div>
     </AppShell>
-  );
+  </OwnerOnly>
+);
 }

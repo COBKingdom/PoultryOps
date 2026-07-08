@@ -18,11 +18,14 @@ export default function CreateUserForm({
   const [password, setPassword] =
     useState("");
 
-  const [role, setRole] =
-    useState("staff");
-
   const [loading, setLoading] =
     useState(false);
+
+  const [success, setSuccess] =
+    useState("");
+
+  const [error, setError] =
+    useState("");
 
   const handleSubmit = async (
     e: React.FormEvent
@@ -30,6 +33,8 @@ export default function CreateUserForm({
     e.preventDefault();
 
     setLoading(true);
+    setSuccess("");
+    setError("");
 
     try {
       const response =
@@ -45,7 +50,7 @@ export default function CreateUserForm({
               fullName,
               email,
               password,
-              role,
+              role: "data_entry",
               farmId,
             }),
           }
@@ -55,27 +60,28 @@ export default function CreateUserForm({
         await response.json();
 
       if (!response.ok) {
-        alert(
+        setError(
           result.error ||
-            "Failed to create user"
+            "Failed to create team member"
         );
         return;
       }
 
-      alert(
-        "User created successfully"
+      setSuccess(
+        "✓ Team member created successfully"
       );
 
       setFullName("");
       setEmail("");
       setPassword("");
-      setRole("staff");
 
-      window.location.reload();
+      setTimeout(() => {
+        window.location.reload();
+      }, 1200);
     } catch (error) {
       console.error(error);
 
-      alert(
+      setError(
         "Something went wrong"
       );
     } finally {
@@ -86,8 +92,20 @@ export default function CreateUserForm({
   return (
     <div className="bg-white rounded-3xl p-6 shadow-sm border">
       <h2 className="text-2xl font-bold mb-6">
-        Create User
+        Add Team Member
       </h2>
+
+      {success && (
+        <div className="mb-4 rounded-xl border border-green-200 bg-green-50 p-4 text-green-700">
+          {success}
+        </div>
+      )}
+
+      {error && (
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
+          {error}
+        </div>
+      )}
 
       <form
         onSubmit={handleSubmit}
@@ -121,7 +139,7 @@ export default function CreateUserForm({
 
         <input
           type="password"
-          placeholder="Password"
+          placeholder="Temporary Password"
           value={password}
           onChange={(e) =>
             setPassword(
@@ -132,32 +150,24 @@ export default function CreateUserForm({
           required
         />
 
-        <select
-          value={role}
-          onChange={(e) =>
-            setRole(
-              e.target.value
-            )
-          }
-          className="w-full border rounded-xl p-3"
-        >
-          <option value="manager">
-            Manager
-          </option>
+        <div className="rounded-xl border bg-slate-50 p-3">
+          <p className="text-sm text-slate-600">
+            Role
+          </p>
 
-          <option value="staff">
-            Staff
-          </option>
-        </select>
+          <p className="font-medium">
+            Data Entry
+          </p>
+        </div>
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-blue-600 text-white rounded-xl p-3 font-medium"
+          className="w-full bg-blue-600 text-white rounded-xl p-3 font-medium disabled:opacity-50"
         >
           {loading
-            ? "Creating..."
-            : "Create User"}
+            ? "Creating Team Member..."
+            : "Add Team Member"}
         </button>
       </form>
     </div>

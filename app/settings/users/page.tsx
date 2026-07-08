@@ -3,10 +3,10 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useDashboard } from "@/hooks/useDashboard";
 import { useUsers } from "@/hooks/useUsers";
-
 import AppShell from "@/components/layout/app-shell";
 import UsersList from "@/components/users/users-list";
 import CreateUserForm from "@/components/users/create-user-form";
+import OwnerOnly from "@/components/auth/owner-only";
 
 export default function UsersPage() {
   const { user } = useAuth();
@@ -21,7 +21,8 @@ export default function UsersPage() {
     return <div>Loading...</div>;
   }
 
-  return (
+return (
+  <OwnerOnly>
     <AppShell
       email={user?.email}
       farmName={data?.farm?.name}
@@ -36,5 +37,6 @@ export default function UsersPage() {
         <CreateUserForm farmId={farmId} />
       </div>
     </AppShell>
-  );
+  </OwnerOnly>
+);
 }

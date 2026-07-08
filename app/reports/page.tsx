@@ -12,6 +12,7 @@ import ProductionSummary from "@/components/reports/production-summary";
 import OperationsSummary from "@/components/reports/operations-summary";
 import FarmHealthSummary from "@/components/reports/farm-health-summary";
 import ExportButtons from "@/components/reports/export-buttons";
+import OwnerOnly from "@/components/auth/owner-only";
 
 export default function ReportsPage() {
   const { user } =
@@ -45,6 +46,7 @@ export default function ReportsPage() {
   }
 
   return (
+  <OwnerOnly>
     <AppShell
       email={user?.email}
       farmName={farm?.name}
@@ -93,5 +95,6 @@ export default function ReportsPage() {
 
       </div>
     </AppShell>
-  );
+  </OwnerOnly>
+);
 }
