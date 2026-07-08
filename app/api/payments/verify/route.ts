@@ -5,83 +5,158 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    const transactionId = body.transaction_id;
+    const transactionId =
+      body.transaction_id;
 
     if (!transactionId) {
       return NextResponse.json(
-        { error: "Transaction ID missing" },
+        {
+          error:
+            "Transaction ID missing",
+        },
         { status: 400 }
       );
     }
 
-    const verifyResponse = await fetch(
-      `https://api.flutterwave.com/v3/transactions/${transactionId}/verify`,
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}`,
-        },
-      }
-    );
+    const verifyResponse =
+      await fetch(
+        `https://api.flutterwave.com/v3/transactions/${transactionId}/verify`,
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}`,
+          },
+        }
+      );
 
-    const verifyData = await verifyResponse.json();
+    const verifyData =
+      await verifyResponse.json();
 
     if (
-      verifyData.status !== "success" ||
-      verifyData.data.status !== "successful"
+      verifyData.status !==
+        "success" ||
+      verifyData.data.status !==
+        "successful"
     ) {
       return NextResponse.json(
-        { error: "Payment verification failed" },
+        {
+          error:
+            "Payment verification failed",
+        },
         { status: 400 }
       );
     }
 
-    const metadata = verifyData.data.meta;
+    const metadata =
+      verifyData.data.meta;
 
-    const farmId = metadata.farm_id;
-    const plan = metadata.plan;
-    const billingCycle = metadata.billing_cycle;
+    const farmId =
+      metadata.farm_id;
 
-    const amountPaid = verifyData.data.amount;
-    const paymentReference = verifyData.data.tx_ref;
+    const plan =
+      metadata.plan;
 
-    const nextBillingDate = new Date();
+    const billingCycle =
+      metadata.billing_cycle;
 
-    if (billingCycle === "annual") {
+    const amountPaid =
+      verifyData.data.amount;
+
+    const paymentReference =
+      verifyData.data.tx_ref;
+
+    const nextBillingDate =
+      new Date();
+
+    if (
+      billingCycle ===
+      "annual"
+    ) {
       nextBillingDate.setFullYear(
-        nextBillingDate.getFullYear() + 1
+        nextBillingDate.getFullYear() +
+          1
       );
     } else {
       nextBillingDate.setMonth(
-        nextBillingDate.getMonth() + 1
+        nextBillingDate.getMonth() +
+          1
       );
     }
 
-    const { error } = await supabaseAdmin
-      .from("subscriptions")
-      .update({
-        plan,
-        billing_cycle: billingCycle,
-        status: "active",
-        payment_reference: paymentReference,
-        transaction_id: transactionId,
-        amount_paid: amountPaid,
-        next_billing_date:
-          nextBillingDate.toISOString(),
-      })
-      .eq("farm_id", farmId);
+    // Update subscription
 
-    if (error) {
-      throw error;
+    const {
+      error:
+        subscriptionError,
+    } =
+      await supabaseAdmin
+        .from("subscriptions")
+        .update({
+          plan,
+          status: "active",
+          billing_cycle:
+            billingCycle,
+          payment_reference:
+            paymentReference,
+          transaction_id:
+            transactionId,
+          amount_paid:
+            amountPaid,
+          next_billing_date:
+            nextBillingDate.toISOString(),
+        })
+        .eq(
+          "farm_id",
+          farmId
+        );
+
+    if (
+      subscriptionError
+    ) {
+      throw subscriptionError;
+    }
+
+    // Save payment history
+
+    const {
+      error: paymentError,
+    } =
+      await supabaseAdmin
+        .from("payments")
+        .insert({
+          farm_id: farmId,
+          plan,
+          billing_cycle:
+            billingCycle,
+          amount_paid:
+            amountPaid,
+          transaction_id:
+            transactionId,
+          payment_reference:
+            paymentReference,
+          status:
+            "successful",
+        });
+
+    if (
+      paymentError
+    ) {
+      throw paymentError;
     }
 
     return NextResponse.json({
       success: true,
     });
   } catch (error) {
-    console.error(error);
+    console.error(
+      "VERIFY ERROR:",
+      error
+    );
 
     return NextResponse.json(
-      { error: "Verification failed" },
+      {
+        error:
+          "Verification failed",
+      },
       { status: 500 }
     );
   }
