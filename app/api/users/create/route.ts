@@ -43,7 +43,10 @@ export async function POST(req: Request) {
       .eq("farm_id", farmId)
       .single();
 
-    if (subscriptionError) {
+    if (
+      subscriptionError ||
+      !subscription
+    ) {
       return NextResponse.json(
         {
           error:
@@ -80,10 +83,19 @@ export async function POST(req: Request) {
       );
     }
 
+    const currentUsers =
+      count || 0;
+
     let maxUsers = 1;
 
-    switch (subscription.plan) {
-      case "starter":
+    switch (
+      subscription.plan
+    ) {
+      case "trial":
+        maxUsers = 1;
+        break;
+
+      case "solo":
         maxUsers = 1;
         break;
 
@@ -99,11 +111,43 @@ export async function POST(req: Request) {
         maxUsers = 1;
     }
 
-    if ((count || 0) >= maxUsers) {
+    if (
+      currentUsers >= maxUsers
+    ) {
+      if (
+        subscription.plan ===
+        "trial"
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Your trial supports owner access only. Upgrade to Team or Business to add users.",
+          },
+          {
+            status: 400,
+          }
+        );
+      }
+
+      if (
+        subscription.plan ===
+        "solo"
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Solo plan supports one user only. Upgrade to Team or Business to add users.",
+          },
+          {
+            status: 400,
+          }
+        );
+      }
+
       return NextResponse.json(
         {
           error:
-            "User limit reached for your subscription plan",
+            "User limit reached for your subscription plan.",
         },
         {
           status: 400,
@@ -111,7 +155,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Create auth user
+    // Create Auth user
 
     const {
       data: authUser,
@@ -149,7 +193,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Update profile created by trigger
+    // Update profile
 
     const {
       error: profileError,
@@ -165,7 +209,8 @@ export async function POST(req: Request) {
     if (profileError) {
       return NextResponse.json(
         {
-          error: profileError.message,
+          error:
+            profileError.message,
         },
         {
           status: 400,
@@ -189,7 +234,8 @@ export async function POST(req: Request) {
     if (farmUserError) {
       return NextResponse.json(
         {
-          error: farmUserError.message,
+          error:
+            farmUserError.message,
         },
         {
           status: 400,
