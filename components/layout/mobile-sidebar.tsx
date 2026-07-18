@@ -18,6 +18,7 @@ import {
   FileBarChart,
   BarChart3,
   Settings,
+  Upload,
 } from "lucide-react";
 
 type Props = {
@@ -31,11 +32,12 @@ export default function MobileSidebar({
 }: Props) {
   const pathname =
     usePathname();
-    const { profile } =
-  useAuth();
 
-const isOwner =
-  profile?.role === "owner";
+  const { profile } =
+    useAuth();
+
+  const isOwner =
+    profile?.role === "owner";
 
   if (!open) return null;
 
@@ -95,6 +97,14 @@ const isOwner =
       name: "Analytics",
       href: "/analytics",
       icon: BarChart3,
+    },
+  ];
+
+  const tools = [
+    {
+      name: "Migration",
+      href: "/migration",
+      icon: Upload,
     },
   ];
 
@@ -169,15 +179,15 @@ const isOwner =
 
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
 
-{isOwner && (
-  <MenuItem
-    pathname={pathname}
-    href="/dashboard"
-    name="Dashboard"
-    icon={LayoutDashboard}
-    onClose={onClose}
-  />
-)}
+          {isOwner && (
+            <MenuItem
+              pathname={pathname}
+              href="/dashboard"
+              name="Dashboard"
+              icon={LayoutDashboard}
+              onClose={onClose}
+            />
+          )}
 
           <MenuSection
             title="OPERATIONS"
@@ -193,24 +203,33 @@ const isOwner =
             onClose={onClose}
           />
 
-{isOwner && (
-  <MenuSection
-    title="INSIGHTS"
-    items={insights}
-    pathname={pathname}
-    onClose={onClose}
-  />
-)}
+          {isOwner && (
+            <MenuSection
+              title="INSIGHTS"
+              items={insights}
+              pathname={pathname}
+              onClose={onClose}
+            />
+          )}
 
           {isOwner && (
-  <MenuItem
-    pathname={pathname}
-    href="/settings"
-    name="Settings"
-    icon={Settings}
-    onClose={onClose}
-  />
-)}
+            <MenuSection
+              title="TOOLS"
+              items={tools}
+              pathname={pathname}
+              onClose={onClose}
+            />
+          )}
+
+          {isOwner && (
+            <MenuItem
+              pathname={pathname}
+              href="/settings"
+              name="Settings"
+              icon={Settings}
+              onClose={onClose}
+            />
+          )}
 
         </div>
 
@@ -317,9 +336,7 @@ function MenuItem({
       `}
     >
       <Icon size={18} />
-
       <span>{name}</span>
-
     </Link>
   );
 }
