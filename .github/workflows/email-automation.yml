@@ -1,0 +1,23 @@
+name: PoultryOps Email Automation
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  run-email-automation:
+    name: Send trial lifecycle emails
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger email automation endpoint
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "${{ secrets.FRONTEND_URL }}/api/run-email-automation" \
+            -H "x-automation-secret: ${{ secrets.AUTOMATION_SECRET }}" \
+            -H "Content-Type: application/json")
+          echo "Response status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "Email automation endpoint returned $STATUS"
+            exit 1
+          fi

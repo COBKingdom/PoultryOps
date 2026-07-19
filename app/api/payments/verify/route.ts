@@ -1,5 +1,12 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+// BEGIN TrueOps Email Framework
+import {
+  sendPaymentReceivedEmail,
+  sendSubscriptionActivatedEmail,
+  sendSubscriptionRenewedEmail,
+} from "@/lib/email-service";
+// END TrueOps Email Framework
 
 export async function POST(req: Request) {
   try {
@@ -9,14 +16,10 @@ export async function POST(req: Request) {
 
     if (!transactionId) {
       return NextResponse.json(
-        {
-          error: "Transaction ID missing",
-        },
+        { error: "Transaction ID missing" },
         { status: 400 }
       );
     }
-
-    // Prevent duplicate processing
 
     const {
       data: existingPayment,
@@ -54,9 +57,7 @@ export async function POST(req: Request) {
       verifyData.data.status !== "successful"
     ) {
       return NextResponse.json(
-        {
-          error: "Payment verification failed",
-        },
+        { error: "Payment verification failed" },
         { status: 400 }
       );
     }
@@ -66,7 +67,6 @@ export async function POST(req: Request) {
     const farmId = metadata.farm_id;
     const plan = metadata.plan;
     const billingCycle = metadata.billing_cycle;
-
     const amountPaid = verifyData.data.amount;
     const paymentReference = verifyData.data.tx_ref;
 
@@ -82,6 +82,17 @@ export async function POST(req: Request) {
       );
     }
 
+    // BEGIN TrueOps Email Framework
+    const { data: preUpdateSub } = await supabaseAdmin
+      .from("subscriptions")
+      .select("status")
+      .eq("farm_id", farmId)
+      .single();
+      
+
+    const previousStatus = preUpdateSub?.status ?? null;
+    // END TrueOps Email Framework
+
     const { error: subscriptionError } =
       await supabaseAdmin
         .from("subscriptions")
@@ -92,8 +103,7 @@ export async function POST(req: Request) {
           payment_reference: paymentReference,
           transaction_id: transactionId,
           amount_paid: amountPaid,
-          next_billing_date:
-            nextBillingDate.toISOString(),
+          next_billing_date: nextBillingDate.toISOString(),
         })
         .eq("farm_id", farmId);
 
@@ -118,22 +128,87 @@ export async function POST(req: Request) {
       throw paymentError;
     }
 
-    return NextResponse.json({
-      success: true,
-    });
+    // BEGIN TrueOps Email Framework
+    void (async () => {
+      try {
+        const { data: farm } = await supabaseAdmin
+          .from("farms")
+          .select("name, owner_id")
+          .eq("id", farmId)
+          .single();
+
+        if (!farm?.owner_id) {
+          console.warn(
+            "[email] payment emails skipped: farm not found or missing owner_id",
+            { farmId }
+          );
+          return;
+        }
+
+        const { data: profile } = await supabaseAdmin
+          .from("profiles")
+          .select("email")
+          .eq("id", farm.owner_id)
+          .single();
+
+        if (!profile?.email) {
+          console.warn(
+            "[email] payment emails skipped: owner profile missing email",
+            { farmId, ownerId: farm.owner_id }
+          );
+          return;
+        }
+
+        let isActivation: boolean;
+
+        if (previousStatus !== null) {
+          isActivation = previousStatus === "trial";
+        } else {
+          const { count } = await supabaseAdmin
+            .from("payments")
+            .select("*", { count: "exact", head: true })
+            .eq("farm_id", farmId)
+            .eq("status", "successful");
+
+          isActivation = count === 1;
+        }
+
+        await Promise.allSettled([
+          sendPaymentReceivedEmail(
+            farm.owner_id,
+            profile.email,
+            farm.name,
+            paymentReference
+          ),
+          isActivation
+            ? sendSubscriptionActivatedEmail(
+                farm.owner_id,
+                profile.email,
+                farm.name,
+                plan
+              )
+            : sendSubscriptionRenewedEmail(
+                farm.owner_id,
+                profile.email,
+                farm.name,
+                plan,
+                nextBillingDate.toISOString()
+              ),
+        ]);
+      } catch (err) {
+        console.error("[email] payment emails failed:", err);
+      }
+    })();
+    // END TrueOps Email Framework
+
+    return NextResponse.json({ success: true });
+
   } catch (error) {
-    console.error(
-      "VERIFY ERROR:",
-      error
-    );
+    console.error("VERIFY ERROR:", error);
 
     return NextResponse.json(
-      {
-        error: "Verification failed",
-      },
-      {
-        status: 500,
-      }
+      { error: "Verification failed" },
+      { status: 500 }
     );
   }
 }

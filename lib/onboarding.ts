@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+// END TrueOps Email Framework
 
 type CreateFarmParams = {
   userId: string;
@@ -94,5 +95,15 @@ trialEnd.setDate(
     throw subscriptionError;
   }
 
+void fetch("/api/send-welcome", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    userId,
+    farmName,
+  }),
+});
   return farm;
 }

@@ -21,6 +21,7 @@ export const PLANS = {
   },
 };
 
+
 export function getFlutterwavePublicKey() {
   return (
     process.env
