@@ -149,38 +149,6 @@ export default function Topbar({
           relative
         "
       >
-<div
-  className="
-    hidden
-    md:flex
-    flex-col
-    items-end
-  "
->
-  <span
-    className="
-      px-3
-      py-1
-      rounded-full
-      bg-green-100
-      text-green-700
-      text-xs
-      font-semibold
-    "
-  >
-    Trial Active
-  </span>
-
-  <span
-    className="
-      text-xs
-      text-slate-500
-      mt-1
-    "
-  >
-    59 Days Left
-  </span>
-</div>
         <div
           className="
             hidden
