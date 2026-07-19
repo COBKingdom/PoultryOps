@@ -8,7 +8,7 @@ interface SubscriptionRow {
   farms: {
     name: string
     owner_id: string
-  } | null
+  }[]
 }
 
 interface ProfileRow {
@@ -35,7 +35,14 @@ export async function POST(request: Request) {
   // Join farms to get name and owner_id (not user_id — confirmed from schema)
   const { data: rawTrials, error: queryError } = await supabase
     .from("subscriptions")
-    .select("farm_id, trial_end, farms!subscriptions_farm_id_fkey(name, owner_id)")
+    .select(`
+  farm_id,
+  trial_end,
+  farms!subscriptions_farm_id_fkey (
+    name,
+    owner_id
+  )
+`)
     .eq("plan", "trial")
 
   if (queryError) {
@@ -48,11 +55,13 @@ export async function POST(request: Request) {
   const trials = (rawTrials ?? []) as SubscriptionRow[]
 
   // Collect all owner_ids for a single bulk profile lookup
-  const ownerIds = [
-    ...new Set(
-      trials.map((t) => t.farms?.owner_id).filter((id): id is string => Boolean(id))
-    ),
-  ]
+const ownerIds = [
+  ...new Set(
+    trials
+      .map((t) => t.farms[0]?.owner_id)
+      .filter((id): id is string => Boolean(id))
+  ),
+]
 
   const { data: profilesData } = await supabase
     .from("profiles")
@@ -71,7 +80,8 @@ export async function POST(request: Request) {
   const buckets: Bucket[] = []
 
   for (const row of trials) {
-    if (!row.farms?.owner_id) continue
+    const farm = row.farms[0]
+    if (!farm?.owner_id) continue
     const expiry = new Date(row.trial_end)
     if (expiry < now) {
       buckets.push({ row, type: "trial_expired" })
@@ -93,8 +103,14 @@ export async function POST(request: Request) {
 
   await Promise.all(
     buckets.map(async ({ row, type }) => {
-      const ownerId = row.farms!.owner_id
-      const farmName = row.farms!.name || "your farm"
+ const farm = row.farms[0]
+
+if (!farm) {
+  return
+}
+
+const ownerId = farm.owner_id
+const farmName = farm.name || "your farm"
       const email = emailByOwnerId.get(ownerId)
 
       if (!email) {
