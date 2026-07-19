@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getSupabaseAdmin } from "@/lib/supabase-admin"
+import { supabaseAdmin } from "@/lib/supabase-admin"
 import { sendTrialEmail, TrialEmailType } from "@/lib/email-service"
 
 interface SubscriptionRow {
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     }
   }
 
-  const supabase = getSupabaseAdmin()
+  const supabase = supabaseAdmin
   const now = new Date()
   const plus2Days = new Date(now); plus2Days.setDate(plus2Days.getDate() + 2)
   const plus4Days = new Date(now); plus4Days.setDate(plus4Days.getDate() + 4)
