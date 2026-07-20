@@ -1,28 +1,24 @@
 "use client";
 
-import { useState } from "react";
-
-import { createFlock } from "@/lib/flocks";
+import { useEffect, useState } from "react";
 
 import SaveButton from "@/components/ui/save-button";
 
 type Props = {
   farmId: string;
-  onCreated?: () => void;
+  flock?: any | null;
+  onSave: (values: any) => Promise<void>;
+  onCancel: () => void;
 };
 
 export default function AddFlockForm({
-  farmId,
-  onCreated,
+  flock,
+  onSave,
+  onCancel,
 }: Props) {
-  const [flockName, setFlockName] =
-    useState("");
-
-  const [birdType, setBirdType] =
-    useState("Layers");
-
-  const [quantity, setQuantity] =
-    useState("");
+  const [flockName, setFlockName] = useState("");
+  const [birdType, setBirdType] = useState("Layers");
+  const [quantity, setQuantity] = useState("");
 
   const [loading, setLoading] =
     useState(false);
@@ -30,28 +26,55 @@ export default function AddFlockForm({
   const [success, setSuccess] =
     useState(false);
 
-  async function handleSave() {
+  useEffect(() => {
+    if (flock) {
+      setFlockName(
+        flock.flock_name ?? ""
+      );
+
+      setBirdType(
+        flock.bird_type ?? "Layers"
+      );
+
+      setQuantity(
+        String(
+          flock.quantity ?? ""
+        )
+      );
+    } else {
+      resetForm();
+    }
+  }, [flock]);
+
+  function resetForm() {
+    setFlockName("");
+    setBirdType("Layers");
+    setQuantity("");
+  }
+
+  async function handleSubmit(
+    e: React.FormEvent
+  ) {
+    e.preventDefault();
+
     try {
       setLoading(true);
 
-      await createFlock({
-        farm_id: farmId,
+      await onSave({
         flock_name: flockName,
         bird_type: birdType,
-        quantity:
-          Number(quantity),
+        quantity: Number(quantity),
       });
-
-      setFlockName("");
-      setQuantity("");
 
       setSuccess(true);
 
       setTimeout(() => {
         setSuccess(false);
-      }, 2000);
+      }, 1800);
 
-      onCreated?.();
+      if (!flock) {
+        resetForm();
+      }
 
     } catch (error) {
       console.error(error);
@@ -62,76 +85,184 @@ export default function AddFlockForm({
   }
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
 
-      <h2 className="text-2xl font-bold mb-6">
-        Add New Flock
-      </h2>
+      <div className="border-b border-slate-200 px-6 py-5">
+
+        <h2 className="text-2xl font-bold text-slate-900">
+
+          {flock
+            ? "Edit Flock"
+            : "Add New Flock"}
+
+        </h2>
+
+        <p className="mt-1 text-sm text-slate-500">
+
+          {flock
+            ? "Update your flock information."
+            : "Register a new poultry flock."}
+
+        </p>
+
+      </div>
 
       <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSave();
-        }}
-        className="space-y-4"
+        onSubmit={handleSubmit}
+        className="space-y-6 p-6"
       >
 
-        <input
-          placeholder="Flock Name"
-          value={flockName}
-          onChange={(e) =>
-            setFlockName(
-              e.target.value
-            )
-          }
-          className="w-full border rounded-xl p-4"
-          required
-        />
+        <div>
 
-        <select
-          value={birdType}
-          onChange={(e) =>
-            setBirdType(
-              e.target.value
-            )
-          }
-          className="w-full border rounded-xl p-4"
-        >
-          <option>
-            Layers
-          </option>
+          <label className="mb-2 block text-sm font-medium text-slate-700">
+            Flock Name
+          </label>
 
-          <option>
-            Broilers
-          </option>
+          <input
+            type="text"
+            value={flockName}
+            onChange={(e) =>
+              setFlockName(
+                e.target.value
+              )
+            }
+            placeholder="e.g. Layer House A"
+            className="
+              w-full
+              rounded-xl
+              border
+              border-slate-300
+              px-4
+              py-3
+              outline-none
+              transition
+              focus:border-blue-500
+              focus:ring-4
+              focus:ring-blue-100
+            "
+            required
+          />
 
-          <option>
-            Cockerels
-          </option>
+        </div>
 
-          <option>
-            Growers
-          </option>
-        </select>
+        <div>
 
-        <input
-          type="number"
-          placeholder="Bird Quantity"
-          value={quantity}
-          onChange={(e) =>
-            setQuantity(
-              e.target.value
-            )
-          }
-          className="w-full border rounded-xl p-4"
-          required
-        />
+          <label className="mb-2 block text-sm font-medium text-slate-700">
+            Bird Type
+          </label>
 
-        <SaveButton
-          loading={loading}
-          success={success}
-          label="Create Flock"
-        />
+          <select
+            value={birdType}
+            onChange={(e) =>
+              setBirdType(
+                e.target.value
+              )
+            }
+            className="
+              w-full
+              rounded-xl
+              border
+              border-slate-300
+              px-4
+              py-3
+              outline-none
+              transition
+              focus:border-blue-500
+              focus:ring-4
+              focus:ring-blue-100
+            "
+          >
+
+            <option value="Layers">
+              Layers
+            </option>
+
+            <option value="Broilers">
+              Broilers
+            </option>
+
+            <option value="Growers">
+              Growers
+            </option>
+
+            <option value="Cockerels">
+              Cockerels
+            </option>
+
+          </select>
+
+        </div>
+
+        <div>
+
+          <label className="mb-2 block text-sm font-medium text-slate-700">
+            Number of Birds
+          </label>
+
+          <input
+            type="number"
+            value={quantity}
+            onChange={(e) =>
+              setQuantity(
+                e.target.value
+              )
+            }
+            placeholder="Enter bird quantity"
+            className="
+              w-full
+              rounded-xl
+              border
+              border-slate-300
+              px-4
+              py-3
+              outline-none
+              transition
+              focus:border-blue-500
+              focus:ring-4
+              focus:ring-blue-100
+            "
+            required
+          />
+
+        </div>
+
+        <div className="flex flex-wrap gap-3 pt-2">
+
+          <SaveButton
+            loading={loading}
+            success={success}
+            label={
+              flock
+                ? "Update Flock"
+                : "Create Flock"
+            }
+          />
+
+          {flock && (
+            <button
+              type="button"
+              onClick={() => {
+                resetForm();
+                onCancel();
+              }}
+              className="
+                rounded-xl
+                border
+                border-slate-300
+                bg-white
+                px-6
+                py-3
+                font-medium
+                text-slate-700
+                transition
+                hover:bg-slate-100
+              "
+            >
+              Cancel
+            </button>
+          )}
+
+        </div>
 
       </form>
 
