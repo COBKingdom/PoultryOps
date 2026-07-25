@@ -1,413 +1,173 @@
+/**
+ * PoultryOps Migration — Import API Route
+ *
+ * Phase B: Secure batch import endpoint.
+ *
+ * This route replaces the existing insecure import endpoint.
+ *
+ * Security:
+ * - Establishes authenticated user server-side via @supabase/ssr
+ * - Derives authorisedFarmId from the profiles table (NEVER from client)
+ * - Verifies flock ownership for defaultFlockId
+ * - All writes use authorisedFarmId
+ * - Fixes the existing expenses farm_id:null bug
+ *
+ * Import flow:
+ * 1. Authenticate user → derive authorisedFarmId
+ * 2. Receive file + selected targets + options
+ * 3. Re-parse and re-validate (read-only)
+ * 4. Filter to selected targets
+ * 5. Verify defaultFlockId belongs to authorised farm
+ * 6. Execute batch import (100 rows per batch)
+ * 7. Return accurate inserted/skipped/failed counts
+ *
+ * No timestamp-based rollback. No silent overwrites.
+ */
+
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
-
-function parseDate(value: any) {
-  if (!value) return null;
-
-  try {
-    // Excel serial dates (46057 etc.)
-    if (typeof value === "number") {
-      const excelEpoch = new Date(
-        Date.UTC(1899, 11, 30)
-      );
-
-      excelEpoch.setDate(
-        excelEpoch.getDate() + value
-      );
-
-      return excelEpoch
-        .toISOString()
-        .split("T")[0];
-    }
-
-    // DD/MM/YYYY
-    if (typeof value === "string") {
-      const parts = value.split("/");
-
-      if (parts.length === 3) {
-        return `${parts[2]}-${parts[1].padStart(
-          2,
-          "0"
-        )}-${parts[0].padStart(
-          2,
-          "0"
-        )}`;
-      }
-    }
-
-    return null;
-  } catch {
-    return null;
-  }
-}
+import { cookies } from "next/headers";
+import {
+  getAuthContext,
+  buildFlockMap,
+  resolveFlockById,
+} from "@/lib/migration/auth";
+import { validateWorkbook } from "@/lib/migration";
+import {
+  executeImport,
+  type ImportTarget,
+  type ImportOptions,
+} from "@/lib/migration/importer";
 
 export async function POST(req: Request) {
-  try {
-    const {
-      sheetName,
-      flockId,
-      rows,
-    } = await req.json();
+  // Step 1: Establish authenticated user and authorised farm
+  const auth = await getAuthContext(cookies);
 
-    if (!sheetName || !rows) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Missing data",
-        },
-        { status: 400 }
-      );
-    }
-
-    // Receipt sheet imports expenses only
-
-    if (
-      sheetName
-        .toLowerCase()
-        .includes("receipt")
-    ) {
-      let imported = 0;
-
-      for (const row of rows) {
-        const amount = Number(
-          row.Amount ||
-            row.amount ||
-            0
-        );
-
-        if (!amount) continue;
-
-        await supabaseAdmin
-          .from("expenses")
-          .insert({
-            farm_id: null,
-            expense_date: parseDate(
-              row.Date ||
-                row.date
-            ),
-            category:
-              row.Purpose ||
-              "Migration",
-            amount,
-            notes:
-              row.Description ||
-              row.Remarks ||
-              "",
-          });
-
-        imported++;
-      }
-
-      return NextResponse.json({
-        success: true,
-        message: `${imported} expense records imported`,
-      });
-    }
-
-    if (!flockId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Please select a flock",
-        },
-        { status: 400 }
-      );
-    }
-
-    const {
-      data: flock,
-      error: flockError,
-    } = await supabaseAdmin
-      .from("flocks")
-      .select("farm_id")
-      .eq("id", flockId)
-      .single();
-
-    if (
-      flockError ||
-      !flock
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Flock not found",
-        },
-        { status: 404 }
-      );
-    }
-
-    const farmId =
-      flock.farm_id;
-
-    let imported = 0;
-
-    for (const row of rows) {
-      const date = parseDate(
-        row.Date ||
-          row.DATE
-      );
-
-      // Egg Production
-
-      if (
-        row[
-          "Total Egg Production"
-        ] !== undefined
-      ) {
-        await supabaseAdmin
-          .from(
-            "egg_production"
-          )
-          .insert({
-            farm_id: farmId,
-            flock_id: flockId,
-            production_date:
-              date,
-            egg_count: Number(
-              row[
-                "Total Egg Production"
-              ] || 0
-            ),
-            cracked_eggs:
-              0,
-          });
-      }
-
-      // Feed Records
-
-      if (
-        row[
-          "Feed Used"
-        ] ||
-        row[
-          "Feed Used Per Kg"
-        ]
-      ) {
-        const quantity = parseFloat(
-          String(
-            row[
-              "Feed Used"
-            ] ||
-              row[
-                "Feed Used Per Kg"
-              ] ||
-              "0"
-          ).replace(
-            /[^0-9.]/g,
-            ""
-          )
-        );
-
-        await supabaseAdmin
-          .from(
-            "feed_records"
-          )
-          .insert({
-            farm_id: farmId,
-            flock_id: flockId,
-            feed_date: date,
-            feed_type:
-              "Migration",
-            quantity_kg:
-              quantity || 0,
-          });
-      }
-
-      // Feed Inventory
-
-      if (
-        row[
-          "Feed Bought"
-        ] ||
-        row[
-          "Feed Bought Per Bag"
-        ]
-      ) {
-        const quantity = parseFloat(
-          String(
-            row[
-              "Feed Bought"
-            ] ||
-              row[
-                "Feed Bought Per Bag"
-              ] ||
-              "0"
-          ).replace(
-            /[^0-9.]/g,
-            ""
-          )
-        );
-
-        await supabaseAdmin
-          .from(
-            "feed_inventory"
-          )
-          .insert({
-            farm_id: farmId,
-            purchase_date:
-              date,
-            feed_type:
-              "Migration",
-            quantity_kg:
-              quantity || 0,
-            cost: 0,
-            supplier:
-              "Migration",
-          });
-      }
-
-      // Health
-
-      if (
-        row[
-          "Medication Administered"
-        ]
-      ) {
-        await supabaseAdmin
-          .from("health")
-          .insert({
-            farm_id: farmId,
-            flock_id: flockId,
-            health_date:
-              date,
-            treatment_name:
-              row[
-                "Medication Administered"
-              ],
-            category:
-              "Treatment",
-            cost: Number(
-              String(
-                row[
-                  "Medication Price"
-                ] || 0
-              ).replace(
-                /,/g,
-                ""
-              )
-            ),
-            notes:
-              row[
-                "Remark/Comment"
-              ] ||
-              row[
-                "Comment"
-              ] ||
-              "",
-            isolated_birds:
-              Number(
-                row[
-                  "Number Of Isolated Birds"
-                ] ||
-                  row[
-                    "Number of Isolated Birds"
-                  ] ||
-                  0
-              ),
-          });
-      }
-
-      // Mortality
-
-      if (
-        row.Mortality
-      ) {
-        await supabaseAdmin
-          .from(
-            "mortality"
-          )
-          .insert({
-            farm_id: farmId,
-            flock_id: flockId,
-            mortality_date:
-              date,
-            quantity:
-              Number(
-                row.Mortality
-              ),
-            reason:
-              "Migration",
-          });
-      }
-
-      // Bird Sales
-
-      if (
-        row[
-          "Bird Sold"
-        ]
-      ) {
-        await supabaseAdmin
-          .from("sales")
-          .insert({
-            farm_id: farmId,
-            sale_date:
-              date,
-            item_type:
-              "Live Bird Sales",
-            quantity:
-              Number(
-                row[
-                  "Bird Sold"
-                ]
-              ),
-            unit_price: 0,
-            total_amount: 0,
-            notes:
-              "Migrated",
-          });
-      }
-
-      // Egg Sales
-
-      if (
-        row[
-          "Egg Sold"
-        ]
-      ) {
-        await supabaseAdmin
-          .from("sales")
-          .insert({
-            farm_id: farmId,
-            sale_date:
-              date,
-            item_type:
-              "Egg Sales",
-            quantity:
-              Number(
-                row[
-                  "Egg Sold"
-                ]
-              ),
-            unit_price: 0,
-            total_amount: 0,
-            notes:
-              "Migrated",
-          });
-      }
-
-      imported++;
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: `${imported} rows imported`,
-    });
-  } catch (error) {
-    console.error(
-      "Migration Error:",
-      error
-    );
-
+  if ("error" in auth) {
     return NextResponse.json(
-      {
-        success: false,
-        error:
-          "Migration failed",
-      },
-      { status: 500 }
+      { error: auth.error },
+      { status: auth.status },
     );
   }
+
+  const authorisedFarmId = auth.authorisedFarmId!;
+
+  // Step 2: Get the uploaded file and options
+  const formData = await req.formData();
+  const file = formData.get("file") as File | null;
+
+  if (!file) {
+    return NextResponse.json(
+      { error: "No file provided" },
+      { status: 400 },
+    );
+  }
+
+  // Parse targets and options from form data
+  const targetsJson = formData.get("targets") as string | null;
+  const optionsJson = formData.get("options") as string | null;
+
+  let targets: { sheetName: string; dataType: string }[] = [];
+  let options: Partial<ImportOptions> = {};
+
+  if (targetsJson) {
+    try {
+      targets = JSON.parse(targetsJson);
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid targets JSON" },
+        { status: 400 },
+      );
+    }
+  }
+
+  if (optionsJson) {
+    try {
+      options = JSON.parse(optionsJson);
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid options JSON" },
+        { status: 400 },
+      );
+    }
+  }
+
+  // Step 3: Convert file to ArrayBuffer
+  const arrayBuffer = await file.arrayBuffer();
+
+  // Step 4: Build flock map from the authorised farm
+  const existingFlockMap = await buildFlockMap(authorisedFarmId);
+
+  // Step 5: Re-parse and re-validate (read-only — no database writes)
+  const validationResult = validateWorkbook(arrayBuffer, existingFlockMap);
+
+  // Step 6: Filter to selected targets
+  const selectedTargets: ImportTarget[] = [];
+
+  for (const target of targets) {
+    const sheetResult = validationResult.sheets.find(
+      (s) =>
+        s.sheetName === target.sheetName &&
+        s.dataType === target.dataType,
+    );
+
+    if (sheetResult) {
+      selectedTargets.push({
+        sheetName: sheetResult.sheetName,
+        dataType: sheetResult.dataType,
+        rows: sheetResult.rows,
+      });
+    }
+  }
+
+  if (selectedTargets.length === 0) {
+    return NextResponse.json(
+      { error: "No valid targets selected for import" },
+      { status: 400 },
+    );
+  }
+
+  // Step 7: Verify defaultFlockId belongs to the authorised farm
+  let verifiedDefaultFlockId: string | undefined;
+
+  if (options.defaultFlockId) {
+    const flock = await resolveFlockById(
+      options.defaultFlockId,
+      authorisedFarmId,
+    );
+
+    if (!flock) {
+      return NextResponse.json(
+        {
+          error:
+            "Invalid default flock: flock does not exist or does not belong to your farm",
+        },
+        { status: 403 },
+      );
+    }
+
+    verifiedDefaultFlockId = flock.id;
+  }
+
+  // Step 8: Build import options with defaults
+  const importOptions: ImportOptions = {
+    batchSize: options.batchSize ?? 100,
+    skipDuplicates: options.skipDuplicates ?? true,
+    defaultFlockId: verifiedDefaultFlockId,
+  };
+
+  // Step 9: Execute the import
+  const summary = await executeImport(
+    selectedTargets,
+    authorisedFarmId,
+    existingFlockMap,
+    importOptions,
+  );
+
+  // Step 10: Return results
+  return NextResponse.json({
+    success: true,
+    authorisedFarmId,
+    userId: auth.userId,
+    summary,
+  });
 }

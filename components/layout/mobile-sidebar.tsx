@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
 
 import {
   X,
@@ -19,6 +20,8 @@ import {
   BarChart3,
   Settings,
   Upload,
+  User,
+  LogOut,
 } from "lucide-react";
 
 type Props = {
@@ -32,12 +35,20 @@ export default function MobileSidebar({
 }: Props) {
   const pathname =
     usePathname();
+  const router =
+    useRouter();
 
   const { profile } =
     useAuth();
 
   const isOwner =
     profile?.role === "owner";
+
+  async function handleSignOut() {
+    onClose();
+    await supabase.auth.signOut();
+    router.push("/login");
+  }
 
   if (!open) return null;
 
@@ -221,6 +232,18 @@ export default function MobileSidebar({
             />
           )}
 
+        </div>
+
+        <div className="p-4 border-t border-slate-800 space-y-1">
+
+          <MenuItem
+            pathname={pathname}
+            href="/profile"
+            name="Profile"
+            icon={User}
+            onClose={onClose}
+          />
+
           {isOwner && (
             <MenuItem
               pathname={pathname}
@@ -231,33 +254,24 @@ export default function MobileSidebar({
             />
           )}
 
-        </div>
-
-        <div className="p-4 border-t border-slate-800">
-
-          <div
+          <button
+            onClick={handleSignOut}
             className="
-              rounded-2xl
-              bg-slate-900
-              border
-              border-slate-800
-              p-4
+              w-full
+              flex
+              items-center
+              gap-3
+              rounded-xl
+              px-4
+              py-3
+              text-red-400
+              hover:bg-red-950
+              transition-all
             "
           >
-
-            <p className="text-xs text-slate-400">
-              PoultryOps SaaS
-            </p>
-
-            <p className="text-sm font-semibold mt-1">
-              Trial Version
-            </p>
-
-            <div className="mt-3 h-2 rounded-full bg-slate-800">
-              <div className="h-2 rounded-full bg-blue-500 w-2/3" />
-            </div>
-
-          </div>
+            <LogOut size={18} />
+            <span>Sign Out</span>
+          </button>
 
         </div>
 
@@ -314,7 +328,7 @@ function MenuItem({
   onClose,
 }: any) {
   const active =
-    pathname === href;
+    pathname === href || (href !== "/" && pathname.startsWith(href + "/"));
 
   return (
     <Link

@@ -277,7 +277,7 @@ export default function Topbar({
             </Link>
 
             <Link
-              href="/settings"
+              href="/settings/subscription"
               onClick={() =>
                 setMenuOpen(false)
               }

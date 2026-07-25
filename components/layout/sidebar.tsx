@@ -173,66 +173,27 @@ const tools = [
       pathname={pathname}
      />
      )}
-{isOwner && (
-  <MenuItem
-    pathname={pathname}
-    name="Settings"
-    href="/settings"
-    icon={Settings}
-  />
-)}
 
       </nav>
 
-      <div className="border-t border-slate-800 p-4 space-y-2">
+      <div className="border-t border-slate-800 p-4 space-y-1">
 
-        <Link
+        <MenuItem
+          pathname={pathname}
+          name="Profile"
           href="/profile"
-          className="
-            flex
-            items-center
-            gap-3
-            rounded-xl
-            px-4
-            py-3
-            text-slate-300
-            hover:bg-slate-800
-            hover:text-white
-            transition-all
-          "
-        >
-          <User size={18} />
-
-          <span>
-            Profile
-          </span>
-
-        </Link>
+          icon={User}
+        />
 
         {isOwner && (
-         <Link
-          href="/settings"
-          className="
-            flex
-            items-center
-            gap-3
-            rounded-xl
-            px-4
-            py-3
-            text-slate-300
-            hover:bg-slate-800
-            hover:text-white
-            transition-all
-          "
-        >
-          <Settings size={18} />
+          <MenuItem
+            pathname={pathname}
+            name="Settings"
+            href="/settings"
+            icon={Settings}
+          />
+        )}
 
-          <span>
-            Settings
-          </span>
-
-        </Link>
-       )}
         <button
           onClick={handleSignOut}
           className="
@@ -311,7 +272,7 @@ function MenuItem({
   icon: Icon,
 }: any) {
   const active =
-    pathname === href;
+    pathname === href || (href !== "/" && pathname.startsWith(href + "/"));
 
   return (
     <Link
