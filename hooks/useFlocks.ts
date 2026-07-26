@@ -13,31 +13,32 @@ export function useFlocks(
   const [loading, setLoading] =
     useState(true);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        if (!farmId) return;
+  async function refresh() {
+    if (!farmId) return;
 
-        const result =
-          await getFlocks(
-            farmId
-          );
+    try {
+      const result =
+        await getFlocks(
+          farmId
+        );
 
-        setFlocks(result);
+      setFlocks(result);
 
-      } catch (error) {
-        console.error(error);
+    } catch (error) {
+      console.error(error);
 
-      } finally {
-        setLoading(false);
-      }
+    } finally {
+      setLoading(false);
     }
+  }
 
-    load();
+  useEffect(() => {
+    refresh();
   }, [farmId]);
 
   return {
     flocks,
     loading,
+    refresh,
   };
 }

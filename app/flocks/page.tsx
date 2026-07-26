@@ -1,11 +1,15 @@
 "use client";
 
+import { useState } from "react";
+
 import { useAuth } from "@/contexts/AuthContext";
 
 import { useDashboard } from "@/hooks/useDashboard";
 import { useFlocks } from "@/hooks/useFlocks";
 
 import AppShell from "@/components/layout/app-shell";
+
+import { createFlock, updateFlock, deleteFlock } from "@/lib/flocks";
 
 import AddFlockForm from "@/components/flocks/add-flock-form";
 import FlockList from "@/components/flocks/flock-list";
@@ -23,6 +27,7 @@ export default function FlocksPage() {
 
   const {
     flocks,
+    refresh,
   } = useFlocks(
     farmId
   );
@@ -46,6 +51,67 @@ export default function FlocksPage() {
         f.bird_type ===
         "Layers"
     ).length;
+
+  const [editingFlock, setEditingFlock] =
+    useState<any | null>(null);
+
+  async function handleSave(
+    values: any
+  ) {
+    try {
+      if (editingFlock) {
+        await updateFlock(
+          editingFlock.id,
+          values
+        );
+      } else {
+        await createFlock({
+          ...values,
+          farm_id: farmId,
+        });
+      }
+
+      await refresh();
+
+      setEditingFlock(null);
+
+    } catch (error) {
+      console.error(
+        "Failed to save flock:",
+        error
+      );
+
+      throw error;
+    }
+  }
+
+  async function handleDelete(
+    id: string
+  ) {
+    try {
+      await deleteFlock(id);
+
+      await refresh();
+
+    } catch (error) {
+      console.error(
+        "Failed to delete flock:",
+        error
+      );
+
+      throw error;
+    }
+  }
+
+  function handleEdit(
+    flock: any
+  ) {
+    setEditingFlock(flock);
+  }
+
+  function handleCancel() {
+    setEditingFlock(null);
+  }
 
   if (loading) {
     return (
@@ -113,11 +179,17 @@ export default function FlocksPage() {
         </div>
 
         <FlockList
+          loading={loading}
           flocks={flocks}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
         />
 
         <AddFlockForm
           farmId={farmId}
+          flock={editingFlock}
+          onSave={handleSave}
+          onCancel={handleCancel}
         />
 
       </div>

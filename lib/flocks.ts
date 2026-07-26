@@ -15,6 +15,35 @@ export async function createFlock(
   return data;
 }
 
+export async function updateFlock(
+  id: string,
+  flock: any
+) {
+  const { data, error } =
+    await supabase
+      .from("flocks")
+      .update(flock)
+      .eq("id", id)
+      .select()
+      .single();
+
+  if (error) throw error;
+
+  return data;
+}
+
+export async function deleteFlock(
+  id: string
+) {
+  const { error } =
+    await supabase
+      .from("flocks")
+      .delete()
+      .eq("id", id);
+
+  if (error) throw error;
+}
+
 export async function getFlocks(
   farmId: string
 ) {
