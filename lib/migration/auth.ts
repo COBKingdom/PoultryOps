@@ -56,10 +56,9 @@ export interface AuthError {
  * @returns AuthContext or AuthError
  */
 export async function getAuthContext(
-  cookies: () => Promise<any>,
+  cookieStore: any,
 ): Promise<AuthContext | AuthError> {
-  // Step 1: Resolve cookie store ONCE (Next.js 15+ async cookies API)
-  const cookieStore = await cookies();
+  // cookieStore is already resolved from the API route
 
   // Step 2: Create server-side client using @supabase/ssr
   const supabase = createServerClient(

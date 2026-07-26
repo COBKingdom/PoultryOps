@@ -22,8 +22,9 @@ import { validateWorkbook, parseWorkbookRows, normalizeFlockName } from "@/lib/m
 import { checkAllExistingDuplicates } from "@/lib/migration/duplicates";
 
 export async function POST(req: Request) {
-  // Step 1: Establish authenticated user and authorised farm
-  const auth = await getAuthContext(cookies);
+  // Step 1: Resolve cookies ONCE and establish authenticated user and authorised farm
+  const cookieStore = await cookies();
+  const auth = await getAuthContext(cookieStore);
 
   if ("error" in auth) {
     return NextResponse.json(

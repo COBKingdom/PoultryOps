@@ -16,8 +16,9 @@ import { cookies } from "next/headers";
 import { getAuthContext, getFarmFlocks } from "@/lib/migration/auth";
 
 export async function GET() {
-  // Step 1: Establish authenticated user and authorised farm
-  const auth = await getAuthContext(cookies);
+  // Step 1: Resolve cookies ONCE and establish authenticated user and authorised farm
+  const cookieStore = await cookies();
+  const auth = await getAuthContext(cookieStore);
 
   if ("error" in auth) {
     return NextResponse.json(
