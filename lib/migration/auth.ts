@@ -58,21 +58,28 @@ export interface AuthError {
 export async function getAuthContext(
   cookies: () => Promise<any>,
 ): Promise<AuthContext | AuthError> {
-  // Step 1: Create server-side client using @supabase/ssr
+  // Step 1: Resolve cookie store ONCE (Next.js 15+ async cookies API)
+  const cookieStore = await cookies();
+
+  // Step 2: Create server-side client using @supabase/ssr
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        async get(name: string) {
-          const cookieStore = await cookies();
-          return cookieStore.get(name)?.value;
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet: { name: string; value: string; options?: any }[]) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          );
         },
       },
     },
   );
 
-  // Step 2: Establish authenticated user
+  // Step 3: Establish authenticated user
   const {
     data: { user },
     error: userError,

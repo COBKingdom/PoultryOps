@@ -145,6 +145,27 @@ export function parseDate(value: unknown): string | null {
   return null;
 }
 
+// ── Flock Name Normalization ─────────────────────────────────────────────
+
+/**
+ * Normalize a flock name for matching purposes.
+ *
+ * - Trim leading/trailing whitespace
+ * - Collapse repeated internal whitespace
+ * - Lowercase for comparison
+ *
+ * Preserves original name for display/storage.
+ *
+ * @param flockName - The flock name to normalize
+ * @returns Normalized flock name for matching
+ */
+export function normalizeFlockName(flockName: string): string {
+  return flockName
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
 // ── Row Validation ────────────────────────────────────────────────────────
 
 /**
@@ -193,7 +214,7 @@ export function validateRow(
   }
 
   // Apply special values (e.g., "Bird Sold" → item_type = "Live Bird Sales")
-  for (const [field, value] of specialValues) {
+  for (const [field, value] of Array.from(specialValues.entries())) {
     mappedData[field] = value;
   }
 
@@ -309,7 +330,7 @@ export function validateRow(
 
   if (isDuplicate) {
     warnings.push(
-      `Potential duplicate: ${rule.fields.join(", ")} match an existing record`,
+      `Possible duplicate within this workbook: ${rule.fields.join(", ")} match another row`,
     );
   }
 

@@ -17,8 +17,9 @@
 
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { getAuthContext, buildFlockMap } from "@/lib/migration/auth";
-import { validateWorkbook } from "@/lib/migration";
+import { getAuthContext, buildFlockMap, getFarmFlocks } from "@/lib/migration/auth";
+import { validateWorkbook, parseWorkbookRows, normalizeFlockName } from "@/lib/migration";
+import { checkAllExistingDuplicates } from "@/lib/migration/duplicates";
 
 export async function POST(req: Request) {
   // Step 1: Establish authenticated user and authorised farm
@@ -45,18 +46,52 @@ export async function POST(req: Request) {
   // Step 3: Convert file to ArrayBuffer for xlsx parsing
   const arrayBuffer = await file.arrayBuffer();
 
-  // Step 4: Build flock map from the authorised farm
-  const flockMap = await buildFlockMap(auth.authorisedFarmId!);
+  // Step 4: Build flock map from the authorised farm (existing flocks)
+  const existingFlockMap = await buildFlockMap(auth.authorisedFarmId!);
 
-  // Step 5: Parse, detect, and validate (read-only — no database writes)
-  const validationResult = validateWorkbook(arrayBuffer, flockMap);
+  // Step 5: Parse workbook rows to extract flock names from Flocks sheet
+  const sheetRows = parseWorkbookRows(arrayBuffer);
+  
+  // Extract flock names from the Flocks sheet (if present)
+  const workbookFlockNames: string[] = [];
+  for (const [sheetName, rows] of Object.entries(sheetRows)) {
+    if (sheetName.toLowerCase() === "flocks" || sheetName.toLowerCase() === "flock") {
+      const typedRows = rows as Record<string, any>[];
+      for (const row of typedRows) {
+        const flockName = row.flock_name || row["flock name"] || row.name;
+        if (flockName && String(flockName).trim()) {
+          // Normalize for consistent matching
+          workbookFlockNames.push(normalizeFlockName(String(flockName).trim()));
+        }
+      }
+    }
+  }
 
-  // Step 6: Return validation results for preview
+  // Step 6: Build combined flock map (existing + workbook flocks)
+  // Workbook flocks are marked as pending (not yet in DB)
+  const combinedFlockMap = { ...existingFlockMap };
+  for (const flockName of workbookFlockNames) {
+    // Add to map with a placeholder ID (will be created during import)
+    // The validator will recognize these as valid flock references
+    if (!combinedFlockMap[flockName]) {
+      combinedFlockMap[flockName] = `pending:${flockName}`;
+    }
+  }
+
+  // Step 7: Parse, detect, and validate (read-only — no database writes)
+  const validationResult = validateWorkbook(arrayBuffer, combinedFlockMap);
+
+  // Step 8: Check for existing-database duplicates (farm-scoped)
+  const validationWithDuplicates = await checkAllExistingDuplicates(
+    validationResult.sheets,
+    auth.authorisedFarmId!,
+  );
+
+  // Step 9: Return validation results for preview
+  // Note: authorisedFarmId and userId are NOT returned (security hardening)
   return NextResponse.json({
     success: true,
-    authorisedFarmId: auth.authorisedFarmId,
-    userId: auth.userId,
     userEmail: auth.userEmail,
-    sheets: validationResult.sheets,
+    sheets: validationWithDuplicates,
   });
 }

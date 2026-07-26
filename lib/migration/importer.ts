@@ -105,7 +105,7 @@ export async function importFlocks(
 ): Promise<ImportResult> {
   const processable = rows.filter((r) => r.status !== "error");
   const toImport = options.skipDuplicates
-    ? processable.filter((r) => !r.isDuplicate)
+    ? processable.filter((r) => !r.isDuplicate && !r.isExistingDuplicate)
     : processable;
 
   const skipped = rows.length - toImport.length;
@@ -178,7 +178,7 @@ export async function importOperationalData(
 
   const processable = rows.filter((r) => r.status !== "error");
   const toImport = options.skipDuplicates
-    ? processable.filter((r) => !r.isDuplicate)
+    ? processable.filter((r) => !r.isDuplicate && !r.isExistingDuplicate)
     : processable;
 
   const skipped = rows.length - toImport.length;

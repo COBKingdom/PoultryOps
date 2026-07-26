@@ -104,8 +104,14 @@ export interface RowValidation {
   warnings: string[];
   /** Normalized data ready for database insert */
   mappedData: Record<string, any>;
-  /** Whether this row is a potential duplicate */
+  /** Whether this row is a potential duplicate within the workbook */
   isDuplicate: boolean;
+  /** Whether this row matches an existing record in the farm database */
+  isExistingDuplicate?: boolean;
+  /** The existing record ID if this is an existing-database duplicate */
+  existingDuplicateRecordId?: string;
+  /** The existing record data if this is an existing-database duplicate */
+  existingDuplicateRecord?: Record<string, any>;
 }
 
 export interface SheetValidationResult {
@@ -116,6 +122,8 @@ export interface SheetValidationResult {
   warningRows: number;
   errorRows: number;
   duplicateRows: number;
+  /** Number of rows that match existing records in the farm database */
+  existingDuplicateRows?: number;
   rows: RowValidation[];
   columnMappings: ColumnMapping[];
 }

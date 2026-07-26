@@ -31,7 +31,8 @@ import {
   buildFlockMap,
   resolveFlockById,
 } from "@/lib/migration/auth";
-import { validateWorkbook } from "@/lib/migration";
+import { validateWorkbook, parseWorkbookRows } from "@/lib/migration";
+import { checkAllExistingDuplicates } from "@/lib/migration/duplicates";
 import {
   executeImport,
   type ImportTarget,
@@ -97,14 +98,45 @@ export async function POST(req: Request) {
   // Step 4: Build flock map from the authorised farm
   const existingFlockMap = await buildFlockMap(authorisedFarmId);
 
-  // Step 5: Re-parse and re-validate (read-only — no database writes)
-  const validationResult = validateWorkbook(arrayBuffer, existingFlockMap);
+  // Step 5: Parse workbook rows to extract flock names from Flocks sheet
+  const sheetRows = parseWorkbookRows(arrayBuffer);
+  
+  // Extract flock names from the Flocks sheet (if present)
+  const workbookFlockNames: string[] = [];
+  for (const [sheetName, rows] of Object.entries(sheetRows)) {
+    if (sheetName.toLowerCase() === "flocks" || sheetName.toLowerCase() === "flock") {
+      const typedRows = rows as Record<string, any>[];
+      for (const row of typedRows) {
+        const flockName = row.flock_name || row["flock name"] || row.name;
+        if (flockName && String(flockName).trim()) {
+          workbookFlockNames.push(String(flockName).trim());
+        }
+      }
+    }
+  }
 
-  // Step 6: Filter to selected targets
+  // Step 6: Build combined flock map (existing + workbook flocks)
+  const combinedFlockMap = { ...existingFlockMap };
+  for (const flockName of workbookFlockNames) {
+    if (!combinedFlockMap[flockName]) {
+      combinedFlockMap[flockName] = `pending:${flockName}`;
+    }
+  }
+
+  // Step 7: Re-parse and re-validate (read-only — no database writes)
+  const validationResult = validateWorkbook(arrayBuffer, combinedFlockMap);
+
+  // Step 8: Check for existing-database duplicates (farm-scoped)
+  const validationWithDuplicates = await checkAllExistingDuplicates(
+    validationResult.sheets,
+    authorisedFarmId,
+  );
+
+  // Step 9: Filter to selected targets
   const selectedTargets: ImportTarget[] = [];
 
   for (const target of targets) {
-    const sheetResult = validationResult.sheets.find(
+    const sheetResult = validationWithDuplicates.find(
       (s) =>
         s.sheetName === target.sheetName &&
         s.dataType === target.dataType,
@@ -159,15 +191,18 @@ export async function POST(req: Request) {
   const summary = await executeImport(
     selectedTargets,
     authorisedFarmId,
-    existingFlockMap,
+    combinedFlockMap,
     importOptions,
   );
 
-  // Step 10: Return results
+  // Step 10: Return results (data minimisation - no internal IDs)
   return NextResponse.json({
     success: true,
-    authorisedFarmId,
-    userId: auth.userId,
-    summary,
+    summary: {
+      targets: summary.targets,
+      totalInserted: summary.totalInserted,
+      totalSkipped: summary.totalSkipped,
+      totalFailed: summary.totalFailed,
+    },
   });
 }

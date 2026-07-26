@@ -67,6 +67,8 @@ export {
   normalizeHeader,
 } from "./detector";
 
+export { normalizeFlockName } from "./validator";
+
 // ── Workbook Parsing ─────────────────────────────────────────────────────
 
 /**
