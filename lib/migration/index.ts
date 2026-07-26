@@ -101,7 +101,6 @@ export function parseWorkbook(
     cellDates: false,
     cellNF: false,
     cellText: false,
-    bookSheets: true,
     bookDeps: false,
   });
 
@@ -140,8 +139,7 @@ export function parseWorkbookRows(
     cellDates: false,
     cellNF: false,
     cellText: false,
-    bookSheets: true,
-  });
+    });
 
   const result: Record<string, Record<string, any>[]> = {};
 

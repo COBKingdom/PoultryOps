@@ -1,18 +1,13 @@
 /**
  * PoultryOps Migration — Server-Side Authentication & Farm Isolation
  *
- * Phase B: Establishes the authenticated user and authorised farm
- * server-side, without modifying the existing AuthContext architecture.
+ * Migration authentication uses the same Supabase session already used
+ * by the PoultryOps client application.
  *
- * Uses @supabase/ssr's createServerClient with request cookies to
- * establish the authenticated user. This is a standard Next.js App
- * Router pattern and does NOT change the existing client-side auth.
- *
- * The existing AuthContext (contexts/AuthContext.tsx) remains the
- * client-side auth provider. This module is server-side only.
+ * The browser sends its Supabase access token in the Authorization header.
+ * The server verifies that token with Supabase Auth, then derives farm_id
+ * from the authenticated user's profile.
  */
-
-import { createServerClient } from "@supabase/ssr";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
 // ── Types ───────────────────────────────────────────────────────────────
@@ -37,62 +32,42 @@ export interface AuthError {
 
 // ── Server-Side Auth ────────────────────────────────────────────────────
 
-/**
- * Establish the authenticated user and authorised farm from request cookies.
- *
- * This function:
- * 1. Creates a server-side Supabase client using @supabase/ssr
- * 2. Calls getUser() to establish the authenticated user
- * 3. Queries the profiles table for the user's farm_id and role
- * 4. Returns the authorisedFarmId
- *
- * NEVER trusts farm_id from:
- * - request body
- * - query parameters
- * - uploaded spreadsheet
- * - browser state
- *
- * @param cookies - The cookies() function from next/headers
- * @returns AuthContext or AuthError
- */
 export async function getAuthContext(
-  cookieStore: any,
+  request: Request,
 ): Promise<AuthContext | AuthError> {
-  // cookieStore is already resolved from the API route
+  const authHeader = request.headers.get("authorization");
 
-  // Step 2: Create server-side client using @supabase/ssr
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet: { name: string; value: string; options?: any }[]) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          );
-        },
-      },
-    },
-  );
-
-  // Step 3: Establish authenticated user
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
+  if (!authHeader?.startsWith("Bearer ")) {
     return {
-      error: "Unauthorized: No authenticated user",
+      error: "Unauthorized: Missing authentication token",
       status: 401,
     };
   }
 
-  // Step 3: Query profiles table for farm_id and role
-  // Using supabaseAdmin (service role) to bypass RLS for profile lookup
+  const accessToken = authHeader.substring(7).trim();
+
+  if (!accessToken) {
+    return {
+      error: "Unauthorized: Missing authentication token",
+      status: 401,
+    };
+  }
+
+  // Verify the browser's Supabase access token server-side.
+  const {
+    data: { user },
+    error: userError,
+  } = await supabaseAdmin.auth.getUser(accessToken);
+
+  if (userError || !user) {
+    return {
+      error: "Unauthorized: Invalid or expired authentication session",
+      status: 401,
+    };
+  }
+
+  // Derive farm access from the verified user's profile.
+  // farm_id is NEVER accepted from the browser.
   const { data: profile, error: profileError } = await supabaseAdmin
     .from("profiles")
     .select("id, farm_id, role, full_name, email")
@@ -106,10 +81,7 @@ export async function getAuthContext(
     };
   }
 
-  // Step 4: Derive authorisedFarmId server-side
-  const authorisedFarmId = profile.farm_id;
-
-  if (!authorisedFarmId) {
+  if (!profile.farm_id) {
     return {
       error: "Forbidden: No farm associated with user profile",
       status: 403,
@@ -126,7 +98,7 @@ export async function getAuthContext(
       full_name: profile.full_name,
       email: profile.email,
     },
-    authorisedFarmId,
+    authorisedFarmId: profile.farm_id,
   };
 }
 
@@ -249,9 +221,9 @@ export async function buildFlockMap(
   authorisedFarmId: string,
 ): Promise<Record<string, string>> {
   const flocks = await getFarmFlocks(authorisedFarmId);
-  const map: Record<string, string> = {};
-  for (const f of flocks) {
-    map[f.flock_name] = f.id;
-  }
-  return map;
+const map: Record<string, string> = {};
+for (const f of flocks) {
+  map[f.flock_name] = f.id;
+}
+return map;
 }

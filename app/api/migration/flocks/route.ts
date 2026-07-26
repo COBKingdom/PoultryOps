@@ -12,14 +12,10 @@
  */
 
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { getAuthContext, getFarmFlocks } from "@/lib/migration/auth";
 
-export async function GET() {
-  // Step 1: Resolve cookies ONCE and establish authenticated user and authorised farm
-  const cookieStore = await cookies();
-  const auth = await getAuthContext(cookieStore);
-
+export async function GET(req: Request) {
+  const auth = await getAuthContext(req);
   if ("error" in auth) {
     return NextResponse.json(
       { error: auth.error },

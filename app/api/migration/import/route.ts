@@ -25,7 +25,6 @@
  */
 
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import {
   getAuthContext,
   buildFlockMap,
@@ -41,8 +40,7 @@ import {
 
 export async function POST(req: Request) {
   // Step 1: Resolve cookies ONCE and establish authenticated user and authorised farm
-  const cookieStore = await cookies();
-  const auth = await getAuthContext(cookieStore);
+const auth = await getAuthContext(req);
 
   if ("error" in auth) {
     return NextResponse.json(

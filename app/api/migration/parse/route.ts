@@ -16,15 +16,14 @@
  */
 
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { getAuthContext, buildFlockMap, getFarmFlocks } from "@/lib/migration/auth";
 import { validateWorkbook, parseWorkbookRows, normalizeFlockName } from "@/lib/migration";
 import { checkAllExistingDuplicates } from "@/lib/migration/duplicates";
 
 export async function POST(req: Request) {
-  // Step 1: Resolve cookies ONCE and establish authenticated user and authorised farm
-  const cookieStore = await cookies();
-  const auth = await getAuthContext(cookieStore);
+  // Step 1: Verify the PoultryOps Supabase access token
+  // and derive the authorised farm server-side.
+  const auth = await getAuthContext(req);
 
   if ("error" in auth) {
     return NextResponse.json(

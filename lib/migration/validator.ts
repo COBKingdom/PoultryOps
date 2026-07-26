@@ -311,15 +311,22 @@ export function validateRow(
     }
   }
 
-  // Flock resolution
-  if (mappedData.flock_name) {
-    const flockId = flockMap[mappedData.flock_name];
-    if (!flockId) {
-      errors.push(`Flock not found: "${mappedData.flock_name}"`);
-    } else {
-      mappedData.flock_id = flockId;
-    }
+// Flock resolution
+// The Flocks sheet creates flocks, so its flock_name must not be
+// resolved as a reference to an existing flock.
+if (dataType !== "flocks" && mappedData.flock_name) {
+  const normalizedFlockName = normalizeFlockName(
+    String(mappedData.flock_name)
+  );
+
+  const flockId = flockMap[normalizedFlockName];
+
+  if (!flockId) {
+    errors.push(`Flock not found: "${mappedData.flock_name}"`);
+  } else {
+    mappedData.flock_id = flockId;
   }
+}
 
   // Duplicate detection
   const rule = DUPLICATE_RULES[dataType];

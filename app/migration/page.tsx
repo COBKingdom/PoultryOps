@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
+import { supabase } from "@/lib/supabase";
 import { MigrationStepper } from "@/components/migration/migration-stepper";
 import { MigrationPrepare } from "@/components/migration/migration-prepare";
 import { MigrationUpload } from "@/components/migration/migration-upload";
@@ -32,92 +33,193 @@ export default function MigrationPage() {
   const [sheets, setSheets] = useState<SheetValidationResult[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const [importSummary, setImportSummary] = useState<ImportSummary | null>(null);
+  const [importSummary, setImportSummary] =
+    useState<ImportSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleAnalyze = useCallback(async (uploadedFile: File) => {
-    setIsAnalyzing(true);
-    setError(null);
+  /**
+   * Get the access token from the same Supabase browser session
+   * already used by PoultryOps.
+   */
+  const getAccessToken = useCallback(async () => {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
 
-    try {
-      const formData = new FormData();
-      formData.append("file", uploadedFile);
-
-      const response = await fetch("/api/migration/parse", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        let errorMessage = "Unable to analyse workbook. Please try again.";
-        
-        try {
-          const data = await response.json();
-          errorMessage = data.error || errorMessage;
-        } catch {
-          // Response is not JSON (e.g., 500 error page)
-          console.error("[MIGRATION] Non-JSON error response:", response.status, response.statusText);
-        }
-        
-        throw new Error(errorMessage);
-      }
-
-      const data = await response.json();
-      setSheets(data.sheets);
-      setFile(uploadedFile);
-      setStage("review");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to analyse workbook");
-    } finally {
-      setIsAnalyzing(false);
+    if (sessionError) {
+      throw new Error(
+        "Unable to verify your login session. Please sign in again."
+      );
     }
+
+    if (!session?.access_token) {
+      throw new Error(
+        "Your login session is unavailable or has expired. Please sign in again."
+      );
+    }
+
+    return session.access_token;
   }, []);
 
+  /**
+   * Analyse and validate the uploaded workbook.
+   */
+  const handleAnalyze = useCallback(
+    async (uploadedFile: File) => {
+      setIsAnalyzing(true);
+      setError(null);
+
+      try {
+        const accessToken = await getAccessToken();
+
+        const formData = new FormData();
+        formData.append("file", uploadedFile);
+
+        const response = await fetch("/api/migration/parse", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: formData,
+        });
+
+        if (!response.ok) {
+          let errorMessage =
+            "Unable to analyse workbook. Please try again.";
+
+          try {
+            const data = await response.json();
+            errorMessage = data.error || errorMessage;
+          } catch {
+            console.error(
+              "[MIGRATION] Non-JSON error response:",
+              response.status,
+              response.statusText
+            );
+          }
+
+          throw new Error(errorMessage);
+        }
+
+        const data = await response.json();
+
+        if (!Array.isArray(data.sheets)) {
+          throw new Error(
+            "The workbook analysis returned an invalid response."
+          );
+        }
+
+        setSheets(data.sheets);
+        setFile(uploadedFile);
+        setStage("review");
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to analyse workbook"
+        );
+      } finally {
+        setIsAnalyzing(false);
+      }
+    },
+    [getAccessToken]
+  );
+
+  /**
+   * Import the validated workbook.
+   */
   const handleImport = useCallback(async () => {
-    if (!file) return;
+    if (!file) {
+      setError("No workbook is available to import.");
+      return;
+    }
 
     setIsImporting(true);
     setError(null);
 
     try {
+      const accessToken = await getAccessToken();
+
       const formData = new FormData();
       formData.append("file", file);
 
-      // Build targets from sheets that have importable rows
       const targets = sheets
-        .filter((sheet) => sheet.validRows > 0 || sheet.warningRows > 0)
+        .filter(
+          (sheet) =>
+            sheet.validRows > 0 || sheet.warningRows > 0
+        )
         .map((sheet) => ({
           sheetName: sheet.sheetName,
           dataType: sheet.dataType,
         }));
 
+      if (targets.length === 0) {
+        throw new Error(
+          "There are no validated records available to import."
+        );
+      }
+
       formData.append("targets", JSON.stringify(targets));
-      formData.append("options", JSON.stringify({
-        batchSize: 100,
-        skipDuplicates: true,
-        defaultFlockId: null,
-      }));
+
+      formData.append(
+        "options",
+        JSON.stringify({
+          batchSize: 100,
+          skipDuplicates: true,
+          defaultFlockId: null,
+        })
+      );
 
       const response = await fetch("/api/migration/import", {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
         body: formData,
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to import workbook");
+        let errorMessage = "Failed to import workbook.";
+
+        try {
+          const data = await response.json();
+          errorMessage = data.error || errorMessage;
+        } catch {
+          console.error(
+            "[MIGRATION] Non-JSON import error response:",
+            response.status,
+            response.statusText
+          );
+        }
+
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
+
+      if (!data.summary) {
+        throw new Error(
+          "The import completed without returning a valid summary."
+        );
+      }
+
       setImportSummary(data.summary);
       setStage("results");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to import workbook");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to import workbook"
+      );
     } finally {
       setIsImporting(false);
     }
-  }, [file, sheets]);
+  }, [file, sheets, getAccessToken]);
 
+  /**
+   * Reset the migration workflow.
+   */
   const handleReset = useCallback(() => {
     setStage("prepare");
     setFile(null);
@@ -132,7 +234,7 @@ export default function MigrationPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="mx-auto max-w-6xl px-4 py-8">
         {/* Stepper */}
         <div className="mb-8">
           <MigrationStepper currentStage={stage} />
@@ -140,13 +242,21 @@ export default function MigrationPage() {
 
         {/* Error Banner */}
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4">
             <div className="flex items-start gap-3">
-              <div className="text-red-600 font-medium">Error</div>
-              <p className="text-sm text-red-700 flex-1">{error}</p>
+              <div className="font-medium text-red-600">
+                Error
+              </div>
+
+              <p className="flex-1 text-sm text-red-700">
+                {error}
+              </p>
+
               <button
+                type="button"
                 onClick={() => setError(null)}
                 className="text-red-400 hover:text-red-600"
+                aria-label="Dismiss error"
               >
                 ×
               </button>
@@ -154,15 +264,22 @@ export default function MigrationPage() {
           </div>
         )}
 
-        {/* Stage Content */}
+        {/* Prepare */}
         {stage === "prepare" && (
-          <MigrationPrepare onContinue={() => setStage("upload")} />
+          <MigrationPrepare
+            onContinue={() => setStage("upload")}
+          />
         )}
 
+        {/* Upload */}
         {stage === "upload" && (
-          <MigrationUpload onAnalyze={handleAnalyze} isAnalyzing={isAnalyzing} />
+          <MigrationUpload
+            onAnalyze={handleAnalyze}
+            isAnalyzing={isAnalyzing}
+          />
         )}
 
+        {/* Review */}
         {stage === "review" && sheets.length > 0 && (
           <MigrationReview
             sheets={sheets}
@@ -171,6 +288,7 @@ export default function MigrationPage() {
           />
         )}
 
+        {/* Confirm */}
         {stage === "confirm" && file && (
           <MigrationConfirm
             sheets={sheets}
@@ -181,6 +299,7 @@ export default function MigrationPage() {
           />
         )}
 
+        {/* Results */}
         {stage === "results" && importSummary && (
           <MigrationResults
             summary={importSummary}
