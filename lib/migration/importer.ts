@@ -1,27 +1,24 @@
 /**
  * PoultryOps Migration — Importer (Batch Insert Service)
  *
- * Phase B: Batch import service that inserts validated records into
- * the database using supabaseAdmin.
+ * Secure batch import service.
  *
  * Key design decisions:
  * - Batch inserts in groups of 100 (configurable)
  * - Stops the affected import target if a batch fails
  * - Never uses timestamp-based rollback
  * - Never silently overwrites existing records
- * - All writes use authorisedFarmId (server-derived, never client-supplied)
+ * - All writes use authorisedFarmId
  * - Flocks are processed before operational data
- * - Fixes the existing expenses farm_id:null bug
- *
- * This module keeps batch-import logic isolated in lib/migration/
- * and does NOT modify existing operational CRUD libraries.
+ * - Newly created flock IDs are reloaded from the database
+ * - Flock-name matching is normalised consistently
+ * - Blank spreadsheet values are converted to null before database insert
  */
 
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import type {
   MigrationDataType,
   RowValidation,
-  SheetValidationResult,
 } from "./types";
 
 // ── Data Type → Database Table Mapping ──────────────────────────────────
@@ -37,7 +34,7 @@ const DATA_TYPE_TABLES: Record<MigrationDataType, string> = {
   expenses: "expenses",
 };
 
-// ── Import Order (flocks must be processed first) ───────────────────────
+// ── Import Order ────────────────────────────────────────────────────────
 
 const IMPORT_ORDER: MigrationDataType[] = [
   "flocks",
@@ -69,11 +66,8 @@ export interface ImportResult {
 }
 
 export interface ImportOptions {
-  /** Batch size for inserts (default: 100) */
   batchSize: number;
-  /** Skip potential duplicates (default: true) */
   skipDuplicates: boolean;
-  /** Default flock ID for sheets without flock_name column */
   defaultFlockId?: string;
 }
 
@@ -85,36 +79,108 @@ export interface ImportSummary {
   flockMap: Record<string, string>;
 }
 
-// ── Flock Creation ───────────────────────────────────────────────────────
+// ── Helpers ─────────────────────────────────────────────────────────────
+
+function normalizeFlockName(value: unknown): string {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
 
 /**
- * Create flocks from validated rows.
+ * Convert blank spreadsheet strings to null.
  *
- * Only processes rows with status "valid" or "warning".
- * Error rows are skipped.
- *
- * @param rows - Validated rows from the Flocks sheet
- * @param authorisedFarmId - Server-derived farm ID
- * @param options - Import options
- * @returns ImportResult for the flocks target
+ * PostgreSQL numeric, integer, date and other typed columns cannot accept
+ * an empty string (""). Optional blank spreadsheet cells should therefore
+ * be represented as null before insertion.
  */
+function convertBlankStringsToNull(
+  record: Record<string, any>,
+): Record<string, any> {
+  for (const key of Object.keys(record)) {
+    const value = record[key];
+
+    if (
+      typeof value === "string" &&
+      value.trim() === ""
+    ) {
+      record[key] = null;
+    }
+  }
+
+  return record;
+}
+
+/**
+ * Reload the authoritative flock map directly from the database.
+ *
+ * This deliberately replaces any pending:* placeholders created during
+ * workbook validation with real database UUIDs.
+ */
+async function loadFarmFlockMap(
+  authorisedFarmId: string,
+): Promise<Record<string, string>> {
+  const { data, error } = await supabaseAdmin
+    .from("flocks")
+    .select("id, flock_name")
+    .eq("farm_id", authorisedFarmId);
+
+  if (error) {
+    throw new Error(
+      `Unable to reload farm flocks after import: ${error.message}`,
+    );
+  }
+
+  const map: Record<string, string> = {};
+
+  for (const flock of data ?? []) {
+    const key = normalizeFlockName(flock.flock_name);
+
+    if (key) {
+      map[key] = flock.id;
+    }
+  }
+
+  return map;
+}
+
+// ── Flock Creation ──────────────────────────────────────────────────────
+
 export async function importFlocks(
   rows: RowValidation[],
   authorisedFarmId: string,
   options: ImportOptions,
 ): Promise<ImportResult> {
-  const processable = rows.filter((r) => r.status !== "error");
+  const processable = rows.filter(
+    (r) => r.status !== "error",
+  );
+
   const toImport = options.skipDuplicates
-    ? processable.filter((r) => !r.isDuplicate && !r.isExistingDuplicate)
+    ? processable.filter(
+        (r) =>
+          !r.isDuplicate &&
+          !r.isExistingDuplicate,
+      )
     : processable;
 
   const skipped = rows.length - toImport.length;
+
   let inserted = 0;
   let failed = 0;
+
   const errors: string[] = [];
 
-  for (let i = 0; i < toImport.length; i += options.batchSize) {
-    const batch = toImport.slice(i, i + options.batchSize);
+  for (
+    let i = 0;
+    i < toImport.length;
+    i += options.batchSize
+  ) {
+    const batch = toImport.slice(
+      i,
+      i + options.batchSize,
+    );
+
     const records = batch.map((r) => ({
       farm_id: authorisedFarmId,
       flock_name: r.mappedData.flock_name,
@@ -128,8 +194,14 @@ export async function importFlocks(
 
     if (error) {
       failed += batch.length;
-      errors.push(`Batch ${Math.floor(i / options.batchSize) + 1}: ${error.message}`);
-      break; // Stop processing this target
+
+      errors.push(
+        `Batch ${
+          Math.floor(i / options.batchSize) + 1
+        }: ${error.message}`,
+      );
+
+      break;
     }
 
     inserted += batch.length;
@@ -146,74 +218,128 @@ export async function importFlocks(
   };
 }
 
-// ── Operational Data Import ──────────────────────────────────────────────
+// ── Operational Data Import ─────────────────────────────────────────────
 
-/**
- * Import operational data (egg production, feed, health, etc.).
- *
- * Only processes rows with status "valid" or "warning".
- * Error rows are skipped.
- * Duplicates are skipped if skipDuplicates is true.
- *
- * All records are inserted with farm_id = authorisedFarmId.
- * Flock references are resolved via flockMap.
- *
- * For Sales records, total_amount is calculated from quantity * unit_price
- * when not provided or invalid.
- *
- * @param target - Import target (sheet name, data type, validated rows)
- * @param authorisedFarmId - Server-derived farm ID
- * @param flockMap - Map of flock_name → flock_id
- * @param options - Import options
- * @returns ImportResult
- */
 export async function importOperationalData(
   target: ImportTarget,
   authorisedFarmId: string,
   flockMap: Record<string, string>,
   options: ImportOptions,
 ): Promise<ImportResult> {
-  const { sheetName, dataType, rows } = target;
-  const tableName = DATA_TYPE_TABLES[dataType];
+  const {
+    sheetName,
+    dataType,
+    rows,
+  } = target;
 
-  const processable = rows.filter((r) => r.status !== "error");
+  const tableName =
+    DATA_TYPE_TABLES[dataType];
+
+  const processable = rows.filter(
+    (r) => r.status !== "error",
+  );
+
   const toImport = options.skipDuplicates
-    ? processable.filter((r) => !r.isDuplicate && !r.isExistingDuplicate)
+    ? processable.filter(
+        (r) =>
+          !r.isDuplicate &&
+          !r.isExistingDuplicate,
+      )
     : processable;
 
-  const skipped = rows.length - toImport.length;
+  const skipped =
+    rows.length - toImport.length;
+
   let inserted = 0;
   let failed = 0;
+
   const errors: string[] = [];
 
-  for (let i = 0; i < toImport.length; i += options.batchSize) {
-    const batch = toImport.slice(i, i + options.batchSize);
-    const records = batch.map((r) => {
-      const record: Record<string, any> = { ...r.mappedData };
+  for (
+    let i = 0;
+    i < toImport.length;
+    i += options.batchSize
+  ) {
+    const batch = toImport.slice(
+      i,
+      i + options.batchSize,
+    );
 
-      // Always set farm_id server-side (fixes the expenses farm_id:null bug)
+    const records = batch.map((r) => {
+      const record: Record<string, any> = {
+        ...r.mappedData,
+      };
+
+      // Farm ownership is ALWAYS established server-side.
       record.farm_id = authorisedFarmId;
 
-      // Resolve flock_id from flockMap if flock_name is present
-      if (record.flock_name && flockMap[record.flock_name]) {
-        record.flock_id = flockMap[record.flock_name];
-      } else if (options.defaultFlockId) {
-        record.flock_id = options.defaultFlockId;
+      // Resolve flock_name using the same normalisation used everywhere
+      // else in the migration system.
+      if (record.flock_name) {
+        const normalizedFlockName =
+          normalizeFlockName(
+            record.flock_name,
+          );
+
+        const resolvedFlockId =
+          flockMap[normalizedFlockName];
+
+        if (resolvedFlockId) {
+          record.flock_id =
+            resolvedFlockId;
+        } else if (
+          options.defaultFlockId
+        ) {
+          record.flock_id =
+            options.defaultFlockId;
+        }
+      } else if (
+        options.defaultFlockId
+      ) {
+        record.flock_id =
+          options.defaultFlockId;
       }
 
-      // Remove non-DB fields (flock_name is not a DB column for operational tables)
+      // flock_name is a migration helper field,
+      // not an operational database column.
       delete record.flock_name;
 
-      // Calculate total_amount for sales if not provided or invalid
-      if (dataType === "sales") {
-        const quantity = Number(record.quantity);
-        const unitPrice = Number(record.unit_price);
-        const totalAmount = Number(record.total_amount);
+      /**
+       * IMPORTANT:
+       *
+       * Blank spreadsheet cells can arrive as "".
+       * PostgreSQL numeric/integer/date columns reject "".
+       *
+       * Convert blank strings to null before performing
+       * any data-type-specific calculations.
+       */
+      convertBlankStringsToNull(record);
 
-        // Use provided valid total_amount, or calculate from quantity * unit_price
-        if (isNaN(totalAmount)) {
-          if (!isNaN(quantity) && !isNaN(unitPrice)) {
-            record.total_amount = quantity * unitPrice;
+      /**
+       * Sales:
+       *
+       * total_amount is required by the database.
+       * If it was blank in the spreadsheet, calculate it
+       * from quantity × unit_price.
+       */
+      if (dataType === "sales") {
+        const quantity =
+          Number(record.quantity);
+
+        const unitPrice =
+          Number(record.unit_price);
+
+        const totalAmountMissing =
+          record.total_amount === null ||
+          record.total_amount === undefined;
+
+        if (totalAmountMissing) {
+          if (
+            Number.isFinite(quantity) &&
+            Number.isFinite(unitPrice)
+          ) {
+            record.total_amount =
+              quantity * unitPrice;
           }
         }
       }
@@ -227,10 +353,14 @@ export async function importOperationalData(
 
     if (error) {
       failed += batch.length;
+
       errors.push(
-        `Batch ${Math.floor(i / options.batchSize) + 1}: ${error.message}`,
+        `Batch ${
+          Math.floor(i / options.batchSize) + 1
+        }: ${error.message}`,
       );
-      break; // Stop processing this target
+
+      break;
     }
 
     inserted += batch.length;
@@ -247,22 +377,8 @@ export async function importOperationalData(
   };
 }
 
-// ── Full Import Pipeline ─────────────────────────────────────────────────
+// ── Full Import Pipeline ────────────────────────────────────────────────
 
-/**
- * Execute the full import pipeline.
- *
- * 1. Process flocks first (creates new flocks)
- * 2. Build flock map from created + existing flocks
- * 3. Process operational data in order
- * 4. Return summary with per-target results
- *
- * @param targets - Array of import targets
- * @param authorisedFarmId - Server-derived farm ID
- * @param existingFlockMap - Pre-existing flock map (from the authorised farm)
- * @param options - Import options
- * @returns ImportSummary
- */
 export async function executeImport(
   targets: ImportTarget[],
   authorisedFarmId: string,
@@ -270,54 +386,80 @@ export async function executeImport(
   options: ImportOptions,
 ): Promise<ImportSummary> {
   const results: ImportResult[] = [];
+
   let totalInserted = 0;
   let totalSkipped = 0;
   let totalFailed = 0;
 
-  // Build flock map starting with existing flocks
-  const flockMap: Record<string, string> = { ...existingFlockMap };
+  /**
+   * Start with the existing map, but normalise all
+   * keys and discard pending placeholders.
+   */
+  let flockMap: Record<string, string> = {};
 
-  // Process targets in order (flocks first)
-  const sortedTargets = [...targets].sort((a, b) => {
-    const aIdx = IMPORT_ORDER.indexOf(a.dataType);
-    const bIdx = IMPORT_ORDER.indexOf(b.dataType);
-    return aIdx - bIdx;
-  });
+  for (
+    const [name, id]
+    of Object.entries(existingFlockMap)
+  ) {
+    if (
+      !id ||
+      id.startsWith("pending:")
+    ) {
+      continue;
+    }
+
+    const normalizedName =
+      normalizeFlockName(name);
+
+    if (normalizedName) {
+      flockMap[normalizedName] = id;
+    }
+  }
+
+  // Flocks MUST execute before dependent operational records.
+  const sortedTargets =
+    [...targets].sort((a, b) => {
+      const aIdx =
+        IMPORT_ORDER.indexOf(a.dataType);
+
+      const bIdx =
+        IMPORT_ORDER.indexOf(b.dataType);
+
+      return aIdx - bIdx;
+    });
 
   for (const target of sortedTargets) {
     let result: ImportResult;
 
     if (target.dataType === "flocks") {
-      // Create new flocks
       result = await importFlocks(
         target.rows,
         authorisedFarmId,
         options,
       );
 
-      // Update flock map with newly created flocks
-      // We need to re-query to get the IDs
-      const { data: newFlocks } = await supabaseAdmin
-        .from("flocks")
-        .select("id, flock_name")
-        .eq("farm_id", authorisedFarmId);
-
-      if (newFlocks) {
-        for (const f of newFlocks) {
-          flockMap[f.flock_name] = f.id;
-        }
-      }
+      /**
+       * Once flock creation has completed,
+       * discard the temporary workbook map
+       * and reload authoritative UUIDs
+       * directly from PostgreSQL.
+       */
+      flockMap =
+        await loadFarmFlockMap(
+          authorisedFarmId,
+        );
     } else {
-      // Import operational data
-      result = await importOperationalData(
-        target,
-        authorisedFarmId,
-        flockMap,
-        options,
-      );
+      result =
+        await importOperationalData(
+          target,
+          authorisedFarmId,
+          flockMap,
+          options,
+        );
     }
 
     results.push(result);
+
     totalInserted += result.inserted;
     totalSkipped += result.skipped;
     totalFailed += result.failed;

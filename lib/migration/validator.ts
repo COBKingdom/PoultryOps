@@ -99,11 +99,39 @@ export function parseDate(value: unknown): string | null {
     return null;
   }
 
-  // Excel serial date (number)
+  /**
+   * Convert an Excel serial date to YYYY-MM-DD.
+   *
+   * Excel dates are stored as the number of days since its epoch.
+   * Workbook parsing may return the serial either as a number
+   * (46228) or as a numeric string ("46228"), so both must be handled.
+   */
+  const convertExcelSerial = (serial: number): string | null => {
+    // Restrict this to a sensible Excel-date range.
+    // This prevents ordinary small numeric values from being
+    // accidentally interpreted as dates.
+    if (!Number.isFinite(serial) || serial < 1 || serial > 100000) {
+      return null;
+    }
+
+    // Excel epoch, accounting for Excel's historical 1900 date system.
+    const excelEpoch = Date.UTC(1899, 11, 30);
+    const millisecondsPerDay = 24 * 60 * 60 * 1000;
+
+    const date = new Date(
+      excelEpoch + Math.floor(serial) * millisecondsPerDay,
+    );
+
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
+
+    return date.toISOString().split("T")[0];
+  };
+
+  // Excel serial supplied as an actual number
   if (typeof value === "number" && !Number.isNaN(value)) {
-    const excelEpoch = new Date(Date.UTC(1899, 11, 30));
-    excelEpoch.setDate(excelEpoch.getDate() + value);
-    return excelEpoch.toISOString().split("T")[0];
+    return convertExcelSerial(value);
   }
 
   const str = String(value).trim();
@@ -112,34 +140,70 @@ export function parseDate(value: unknown): string | null {
     return null;
   }
 
+  // Excel serial supplied as a numeric string, e.g. "46228"
+  if (/^\d+(?:\.\d+)?$/.test(str)) {
+    const serial = Number(str);
+
+    // Typical modern Excel dates are well above 1000.
+    // This avoids treating values such as "25" as Excel dates.
+    if (serial >= 1000 && serial <= 100000) {
+      return convertExcelSerial(serial);
+    }
+  }
+
   // YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
-    const d = new Date(str);
-    if (!Number.isNaN(d.getTime())) {
+    const [year, month, day] = str.split("-").map(Number);
+
+    const date = new Date(Date.UTC(year, month - 1, day));
+
+    // Verify that JavaScript did not silently roll an invalid date
+    // such as 2026-02-31 into another month.
+    if (
+      date.getUTCFullYear() === year &&
+      date.getUTCMonth() === month - 1 &&
+      date.getUTCDate() === day
+    ) {
       return str;
     }
+
+    return null;
   }
 
-  // DD/MM/YYYY or MM/DD/YYYY
-  const slashParts = str.split("/");
-  if (slashParts.length === 3) {
-    const [part1, part2, part3] = slashParts;
-    if (part3.length === 4) {
-      // Assume DD/MM/YYYY (European format, common in Nigeria)
-      const day = part1.padStart(2, "0");
-      const month = part2.padStart(2, "0");
-      const year = part3;
-      const d = new Date(`${year}-${month}-${day}`);
-      if (!Number.isNaN(d.getTime())) {
-        return `${year}-${month}-${day}`;
-      }
+  // DD/MM/YYYY
+  const slashMatch = str.match(
+    /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/,
+  );
+
+  if (slashMatch) {
+    const day = Number(slashMatch[1]);
+    const month = Number(slashMatch[2]);
+    const year = Number(slashMatch[3]);
+
+    const date = new Date(Date.UTC(year, month - 1, day));
+
+    if (
+      date.getUTCFullYear() === year &&
+      date.getUTCMonth() === month - 1 &&
+      date.getUTCDate() === day
+    ) {
+      return [
+        String(year).padStart(4, "0"),
+        String(month).padStart(2, "0"),
+        String(day).padStart(2, "0"),
+      ].join("-");
     }
+
+    return null;
   }
 
-  // Try generic Date parsing
-  const d = new Date(str);
-  if (!Number.isNaN(d.getTime())) {
-    return d.toISOString().split("T")[0];
+  // Last-resort parsing for recognised textual dates.
+  // Numeric-only strings have already been handled above and
+  // therefore cannot accidentally become huge years.
+  const date = new Date(str);
+
+  if (!Number.isNaN(date.getTime())) {
+    return date.toISOString().split("T")[0];
   }
 
   return null;
@@ -312,12 +376,19 @@ export function validateRow(
   }
 
 // Flock resolution
-// The Flocks sheet creates flocks, so its flock_name must not be
-// resolved as a reference to an existing flock.
-if (dataType !== "flocks" && mappedData.flock_name) {
-  const normalizedFlockName = normalizeFlockName(
-    String(mappedData.flock_name)
-  );
+//
+// Rows in the Flocks sheet DEFINE flocks, so they must not be required
+// to already exist in PoultryOps or in the flock map.
+//
+// All other data types that reference a flock must resolve their
+// flock_name against either:
+// 1. an existing PoultryOps flock, or
+// 2. a flock being created by this workbook.
+if (mappedData.flock_name && dataType !== "flocks") {
+  const normalizedFlockName = String(mappedData.flock_name)
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
 
   const flockId = flockMap[normalizedFlockName];
 

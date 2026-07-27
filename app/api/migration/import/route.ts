@@ -97,30 +97,50 @@ const auth = await getAuthContext(req);
   // Step 4: Build flock map from the authorised farm
   const existingFlockMap = await buildFlockMap(authorisedFarmId);
 
-  // Step 5: Parse workbook rows to extract flock names from Flocks sheet
-  const sheetRows = parseWorkbookRows(arrayBuffer);
-  
-  // Extract flock names from the Flocks sheet (if present)
-  const workbookFlockNames: string[] = [];
-  for (const [sheetName, rows] of Object.entries(sheetRows)) {
-    if (sheetName.toLowerCase() === "flocks" || sheetName.toLowerCase() === "flock") {
-      const typedRows = rows as Record<string, any>[];
-      for (const row of typedRows) {
-        const flockName = row.flock_name || row["flock name"] || row.name;
-        if (flockName && String(flockName).trim()) {
-          workbookFlockNames.push(String(flockName).trim());
-        }
+ // Step 5: Parse workbook rows to extract flock names from Flocks sheet
+const sheetRows = parseWorkbookRows(arrayBuffer);
+
+const normalizeFlockName = (value: string) =>
+  String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+
+// Extract flock names from the Flocks sheet (if present)
+const workbookFlockNames: string[] = [];
+
+for (const [sheetName, rows] of Object.entries(sheetRows)) {
+  if (
+    sheetName.toLowerCase() === "flocks" ||
+    sheetName.toLowerCase() === "flock"
+  ) {
+    const typedRows = rows as Record<string, any>[];
+
+    for (const row of typedRows) {
+      const flockName =
+        row["* Flock Name"] ||
+        row["Flock Name"] ||
+        row.flock_name ||
+        row["flock name"] ||
+        row.name;
+
+      if (flockName && String(flockName).trim()) {
+        workbookFlockNames.push(
+          normalizeFlockName(String(flockName))
+        );
       }
     }
   }
+}
 
-  // Step 6: Build combined flock map (existing + workbook flocks)
-  const combinedFlockMap = { ...existingFlockMap };
-  for (const flockName of workbookFlockNames) {
-    if (!combinedFlockMap[flockName]) {
-      combinedFlockMap[flockName] = `pending:${flockName}`;
-    }
+// Step 6: Build combined flock map (existing + workbook flocks)
+const combinedFlockMap = { ...existingFlockMap };
+
+for (const flockName of workbookFlockNames) {
+  if (!combinedFlockMap[flockName]) {
+    combinedFlockMap[flockName] = `pending:${flockName}`;
   }
+}
 
   // Step 7: Re-parse and re-validate (read-only — no database writes)
   const validationResult = validateWorkbook(arrayBuffer, combinedFlockMap);

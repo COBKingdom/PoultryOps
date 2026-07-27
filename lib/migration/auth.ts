@@ -8,6 +8,7 @@
  * The server verifies that token with Supabase Auth, then derives farm_id
  * from the authenticated user's profile.
  */
+
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
 // ── Types ───────────────────────────────────────────────────────────────
@@ -30,8 +31,17 @@ export interface AuthError {
   status: number;
 }
 
-// ── Server-Side Auth ────────────────────────────────────────────────────
+// ── Server-Side Authentication ─────────────────────────────────────────
 
+/**
+ * Verify the Supabase access token supplied by the PoultryOps browser
+ * session and derive the user's authorised farm from their profile.
+ *
+ * Security:
+ * - The access token is verified server-side with Supabase Auth.
+ * - farm_id is NEVER accepted from the request body or browser state.
+ * - The authorised farm is derived from the authenticated user's profile.
+ */
 export async function getAuthContext(
   request: Request,
 ): Promise<AuthContext | AuthError> {
@@ -67,7 +77,6 @@ export async function getAuthContext(
   }
 
   // Derive farm access from the verified user's profile.
-  // farm_id is NEVER accepted from the browser.
   const { data: profile, error: profileError } = await supabaseAdmin
     .from("profiles")
     .select("id, farm_id, role, full_name, email")
@@ -112,48 +121,57 @@ export interface FlockInfo {
 }
 
 /**
- * Resolve a flock by name, verifying it belongs to the authorised farm.
+ * Normalize flock names for comparison.
  *
- * This function NEVER trusts a client-supplied flock_id. It resolves
- * flocks by name within the authorised farm only.
- *
- * @param flockName - The flock name to resolve
- * @param authorisedFarmId - The server-derived farm ID
- * @returns FlockInfo or null if not found / not owned
+ * This is used only for matching.
+ * It does NOT modify the flock name stored in the database.
+ */
+function normalizeFlockName(flockName: string): string {
+  return String(flockName)
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+/**
+ * Resolve a flock by name, verifying that it belongs to the
+ * authenticated user's authorised farm.
  */
 export async function resolveFlock(
   flockName: string,
   authorisedFarmId: string,
 ): Promise<FlockInfo | null> {
+  const normalizedRequestedName = normalizeFlockName(flockName);
+
   const { data, error } = await supabaseAdmin
     .from("flocks")
     .select("id, flock_name, bird_type, quantity")
-    .eq("farm_id", authorisedFarmId)
-    .eq("flock_name", flockName)
-    .single();
+    .eq("farm_id", authorisedFarmId);
 
   if (error || !data) {
     return null;
   }
 
+  const flock = data.find(
+    (item) =>
+      normalizeFlockName(item.flock_name) === normalizedRequestedName,
+  );
+
+  if (!flock) {
+    return null;
+  }
+
   return {
-    id: data.id,
-    flock_name: data.flock_name,
-    bird_type: data.bird_type,
-    quantity: data.quantity,
+    id: flock.id,
+    flock_name: flock.flock_name,
+    bird_type: flock.bird_type,
+    quantity: flock.quantity,
   };
 }
 
 /**
- * Resolve a flock by ID, verifying it belongs to the authorised farm.
- *
- * This function verifies that the flock exists AND belongs to the
- * authorised farm. It does NOT trust the client-supplied flock_id
- * without this ownership check.
- *
- * @param flockId - The flock ID to verify
- * @param authorisedFarmId - The server-derived farm ID
- * @returns FlockInfo or null if not found / not owned
+ * Resolve a flock by ID, verifying that it belongs to the
+ * authenticated user's authorised farm.
  */
 export async function resolveFlockById(
   flockId: string,
@@ -179,13 +197,8 @@ export async function resolveFlockById(
 }
 
 /**
- * Get all flocks belonging to the authorised farm.
- *
- * Used by the parse/validate endpoint to build a flockMap for
- * flock resolution during validation.
- *
- * @param authorisedFarmId - The server-derived farm ID
- * @returns Array of FlockInfo
+ * Get all flocks belonging to the authenticated user's
+ * authorised farm.
  */
 export async function getFarmFlocks(
   authorisedFarmId: string,
@@ -209,21 +222,34 @@ export async function getFarmFlocks(
 }
 
 /**
- * Build a flock name → flock ID map for the authorised farm.
+ * Build a normalized flock-name → flock-ID map for the
+ * authenticated user's authorised farm.
  *
- * Used by the validator to resolve flock_name references in
- * spreadsheet rows to actual flock IDs.
+ * Example:
  *
- * @param authorisedFarmId - The server-derived farm ID
- * @returns Record mapping flock_name → flock_id
+ * "Migration Test Layers A"
+ *
+ * becomes:
+ *
+ * "migration test layers a"
+ *
+ * The normalization is for matching only. The original flock name
+ * remains unchanged in the database.
  */
 export async function buildFlockMap(
   authorisedFarmId: string,
 ): Promise<Record<string, string>> {
   const flocks = await getFarmFlocks(authorisedFarmId);
-const map: Record<string, string> = {};
-for (const f of flocks) {
-  map[f.flock_name] = f.id;
-}
-return map;
+
+  const map: Record<string, string> = {};
+
+  for (const flock of flocks) {
+    const normalizedFlockName = normalizeFlockName(flock.flock_name);
+
+    if (normalizedFlockName) {
+      map[normalizedFlockName] = flock.id;
+    }
+  }
+
+  return map;
 }

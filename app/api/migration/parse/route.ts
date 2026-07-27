@@ -51,21 +51,49 @@ export async function POST(req: Request) {
 
   // Step 5: Parse workbook rows to extract flock names from Flocks sheet
   const sheetRows = parseWorkbookRows(arrayBuffer);
-  
-  // Extract flock names from the Flocks sheet (if present)
-  const workbookFlockNames: string[] = [];
-  for (const [sheetName, rows] of Object.entries(sheetRows)) {
-    if (sheetName.toLowerCase() === "flocks" || sheetName.toLowerCase() === "flock") {
-      const typedRows = rows as Record<string, any>[];
-      for (const row of typedRows) {
-        const flockName = row.flock_name || row["flock name"] || row.name;
-        if (flockName && String(flockName).trim()) {
-          // Normalize for consistent matching
-          workbookFlockNames.push(normalizeFlockName(String(flockName).trim()));
-        }
+
+// Extract flock names from the Flocks sheet (if present)
+const workbookFlockNames: string[] = [];
+
+for (const [sheetName, rows] of Object.entries(sheetRows)) {
+  const normalizedSheetName = sheetName.trim().toLowerCase();
+
+  if (
+    normalizedSheetName === "flocks" ||
+    normalizedSheetName === "flock"
+  ) {
+    const typedRows = rows as Record<string, any>[];
+
+    for (const row of typedRows) {
+      // Locate the flock-name column regardless of:
+      // - required-field marker (*)
+      // - capitalisation
+      // - underscores
+      // - extra whitespace
+      const flockNameKey = Object.keys(row).find((key) => {
+        const normalizedKey = key
+          .replace(/\*/g, "")
+          .trim()
+          .toLowerCase()
+          .replace(/[_\s]+/g, " ");
+
+        return normalizedKey === "flock name";
+      });
+
+      if (!flockNameKey) {
+        continue;
+      }
+
+      const flockName = row[flockNameKey];
+
+      if (flockName && String(flockName).trim()) {
+        workbookFlockNames.push(
+          normalizeFlockName(String(flockName))
+        );
       }
     }
   }
+}
 
   // Step 6: Build combined flock map (existing + workbook flocks)
   // Workbook flocks are marked as pending (not yet in DB)
