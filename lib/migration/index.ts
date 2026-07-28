@@ -21,6 +21,10 @@ import type {
 } from "./types";
 import { detectSheetTypes, detectColumns, detectSheets, normalizeHeader } from "./detector";
 import { validateSheet } from "./validator";
+import {
+  isLegacyWorkbook,
+  validateLegacyWorkbook,
+} from "./legacy";
 
 // ── Re-exports ────────────────────────────────────────────────────────────
 
@@ -68,6 +72,11 @@ export {
 } from "./detector";
 
 export { normalizeFlockName } from "./validator";
+
+export {
+  isLegacyWorkbook,
+  validateLegacyWorkbook,
+} from "./legacy";
 
 // ── Workbook Parsing ─────────────────────────────────────────────────────
 
@@ -135,11 +144,11 @@ export function parseWorkbook(
 export function parseWorkbookRows(
   data: ArrayBuffer | Buffer,
 ): Record<string, Record<string, any>[]> {
-  const workbook = XLSX.read(data, {
-    cellDates: false,
-    cellNF: false,
-    cellText: false,
-    });
+const workbook = XLSX.read(data, {
+  cellDates: false,
+  cellNF: false,
+  cellText: false,
+});
 
   const result: Record<string, Record<string, any>[]> = {};
 
@@ -181,13 +190,13 @@ export function validateWorkbook(
   data: ArrayBuffer | Buffer,
   flockMap: Record<string, string> = {},
 ): ValidationResult {
-  // Step 1: Parse workbook metadata
+  // Step 1: Try the normal PoultryOps migration format first.
   const parseResult = parseWorkbook(data);
 
-  // Step 2: Parse workbook rows
+  // Step 2: Parse workbook rows.
   const sheetRows = parseWorkbookRows(data);
 
-  // Step 3: Validate each sheet for each detected data type
+  // Step 3: Validate all normally detected PoultryOps sheets.
   const results: SheetValidationResult[] = [];
 
   for (const sheet of parseResult.sheets) {
@@ -212,7 +221,25 @@ export function validateWorkbook(
     }
   }
 
-  return { sheets: results };
+  // Standard PoultryOps workbook successfully recognised.
+  // Preserve the existing migration behaviour exactly.
+  if (results.length > 0) {
+    return {
+      sheets: results,
+    };
+  }
+
+  // No standard PoultryOps sheets were recognised.
+  // Try the isolated legacy/existing-spreadsheet adapter.
+  if (isLegacyWorkbook(data)) {
+    return validateLegacyWorkbook(data);
+  }
+
+  // Workbook is neither a recognised PoultryOps workbook nor a
+  // supported legacy poultry spreadsheet.
+  return {
+    sheets: [],
+  };
 }
 
 // ── Utility: Get sheet metadata for a specific data type ────────────────
