@@ -49,7 +49,6 @@ export default function ReportsPage() {
   <OwnerOnly>
     <AppShell
       email={user?.email}
-      farmName={farm?.name}
     >
       <div className="space-y-6">
 

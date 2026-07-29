@@ -70,7 +70,6 @@ export default function FarmSettingsPage() {
     <OwnerOnly>
       <AppShell
         email={user?.email}
-        farmName={farm?.name}
       >
         <div className="p-6 space-y-6">
 

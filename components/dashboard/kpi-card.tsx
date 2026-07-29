@@ -96,7 +96,7 @@ export default function KpiCard({
     displayValue =
       formatCurrency(
         numericValue,
-        currency
+        { currency }
       );
   }
 
@@ -120,7 +120,7 @@ export default function KpiCard({
     displayValue =
       formatCurrency(
         numericValue,
-        currency
+        { currency }
       );
   }
 
@@ -133,7 +133,7 @@ export default function KpiCard({
     displayValue =
       formatCurrency(
         numericValue,
-        currency
+        { currency }
       );
 
     if (

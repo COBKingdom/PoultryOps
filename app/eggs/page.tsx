@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import { useAuth } from "@/contexts/AuthContext";
 
-import { useDashboard } from "@/hooks/useDashboard";
+import { useCurrentFarm } from "@/hooks/useCurrentFarm";
 import { useEggProduction } from "@/hooks/useEggProduction";
 
 import { getFarmFlocks } from "@/lib/flocks";
@@ -19,13 +19,9 @@ export default function EggsPage() {
   const { user } =
     useAuth();
 
-  const {
-    data,
-    loading,
-  } = useDashboard();
+  const { farm, loading: farmLoading } = useCurrentFarm();
 
-  const farmId =
-    data?.farm?.id;
+  const farmId = farm?.id;
 
   const [flocks, setFlocks] =
     useState<any[]>([]);
@@ -52,20 +48,22 @@ const {
     load();
   }, [farmId]);
 
-  if (loading) {
+  if (farmLoading) {
     return (
-      <div className="p-6">
-        Loading...
-      </div>
+      <AppShell email={user?.email}>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
+            <p className="mt-4 text-slate-600">Loading...</p>
+          </div>
+        </div>
+      </AppShell>
     );
   }
 
   return (
     <AppShell
       email={user?.email}
-      farmName={
-        data?.farm?.name
-      }
     >
       <div className="p-6 space-y-6">
 

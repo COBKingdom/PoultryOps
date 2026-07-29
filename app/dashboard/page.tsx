@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { useDashboard } from "@/hooks/useDashboard";
+import { useCurrentFarm } from "@/hooks/useCurrentFarm";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 
 import AppShell from "@/components/layout/app-shell";
@@ -17,13 +17,7 @@ export default function DashboardPage() {
   const { user } =
     useAuth();
 
-  const {
-    loading,
-    data,
-  } = useDashboard();
-
-  const farm =
-    data?.farm;
+  const { farm, loading: farmLoading } = useCurrentFarm();
 
   const {
     currentBirds,
@@ -36,19 +30,24 @@ export default function DashboardPage() {
     farm?.id
   );
 
-  if (loading) {
+  if (farmLoading) {
     return (
-      <div className="p-10">
-        Loading Dashboard...
-      </div>
+      <AppShell email={user?.email}>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
+            <p className="mt-4 text-slate-600">Loading dashboard...</p>
+          </div>
+        </div>
+      </AppShell>
     );
   }
-return (
-  <OwnerOnly>
-    <AppShell
-      email={user?.email}
-      farmName={farm?.name}
-    >
+
+  return (
+    <OwnerOnly>
+      <AppShell
+        email={user?.email}
+      >
       <div className="space-y-6">
 
         <FarmHero

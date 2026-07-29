@@ -41,7 +41,6 @@ export default function AnalyticsPage() {
   <OwnerOnly>
     <AppShell
       email={user?.email}
-      farmName={farm?.name}
     >
       <div className="space-y-6">
 

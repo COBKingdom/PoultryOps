@@ -6,7 +6,10 @@ export async function createFlock(
   const { data, error } =
     await supabase
       .from("flocks")
-      .insert(flock)
+      .insert({
+        ...flock,
+        updated_at: new Date().toISOString(),
+      })
       .select()
       .single();
 
@@ -22,7 +25,10 @@ export async function updateFlock(
   const { data, error } =
     await supabase
       .from("flocks")
-      .update(flock)
+      .update({
+        ...flock,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", id)
       .select()
       .single();
@@ -32,30 +38,43 @@ export async function updateFlock(
   return data;
 }
 
-export async function deleteFlock(
+export async function archiveFlock(
   id: string
-) {
-  const { error } =
-    await supabase
-      .from("flocks")
-      .delete()
-      .eq("id", id);
-
-  if (error) throw error;
-}
-
-export async function getFlocks(
-  farmId: string
 ) {
   const { data, error } =
     await supabase
       .from("flocks")
-      .select("*")
-      .eq("farm_id", farmId)
-      .order(
-        "created_at",
-        { ascending: false }
-      );
+      .update({
+        archived_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .select()
+      .single();
+
+  if (error) throw error;
+
+  return data;
+}
+
+export async function getFlocks(
+  farmId: string,
+  includeArchived = false
+) {
+  let query = supabase
+    .from("flocks")
+    .select("*")
+    .eq("farm_id", farmId);
+
+  if (!includeArchived) {
+    query = query.is("archived_at", null);
+  }
+
+  const { data, error } =
+    await query.order(
+      "created_at",
+      { ascending: false }
+    );
 
   if (error) throw error;
 

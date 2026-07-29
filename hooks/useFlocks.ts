@@ -5,7 +5,8 @@ import { useEffect, useState } from "react";
 import { getFlocks } from "@/lib/flocks";
 
 export function useFlocks(
-  farmId?: string
+  farmId?: string,
+  includeArchived = false
 ) {
   const [flocks, setFlocks] =
     useState<any[]>([]);
@@ -13,20 +14,32 @@ export function useFlocks(
   const [loading, setLoading] =
     useState(true);
 
+  const [error, setError] =
+    useState<Error | null>(null);
+
   async function refresh() {
-    if (!farmId) return;
+    if (!farmId) {
+      setFlocks([]);
+      setLoading(false);
+      return;
+    }
 
     try {
+      setError(null);
+      setLoading(true);
+
       const result =
         await getFlocks(
-          farmId
+          farmId,
+          includeArchived
         );
 
-      setFlocks(result);
+      setFlocks(result || []);
 
-    } catch (error) {
-      console.error(error);
-
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error("Failed to load flocks");
+      setError(error);
+      console.error("Error loading flocks:", error);
     } finally {
       setLoading(false);
     }
@@ -34,11 +47,12 @@ export function useFlocks(
 
   useEffect(() => {
     refresh();
-  }, [farmId]);
+  }, [farmId, includeArchived]);
 
   return {
     flocks,
     loading,
+    error,
     refresh,
   };
 }

@@ -9,7 +9,7 @@ import {
 import SaveButton from "@/components/ui/save-button";
 
 type Props = {
-  farmId: string;
+  farmId?: string;
   onSaved?: () => Promise<void> | void;
   
 };

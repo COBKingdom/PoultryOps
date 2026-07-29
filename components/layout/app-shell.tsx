@@ -4,22 +4,24 @@ import { ReactNode, useState } from "react";
 
 import { Menu } from "lucide-react";
 
+import { useCurrentFarm } from "@/hooks/useCurrentFarm";
+
 import Sidebar from "./sidebar";
 import Topbar from "./topbar";
 import MobileSidebar from "./mobile-sidebar";
 
 type Props = {
   email?: string;
-  farmName?: string;
   children: ReactNode;
 };
 export default function AppShell({
   email,
-  farmName,
   children,
 }: Props) {
   const [open, setOpen] =
     useState(false);
+
+  const { farm, loading: farmLoading } = useCurrentFarm();
 
   return (
     <div className="flex min-h-screen bg-slate-100">
@@ -51,7 +53,7 @@ export default function AppShell({
 
         <Topbar
          email={email}
-         farmName={farmName}
+         farmName={farmLoading ? undefined : farm?.name}
         />
 
         <div className="p-4 md:p-6">

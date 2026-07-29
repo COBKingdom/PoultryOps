@@ -71,7 +71,6 @@ export default function ProfilePage() {
   return (
     <AppShell
       email={user?.email}
-      farmName={farm?.name}
     >
       <div className="p-4 md:p-8 space-y-8 max-w-6xl mx-auto">
         {/* Header */}

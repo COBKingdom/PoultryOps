@@ -99,7 +99,7 @@ export default function SettingsPage() {
 
   return (
     <OwnerOnly>
-      <AppShell email={user?.email} farmName={farm?.name}>
+      <AppShell email={user?.email}>
         <div className="px-4 md:px-6 py-8 md:py-10 max-w-5xl mx-auto">
           {/* Header */}
           <div className="mb-8">

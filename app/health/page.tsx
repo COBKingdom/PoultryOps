@@ -48,9 +48,6 @@ const {
   return (
     <AppShell
       email={user?.email}
-      farmName={
-        data?.farm?.name
-      }
     >
       <div className="p-6 space-y-6">
 

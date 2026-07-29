@@ -9,9 +9,10 @@ import {
 import SaveButton from "@/components/ui/save-button";
 
 type Props = {
-  farmId: string;
+  farmId?: string;
   flocks: any[];
-  onSaved?: () => void;
+  onSaved?: () => Promise<void> | void;
+  
 };
 
 export default function AddEggForm({
@@ -121,7 +122,7 @@ export default function AddEggForm({
           </option>
 
           {flocks.map(
-            (flock) => (
+            (flock: any) => (
               <option
                 key={flock.id}
                 value={flock.id}
