@@ -11,7 +11,6 @@ import AppShell from "@/components/layout/app-shell";
 import { createFlock, updateFlock, archiveFlock } from "@/lib/flocks";
 
 import FlockModal from "@/components/flocks/flock-modal";
-import FlockViewModal from "@/components/flocks/flock-view-modal";
 import FlockCard from "@/components/flocks/flock-card";
 
 import { Plus, Package, RefreshCw } from "lucide-react";
@@ -32,7 +31,6 @@ export default function FlocksPage() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingFlock, setEditingFlock] = useState<any | null>(null);
-  const [viewingFlock, setViewingFlock] = useState<any | null>(null);
 
   const totalBirds = flocks.reduce(
     (sum, flock) => sum + Number(flock.quantity),
@@ -72,17 +70,9 @@ export default function FlocksPage() {
     setIsModalOpen(true);
   }
 
-  function handleView(flock: any) {
-    setViewingFlock(flock);
-  }
-
   function handleCloseModal() {
     setIsModalOpen(false);
     setEditingFlock(null);
-  }
-
-  function handleCloseViewModal() {
-    setViewingFlock(null);
   }
 
   const isLoading = farmLoading || flocksLoading;
@@ -265,7 +255,6 @@ export default function FlocksPage() {
               <FlockCard
                 key={flock.id}
                 flock={flock}
-                onView={handleView}
                 onEdit={handleEdit}
                 onArchive={handleArchive}
               />
@@ -281,12 +270,6 @@ export default function FlocksPage() {
           flock={editingFlock}
         />
 
-        {/* View Modal */}
-        <FlockViewModal
-          isOpen={!!viewingFlock}
-          onClose={handleCloseViewModal}
-          flock={viewingFlock}
-        />
       </div>
     </AppShell>
   );

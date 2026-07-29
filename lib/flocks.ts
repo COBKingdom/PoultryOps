@@ -131,3 +131,18 @@ export async function getFarmFlocks(
 
   return data;
 }
+
+export async function getFlockById(
+  id: string
+) {
+  const { data, error } =
+    await supabase
+      .from("flocks")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+  if (error) throw error;
+
+  return data;
+}

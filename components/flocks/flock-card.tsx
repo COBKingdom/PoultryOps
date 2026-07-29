@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 
+import { useRouter } from "next/navigation";
+
 import { Eye, Edit, Archive, MoreVertical, Package, Calendar, MapPin } from "lucide-react";
 
 type Props = {
   flock: any;
-  onView: (flock: any) => void;
+  onView?: (flock: any) => void;
   onEdit: (flock: any) => void;
   onArchive: (id: string) => void;
 };
@@ -17,6 +19,7 @@ export default function FlockCard({
   onEdit,
   onArchive,
 }: Props) {
+  const router = useRouter();
   const [showActions, setShowActions] = useState(false);
 
   const formatDate = (dateString: string) => {
@@ -53,6 +56,14 @@ export default function FlockCard({
       return fallback;
     }
     return value;
+  };
+
+  const handleViewClick = () => {
+    if (onView) {
+      onView(flock);
+    } else {
+      router.push(`/flocks/${flock.id}`);
+    }
   };
 
   return (
@@ -107,7 +118,7 @@ export default function FlockCard({
               <div className="absolute right-0 top-10 z-20 w-48 rounded-xl bg-white border border-slate-200 shadow-lg py-2">
                 <button
                   onClick={() => {
-                    onView(flock);
+                    handleViewClick();
                     setShowActions(false);
                   }}
                   className="w-full flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
@@ -196,7 +207,7 @@ export default function FlockCard({
         
         <div className="flex gap-2">
           <button
-            onClick={() => onView(flock)}
+            onClick={handleViewClick}
             className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors inline-flex items-center gap-1.5"
             aria-label="View flock details"
           >
