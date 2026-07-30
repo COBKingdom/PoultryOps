@@ -95,15 +95,26 @@ trialEnd.setDate(
     throw subscriptionError;
   }
 
-void fetch("/api/send-welcome", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    userId,
-    farmName,
-  }),
-});
+try {
+  const response = await fetch("/api/send-welcome", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      userId,
+      farmName,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    console.error("Welcome email failed:", error);
+  } else {
+    console.log("Welcome email request completed.");
+  }
+} catch (error) {
+  console.error("Failed to call send-welcome API:", error);
+}
   return farm;
 }
