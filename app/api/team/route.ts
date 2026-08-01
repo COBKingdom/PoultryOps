@@ -1,47 +1,59 @@
 import { NextResponse } from "next/server";
 import { requirePermission } from "@/lib/permissions/api";
 import { PERMISSIONS } from "@/lib/permissions";
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 
 export async function GET(request: Request) {
   try {
     const result = await requirePermission(PERMISSIONS.TEAM_VIEW, request);
     
     if (!result.success) {
+      console.log("Permission check failed:", result);
       return NextResponse.json(
         { error: result.error },
         { status: result.statusCode }
       );
     }
 
+    console.log("Authenticated user:", result.userId, "role:", result.role);
+
     // Get farm ID from user's profile
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from("profiles")
       .select("farm_id")
       .eq("id", result.userId)
       .single();
 
+    console.log("Profile query result:", { profile, profileError });
+
     if (profileError || !profile?.farm_id) {
+      console.log("Farm not found for user:", result.userId);
       return NextResponse.json(
         { error: "Farm not found" },
         { status: 404 }
       );
     }
 
+    console.log("Fetching members for farm:", profile.farm_id);
+
     // Get all team members for this farm
-    const { data: members, error: membersError } = await supabase
+    const { data: members, error: membersError } = await supabaseAdmin
       .from("profiles")
       .select(`
         id,
         full_name,
         email,
         role,
-        status,
-        created_at,
-        last_sign_in_at
+        created_at
       `)
       .eq("farm_id", profile.farm_id)
       .order("created_at", { ascending: true });
+
+    console.log("Members query result:", { 
+      membersCount: members?.length, 
+      membersError,
+      members: members?.slice(0, 2) // Log first 2 members for debugging
+    });
 
     if (membersError) {
       console.error("Error fetching team members:", membersError);
@@ -51,6 +63,7 @@ export async function GET(request: Request) {
       );
     }
 
+    console.log("Returning members:", members?.length || 0);
     return NextResponse.json({ members: members || [] });
   } catch (error) {
     console.error("Error in GET /api/team:", error);
@@ -83,7 +96,7 @@ export async function POST(request: Request) {
     }
 
     // Get farm ID from user's profile
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from("profiles")
       .select("farm_id")
       .eq("id", result.userId)
@@ -96,56 +109,44 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create invitation (TODO: Implement actual invitation logic)
-    // For now, create a pending profile
-    const { data: newMember, error: createError } = await supabase
-      .from("profiles")
-      .insert({
-        full_name,
-        email,
-        role,
-        farm_id: profile.farm_id,
-        status: "pending",
-        invited_by: result.userId,
-      })
-      .select()
-      .single();
+    // Generate temporary password
+    const temporaryPassword = generateTemporaryPassword();
 
-    if (createError) {
-      console.error("Error creating team member:", createError);
+    // Call the centralized user creation service
+    const createUserResponse = await fetch("/api/users/create", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: email.trim().toLowerCase(),
+        password: temporaryPassword,
+        fullName: full_name.trim(),
+        farmId: profile.farm_id,
+        role: role,
+        permissions: permissions || [],
+        sendInvitation: true,
+        invitedBy: result.userId,
+      }),
+    });
+
+    const createUserData = await createUserResponse.json();
+
+    if (!createUserResponse.ok) {
       return NextResponse.json(
-        { error: "Failed to create team member" },
-        { status: 500 }
+        { error: createUserData.error || "Failed to create user" },
+        { status: createUserResponse.status }
       );
     }
 
-    // TODO: Assign permissions if provided
-    if (permissions && Array.isArray(permissions)) {
-      // Insert permissions into user_permissions table
-      const permissionInserts = permissions.map((permissionCode: string) => ({
-        user_id: newMember.id,
-        permission_code: permissionCode,
-        granted: true,
-      }));
-
-      const { error: permError } = await supabase
-        .from("user_permissions")
-        .insert(permissionInserts);
-
-      if (permError) {
-        console.error("Error assigning permissions:", permError);
-        // Don't fail the request, just log the error
-      }
-    }
-
-    // TODO: Send invitation email
-    console.log(`Invitation sent to ${email} for farm ${profile.farm_id}`);
-
+    // Return success with temporary password so it can be displayed to the user
     return NextResponse.json(
-      { 
-        success: true, 
-        member: newMember,
-        message: "Invitation sent successfully"
+      {
+        success: true,
+        userId: createUserData.userId,
+        invitationId: createUserData.invitationId,
+        temporaryPassword,
+        message: createUserData.message || "Invitation sent successfully",
       },
       { status: 201 }
     );
@@ -156,4 +157,29 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+}
+
+// Generate a secure temporary password
+function generateTemporaryPassword(): string {
+  const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const lowercase = "abcdefghijklmnopqrstuvwxyz";
+  const numbers = "0123456789";
+  const special = "!@#$%";
+  
+  // Ensure at least one character from each category
+  const password = [
+    uppercase[Math.floor(Math.random() * uppercase.length)],
+    lowercase[Math.floor(Math.random() * lowercase.length)],
+    numbers[Math.floor(Math.random() * numbers.length)],
+    special[Math.floor(Math.random() * special.length)],
+  ];
+  
+  // Add 4 more random characters
+  const allChars = uppercase + lowercase + numbers + special;
+  for (let i = 0; i < 4; i++) {
+    password.push(allChars[Math.floor(Math.random() * allChars.length)]);
+  }
+  
+  // Shuffle the password
+  return password.sort(() => Math.random() - 0.5).join('');
 }

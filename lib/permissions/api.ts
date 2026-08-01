@@ -18,7 +18,8 @@
  * ```
  */
 
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase-admin";
+import { getAuthenticatedUser } from "@/lib/auth/server";
 import { permissionCache } from "./cache";
 import { PermissionCode, ROLES, Role } from "./constants";
 
@@ -31,28 +32,22 @@ export interface ApiPermissionResult {
 }
 
 /**
- * Get session from request
+ * Get authenticated user from request
+ * Uses the proper server-side authentication helper
  */
 async function getSessionFromRequest(request?: Request) {
   try {
-    if (request) {
-      const authHeader = request.headers.get("authorization");
-      if (authHeader?.startsWith("Bearer ")) {
-        const token = authHeader.substring(7);
-        const { data: { user }, error } = await supabase.auth.getUser(token);
-        if (error || !user) {
-          return null;
-        }
-        return { user };
-      }
-    }
-    
-    // Try to get current session
-    const { data: { session }, error } = await supabase.auth.getSession();
-    if (error || !session) {
+    if (!request) {
       return null;
     }
-    return { user: session.user };
+
+    const authResult = await getAuthenticatedUser(request);
+    
+    if (!authResult.success || !authResult.user) {
+      return null;
+    }
+    
+    return { user: authResult.user };
   } catch (error) {
     console.error("Error getting session:", error);
     return null;
@@ -80,8 +75,8 @@ export async function requirePermission(
 
     const userId = session.user.id;
     
-    // Get user profile to check role
-    const { data: profile, error: profileError } = await supabase
+    // Get user profile
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from("profiles")
       .select("role")
       .eq("id", userId)
@@ -172,7 +167,7 @@ export async function requireAnyPermission(
     const userId = session.user.id;
     
     // Get user profile
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from("profiles")
       .select("role")
       .eq("id", userId)
@@ -263,7 +258,7 @@ export async function requireAllPermissions(
     const userId = session.user.id;
     
     // Get user profile
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from("profiles")
       .select("role")
       .eq("id", userId)
@@ -351,7 +346,7 @@ export async function requireOwner(request?: Request): Promise<ApiPermissionResu
     const userId = session.user.id;
     
     // Get user profile
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from("profiles")
       .select("role")
       .eq("id", userId)

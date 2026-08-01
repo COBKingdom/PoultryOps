@@ -34,6 +34,8 @@ export default function InviteMemberDialog({ isOpen, onClose, farmId, onSuccess 
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null);
 
   const permissionsByCategory = groupPermissionsByCategory();
   const canManageUsers = can(PERMISSIONS.SETTINGS_MANAGE_USERS);
@@ -180,18 +182,53 @@ export default function InviteMemberDialog({ isOpen, onClose, farmId, onSuccess 
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setSuccess(false);
+
+    // Validation
+    if (!formData.full_name.trim()) {
+      setError("Please enter the team member's full name");
+      setLoading(false);
+      return;
+    }
+
+    if (!formData.email.trim()) {
+      setError("Please enter an email address");
+      setLoading(false);
+      return;
+    }
+
+    // Basic email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email.trim())) {
+      setError("Please enter a valid email address");
+      setLoading(false);
+      return;
+    }
 
     try {
-      // TODO: Implement actual API call
-      console.log("Inviting member:", {
-        farmId,
-        ...formData,
-        permissions: Array.from(formData.permissions),
+      const response = await fetch("/api/team", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          full_name: formData.full_name.trim(),
+          email: formData.email.trim().toLowerCase(),
+          role: formData.role,
+          permissions: Array.from(formData.permissions),
+        }),
       });
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const data = await response.json();
 
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to send invitation");
+      }
+
+      // Show success state with temporary password
+      setSuccess(true);
+      setTemporaryPassword(data.temporaryPassword);
+      
       // Reset form
       setFormData({
         full_name: "",
@@ -200,7 +237,15 @@ export default function InviteMemberDialog({ isOpen, onClose, farmId, onSuccess 
         permissions: new Set(),
       });
 
+      // Call onSuccess callback
       onSuccess();
+
+      // Close dialog after 5 seconds to allow user to see the password
+      setTimeout(() => {
+        setSuccess(false);
+        setTemporaryPassword(null);
+        handleClose();
+      }, 5000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to invite member");
     } finally {
@@ -319,6 +364,30 @@ export default function InviteMemberDialog({ isOpen, onClose, farmId, onSuccess 
             {error && (
               <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
                 {error}
+              </div>
+            )}
+
+            {success && (
+              <div className="p-4 rounded-xl bg-green-50 border border-green-200 text-green-700 text-sm space-y-3">
+                <p className="font-semibold">Invitation sent successfully.</p>
+                {temporaryPassword && (
+                  <div className="mt-2 p-3 bg-white rounded-lg border border-green-300">
+                    <p className="font-semibold text-green-900 mb-1">Temporary password has been assigned.</p>
+                    <p className="text-xs text-green-800 mb-2">The new member can log in immediately using the credentials provided in the email.</p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 bg-green-100 px-3 py-2 rounded text-sm font-mono text-green-900 break-all">
+                        {temporaryPassword}
+                      </code>
+                      <button
+                        type="button"
+                        onClick={() => navigator.clipboard.writeText(temporaryPassword)}
+                        className="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

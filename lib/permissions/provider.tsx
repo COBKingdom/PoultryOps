@@ -3,8 +3,8 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { permissionService } from "./service";
-import { PermissionCode, Role } from "./constants";
+import { supabase } from "@/lib/supabase";
+import { PermissionCode, Role, ROLES, ALL_PERMISSIONS } from "./constants";
 
 interface PermissionContextValue {
   // Permission checks
@@ -43,42 +43,84 @@ interface PermissionProviderProps {
   children: React.ReactNode;
 }
 
+interface PermissionState {
+  role: Role | null;
+  permissions: Set<PermissionCode>;
+  loading: boolean;
+  error: Error | null;
+}
+
 export function PermissionProvider({ children }: PermissionProviderProps) {
   const { user, profile, loading: authLoading } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const [state, setState] = useState<PermissionState>({
+    role: null,
+    permissions: new Set(),
+    loading: true,
+    error: null,
+  });
 
-  // Initialize permissions when user changes
+  // Load permissions from API
   useEffect(() => {
     if (authLoading) {
       return;
     }
 
     if (!user || !profile) {
-      // No user, reset permission service
-      permissionService.reset();
-      setLoading(false);
+      // No user, reset state
+      setState({
+        role: null,
+        permissions: new Set(),
+        loading: false,
+        error: null,
+      });
       return;
     }
 
-    // Initialize permission service with user data
-    const initializePermissions = async () => {
+    // Load permissions from server
+    const loadPermissions = async () => {
       try {
-        setLoading(true);
-        setError(null);
+        setState(prev => ({ ...prev, loading: true, error: null }));
         
-        const role = profile.role as Role;
-        await permissionService.initialize(user.id, role);
+        // Get the current session to include JWT in Authorization header
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        const headers: HeadersInit = {
+          "Content-Type": "application/json",
+        };
+        
+        if (session?.access_token) {
+          headers.Authorization = `Bearer ${session.access_token}`;
+        }
+        
+        const response = await fetch("/api/permissions", {
+          method: "GET",
+          headers,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to load permissions: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        
+        setState({
+          role: data.role,
+          permissions: new Set(data.permissions),
+          loading: false,
+          error: null,
+        });
       } catch (err) {
-        const error = err instanceof Error ? err : new Error("Failed to initialize permissions");
-        setError(error);
-        console.error("Permission initialization error:", error);
-      } finally {
-        setLoading(false);
+        const error = err instanceof Error ? err : new Error("Failed to load permissions");
+        setState(prev => ({
+          ...prev,
+          loading: false,
+          error,
+        }));
+        console.error("Permission loading error:", error);
       }
     };
 
-    initializePermissions();
+    loadPermissions();
   }, [user, profile, authLoading]);
 
   // Refresh permissions
@@ -88,44 +130,100 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
     }
 
     try {
-      setLoading(true);
-      setError(null);
-      await permissionService.refreshPermissions();
+      setState(prev => ({ ...prev, loading: true, error: null }));
+      
+      // Get the current session to include JWT in Authorization header
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+      };
+      
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
+      
+      const response = await fetch("/api/permissions", {
+        method: "GET",
+        headers,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to refresh permissions: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      setState({
+        role: data.role,
+        permissions: new Set(data.permissions),
+        loading: false,
+        error: null,
+      });
     } catch (err) {
       const error = err instanceof Error ? err : new Error("Failed to refresh permissions");
-      setError(error);
+      setState(prev => ({
+        ...prev,
+        loading: false,
+        error,
+      }));
       console.error("Permission refresh error:", error);
-    } finally {
-      setLoading(false);
     }
   }, [user, profile]);
 
   // Permission check functions
   const can = useCallback((permission: PermissionCode): boolean => {
-    return permissionService.can(permission);
-  }, []);
+    if (!state.role) {
+      return false;
+    }
+
+    // Owner has all permissions
+    if (state.role === ROLES.OWNER) {
+      return true;
+    }
+
+    return state.permissions.has(permission);
+  }, [state.role, state.permissions]);
 
   const canAny = useCallback((permissions: PermissionCode[]): boolean => {
-    return permissionService.canAny(permissions);
-  }, []);
+    if (!state.role) {
+      return false;
+    }
+
+    // Owner has all permissions
+    if (state.role === ROLES.OWNER) {
+      return true;
+    }
+
+    return permissions.some(permission => state.permissions.has(permission));
+  }, [state.role, state.permissions]);
 
   const canAll = useCallback((permissions: PermissionCode[]): boolean => {
-    return permissionService.canAll(permissions);
-  }, []);
+    if (!state.role) {
+      return false;
+    }
+
+    // Owner has all permissions
+    if (state.role === ROLES.OWNER) {
+      return true;
+    }
+
+    return permissions.every(permission => state.permissions.has(permission));
+  }, [state.role, state.permissions]);
 
   // Role check functions
   const hasRole = useCallback((role: Role): boolean => {
-    return permissionService.hasRole(role);
-  }, []);
+    return state.role === role;
+  }, [state.role]);
 
-  const isOwner = permissionService.isOwner();
-  const isManagerOrHigher = permissionService.isManagerOrHigher();
-  const isStaffOrHigher = permissionService.isStaffOrHigher();
+  const isOwner = state.role === ROLES.OWNER;
+  const isManagerOrHigher = state.role === ROLES.OWNER || state.role === ROLES.MANAGER;
+  const isStaffOrHigher = state.role === ROLES.OWNER || state.role === ROLES.MANAGER || state.role === ROLES.STAFF;
 
   // Get all permissions
   const getPermissions = useCallback((): PermissionCode[] => {
-    return permissionService.getPermissions();
-  }, []);
+    return Array.from(state.permissions);
+  }, [state.permissions]);
 
   // Context value
   const value: PermissionContextValue = {
@@ -136,8 +234,8 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
     isOwner,
     isManagerOrHigher,
     isStaffOrHigher,
-    loading: loading || authLoading,
-    error,
+    loading: state.loading || authLoading,
+    error: state.error,
     refreshPermissions,
     getPermissions,
   };

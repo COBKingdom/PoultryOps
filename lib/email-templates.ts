@@ -105,12 +105,12 @@ export function welcomeEmailTemplate(farmName: string): { subject: string; html:
 
 export function invitationEmailTemplate(
   farmName: string,
-  inviteCode: string,
-  role: string
+  role: string,
+  temporaryPassword: string
 ): { subject: string; html: string } {
   const frontendUrl = process.env.FRONTEND_URL ?? ""
-  const joinUrl = `${frontendUrl}/join?code=${inviteCode}`
-  const roleDisplay = role === "data_entry" ? "Data Entry" : "Owner"
+  const loginUrl = `${frontendUrl}/login`
+  const roleDisplay = role === "data_entry" ? "Data Entry" : role === "manager" ? "Manager" : "User"
 
   const body = `
     <p style="color:#374151;font-size:15px;margin:0 0 20px;line-height:1.6;">Hello,</p>
@@ -118,25 +118,37 @@ export function invitationEmailTemplate(
       You have been invited to join <strong style="color:#0d1b3e;">${farmName}</strong>
       on PoultryOps as a <strong style="color:#0d1b3e;">${roleDisplay}</strong> user.
     </p>
-    <p style="color:#374151;font-size:15px;margin:0 0 28px;line-height:1.6;">
-      Click the button below to join the farm.
+    
+    <div style="background:#f0f9ff;border-left:4px solid #2563eb;padding:16px;margin:20px 0;border-radius:8px;">
+      <p style="color:#0d1b3e;font-size:14px;font-weight:700;margin:0 0 12px;">Your Login Credentials</p>
+      <p style="color:#374151;font-size:14px;margin:0 0 8px;"><strong>Email:</strong> ${temporaryPassword ? '{{email}}' : ''}</p>
+      <p style="color:#374151;font-size:14px;margin:0 0 8px;"><strong>Temporary Password:</strong> <code style="background:#e5e7eb;padding:2px 6px;border-radius:4px;font-family:monospace;">${temporaryPassword}</code></p>
+    </div>
+    
+    <p style="color:#374151;font-size:15px;margin:20px 0 28px;line-height:1.6;">
+      Click the button below to log in to your account.
     </p>
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr>
         <td align="center" style="padding-bottom:28px;">
-          <a href="${joinUrl}"
+          <a href="${loginUrl}"
              style="display:inline-block;background:#2563eb;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:10px;">
-            Join ${farmName} &rarr;
+            Log In to PoultryOps &rarr;
           </a>
         </td>
       </tr>
     </table>
-    <p style="color:#6b7280;font-size:13px;margin:0 0 10px;line-height:1.7;">
-      If you already have a PoultryOps account, simply log in.
-    </p>
-    <p style="color:#6b7280;font-size:13px;margin:0 0 10px;line-height:1.7;">
-      If you are new, create your account and you will automatically be linked to
-      <strong>${farmName}</strong>.
+    
+    <div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:16px;margin:20px 0;border-radius:8px;">
+      <p style="color:#92400e;font-size:14px;font-weight:700;margin:0 0 8px;">Important: Change Your Password</p>
+      <p style="color:#92400e;font-size:13px;margin:0;line-height:1.6;">
+        For security reasons, you will be required to change your password on your first login. 
+        Please choose a strong, unique password that you haven't used before.
+      </p>
+    </div>
+    
+    <p style="color:#6b7280;font-size:13px;margin:20px 0 10px;line-height:1.7;">
+      If you have any questions or need assistance, please don't hesitate to reach out to your farm administrator.
     </p>
     <p style="color:#6b7280;font-size:13px;margin:0;line-height:1.7;">
       If you were not expecting this invitation, you may safely ignore this email.

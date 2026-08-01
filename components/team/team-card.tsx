@@ -7,6 +7,7 @@ import { Users, Search, Filter, Shield, UserCheck, Plus } from "lucide-react";
 import MemberCard from "./member-card";
 import { usePermissions } from "@/lib/permissions";
 import { PERMISSIONS } from "@/lib/permissions";
+import { supabase } from "@/lib/supabase";
 
 type Props = {
   farmId: string;
@@ -36,33 +37,65 @@ export default function TeamCard({ farmId, onMemberSelect, selectedMemberId }: P
   const canInvite = can(PERMISSIONS.TEAM_INVITE);
   const canEdit = can(PERMISSIONS.TEAM_EDIT);
 
-  // Mock data for now - will be replaced with actual API call
+  // Load team members from API
   React.useEffect(() => {
-    // TODO: Replace with actual API call
-    const mockMembers: Member[] = [
-      {
-        id: "1",
-        full_name: "Farm Owner",
-        email: "owner@farm.com",
-        role: "owner",
-        status: "active",
-        created_at: "2024-01-01",
-        last_sign_in_at: new Date().toISOString(),
-      },
-    ];
+    async function loadMembers() {
+      try {
+        setLoading(true);
+        
+        // Get the current session to include JWT in Authorization header
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        const headers: HeadersInit = {
+          "Content-Type": "application/json",
+        };
+        
+        if (session?.access_token) {
+          headers.Authorization = `Bearer ${session.access_token}`;
+        }
+        
+        const response = await fetch("/api/team", {
+          headers,
+        });
+        
+        console.log("Team API response status:", response.status);
+        
+        const text = await response.text();
+        console.log("Team API response body:", text);
+        
+        if (!response.ok) {
+          throw new Error(`Status ${response.status}: ${text}`);
+        }
 
-    setMembers(mockMembers);
-    setLoading(false);
+        const data = JSON.parse(text);
+        setMembers(data.members || []);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Failed to load team members";
+        console.error("Team API error:", err);
+        setError(errorMessage);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (farmId) {
+      loadMembers();
+    }
   }, [farmId]);
 
   const filteredMembers = useMemo(() => {
     return members.filter((member) => {
-      const matchesSearch =
-        member.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        member.email.toLowerCase().includes(searchQuery.toLowerCase());
+      const fullName = member.full_name ?? "";
+      const email = member.email ?? "";
+      const role = member.role ?? "";
+      const status = member.status ?? "active";
 
-      const matchesRole = roleFilter === "all" || member.role === roleFilter;
-      const matchesStatus = statusFilter === "all" || member.status === statusFilter;
+      const matchesSearch =
+        fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        email.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesRole = roleFilter === "all" || role === roleFilter;
+      const matchesStatus = statusFilter === "all" || status === statusFilter;
 
       return matchesSearch && matchesRole && matchesStatus;
     });
@@ -70,9 +103,9 @@ export default function TeamCard({ farmId, onMemberSelect, selectedMemberId }: P
 
   const stats = useMemo(() => {
     const total = members.length;
-    const managers = members.filter((m) => m.role === "manager").length;
-    const staff = members.filter((m) => m.role === "staff").length;
-    const active = members.filter((m) => m.status === "active").length;
+    const managers = members.filter((m) => (m.role ?? "") === "manager").length;
+    const staff = members.filter((m) => (m.role ?? "") === "staff").length;
+    const active = members.filter((m) => (m.status ?? "active") === "active").length;
 
     return { total, managers, staff, active };
   }, [members]);

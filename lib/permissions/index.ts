@@ -1,24 +1,24 @@
 /**
- * PoultryOps Permission Engine
+ * PoultryOps Permission Engine - Client Exports
  * 
- * Enterprise-grade permission system for PoultryOps and future TrueOps applications.
- * This module provides a centralized, type-safe permission management system.
+ * This module exports only client-safe permission utilities.
+ * Server-side code should import from the specific modules directly:
+ * - lib/permissions/api (for API route helpers)
+ * - lib/permissions/cache (for permission caching)
+ * - lib/permissions/service (for permission service)
  * 
  * Features:
  * - Database-driven permissions
  * - Role-based access control (RBAC)
- * - Permission caching for performance
  * - Type-safe permission checking
  * - React hooks and components
- * - API authorization helpers
  * 
  * Usage:
  * ```typescript
  * import { 
  *   PERMISSIONS, 
  *   usePermissions, 
- *   PermissionGuard,
- *   requirePermission 
+ *   PermissionGuard 
  * } from '@/lib/permissions';
  * 
  * // In component
@@ -31,16 +31,16 @@
  * <PermissionGuard permission={PERMISSIONS.SALES_CREATE}>
  *   <Button>Create Sale</Button>
  * </PermissionGuard>
+ * ```
  * 
- * // In API route
- * const result = await requirePermission(PERMISSIONS.SALES_CREATE, request);
- * if (!result.success) {
- *   return NextResponse.json({ error: result.error }, { status: result.statusCode });
- * }
+ * For API routes:
+ * ```typescript
+ * import { requirePermission } from '@/lib/permissions/api';
+ * import { PERMISSIONS } from '@/lib/permissions';
  * ```
  */
 
-// Constants
+// Constants (client-safe)
 export {
   PERMISSIONS,
   ALL_PERMISSIONS,
@@ -53,26 +53,13 @@ export {
   type SystemRole,
 } from "./constants";
 
-// Cache
-export {
-  permissionCache,
-  type CachedPermissions,
-} from "./cache";
-
-// Service
-export {
-  permissionService,
-  type PermissionState,
-  type PermissionServiceResult,
-} from "./service";
-
-// Provider
+// Provider (client-safe - React component)
 export {
   PermissionProvider,
   usePermissions,
 } from "./provider";
 
-// Guards
+// Guards (client-safe - React components)
 export {
   PermissionGuard,
   AnyPermissionGuard,
@@ -81,16 +68,7 @@ export {
   OwnerOnly,
 } from "./guards";
 
-// API Helpers
-export {
-  requirePermission,
-  requireAnyPermission,
-  requireAllPermissions,
-  requireOwner,
-  type ApiPermissionResult,
-} from "./api";
-
-// Utilities
+// Utilities (client-safe - pure functions)
 export {
   getPermissionCategory,
   getPermissionsByCategory,
@@ -105,3 +83,21 @@ export {
   sortPermissions,
   formatPermissionForDisplay,
 } from "./utils";
+
+/**
+ * SERVER-SIDE IMPORTS
+ * 
+ * For API routes and server utilities, import directly from these modules:
+ * 
+ * // API route helpers (uses supabaseAdmin)
+ * import { requirePermission } from '@/lib/permissions/api';
+ * 
+ * // Permission cache (uses supabaseAdmin)
+ * import { permissionCache } from '@/lib/permissions/cache';
+ * 
+ * // Permission service (uses cache)
+ * import { permissionService } from '@/lib/permissions/service';
+ * 
+ * // Constants
+ * import { PERMISSIONS, ROLES } from '@/lib/permissions';
+ */

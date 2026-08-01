@@ -11,12 +11,12 @@ import MemberStatusBadge from "./member-status-badge";
 type Props = {
   member: {
     id: string;
-    full_name: string;
-    email: string;
-    role: string;
-    status: "active" | "inactive" | "pending";
-    created_at: string;
-    last_sign_in_at?: string;
+    full_name: string | null;
+    email: string | null;
+    role: string | null;
+    status: "active" | "inactive" | "pending" | null;
+    created_at: string | null;
+    last_sign_in_at?: string | null;
   };
   isSelected: boolean;
   onClick: (id: string) => void;
@@ -25,7 +25,7 @@ type Props = {
 export default function MemberCard({ member, isSelected, onClick }: Props) {
   const router = useRouter();
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return "Never";
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
@@ -34,7 +34,7 @@ export default function MemberCard({ member, isSelected, onClick }: Props) {
     });
   };
 
-  const getRoleColor = (role: string) => {
+  const getRoleColor = (role: string | null | undefined) => {
     switch (role) {
       case "owner":
         return "bg-purple-100 text-purple-700 border-purple-200";
@@ -63,15 +63,15 @@ export default function MemberCard({ member, isSelected, onClick }: Props) {
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-lg">
-            {member.full_name.charAt(0).toUpperCase()}
+            {(member.full_name ?? "U").charAt(0).toUpperCase()}
           </div>
           <div>
             <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-              {member.full_name}
+              {member.full_name ?? (member.role === "owner" ? "Farm Owner" : "Unknown User")}
             </h3>
             <p className="text-sm text-slate-500 flex items-center gap-1">
               <Mail size={14} />
-              {member.email}
+              {member.email ?? "no-email@example.com"}
             </p>
           </div>
         </div>
@@ -80,9 +80,9 @@ export default function MemberCard({ member, isSelected, onClick }: Props) {
       {/* Role & Status */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <span className={`rounded-full px-3 py-1 text-xs font-semibold border ${getRoleColor(member.role)}`}>
-          {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+          {member.role ? member.role.charAt(0).toUpperCase() + member.role.slice(1) : "Unknown"}
         </span>
-        <MemberStatusBadge status={member.status} />
+        <MemberStatusBadge status={member.status ?? "active"} />
       </div>
 
       {/* Info */}

@@ -16,12 +16,12 @@ type Props = {
 
 type Member = {
   id: string;
-  full_name: string;
-  email: string;
-  role: string;
-  status: "active" | "inactive" | "pending";
-  created_at: string;
-  last_sign_in_at?: string;
+  full_name: string | null;
+  email: string | null;
+  role: string | null;
+  status: "active" | "inactive" | "pending" | null;
+  created_at: string | null;
+  last_sign_in_at?: string | null;
   permissions: string[];
 };
 
@@ -114,7 +114,7 @@ export default function MemberWorkspace({ memberId, onClose }: Props) {
     }
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return "Never";
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
@@ -152,13 +152,15 @@ export default function MemberWorkspace({ memberId, onClose }: Props) {
       <div className="flex items-start justify-between p-6 border-b border-slate-200">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-2xl">
-            {member.full_name.charAt(0).toUpperCase()}
+            {(member.full_name ?? "U").charAt(0).toUpperCase()}
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">{member.full_name}</h2>
+            <h2 className="text-2xl font-bold text-slate-900">
+              {member.full_name ?? (isOwner ? "Farm Owner" : "Unknown User")}
+            </h2>
             <p className="text-sm text-slate-500 flex items-center gap-1">
               <Mail size={14} />
-              {member.email}
+              {member.email ?? "no-email@example.com"}
             </p>
             <div className="flex items-center gap-2 mt-2">
               <span className={`rounded-full px-3 py-1 text-xs font-semibold border ${
@@ -166,14 +168,14 @@ export default function MemberWorkspace({ memberId, onClose }: Props) {
                 member.role === "manager" ? "bg-blue-100 text-blue-700 border-blue-200" :
                 "bg-green-100 text-green-700 border-green-200"
               }`}>
-                {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+                {member.role ? member.role.charAt(0).toUpperCase() + member.role.slice(1) : "Unknown"}
               </span>
               <span className={`rounded-full px-3 py-1 text-xs font-semibold border ${
                 member.status === "active" ? "bg-green-100 text-green-700 border-green-200" :
                 member.status === "inactive" ? "bg-slate-100 text-slate-700 border-slate-200" :
                 "bg-amber-100 text-amber-700 border-amber-200"
               }`}>
-                {member.status.charAt(0).toUpperCase() + member.status.slice(1)}
+                {member.status ? member.status.charAt(0).toUpperCase() + member.status.slice(1) : "Unknown"}
               </span>
             </div>
           </div>
@@ -198,7 +200,7 @@ export default function MemberWorkspace({ memberId, onClose }: Props) {
                 <Mail size={16} />
                 <p className="text-xs font-medium">Email</p>
               </div>
-              <p className="text-sm font-medium text-slate-900">{member.email}</p>
+              <p className="text-sm font-medium text-slate-900">{member.email ?? "no-email@example.com"}</p>
             </div>
 
             <div className="bg-slate-50 rounded-xl p-4">
@@ -206,7 +208,7 @@ export default function MemberWorkspace({ memberId, onClose }: Props) {
                 <Shield size={16} />
                 <p className="text-xs font-medium">Role</p>
               </div>
-              <p className="text-sm font-medium text-slate-900 capitalize">{member.role}</p>
+              <p className="text-sm font-medium text-slate-900 capitalize">{member.role ?? "unknown"}</p>
             </div>
 
             <div className="bg-slate-50 rounded-xl p-4">

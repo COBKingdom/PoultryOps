@@ -5,7 +5,7 @@
  * Permissions are loaded once after login and cached for the session.
  */
 
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 import { PERMISSIONS, ALL_PERMISSIONS, PermissionCode, ROLES, Role } from "./constants";
 
 export interface CachedPermissions {
@@ -123,8 +123,8 @@ class PermissionCache {
     }
 
     try {
-      // Fetch user permissions from database
-      const { data: userPermissions, error } = await supabase
+      // Fetch user permissions from database using admin client
+      const { data: userPermissions, error } = await supabaseAdmin
         .from("user_permissions")
         .select(`
           granted,

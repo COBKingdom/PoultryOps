@@ -140,11 +140,15 @@ export async function sendWelcomeEmail(
 export async function sendInvitationEmail(
   email: string,
   farmName: string,
-  inviteCode: string,
+  temporaryPassword: string,
   role: string
 ): Promise<void> {
-  const { subject, html } = invitationEmailTemplate(farmName, inviteCode, role)
-  await dispatchEmail(email, subject, html)
+  const { subject, html } = invitationEmailTemplate(farmName, role, temporaryPassword)
+  
+  // Replace placeholder with actual email
+  const htmlWithEmail = html.replace('{{email}}', email)
+  
+  await dispatchEmail(email, subject, htmlWithEmail)
 }
 
 /**
