@@ -21,6 +21,7 @@ import {
   Settings,
   Upload,
   User,
+  Users,
   LogOut,
 } from "lucide-react";
 
@@ -116,6 +117,14 @@ export default function MobileSidebar({
       name: "Migration",
       href: "/migration",
       icon: Upload,
+    },
+  ];
+
+  const team = [
+    {
+      name: "Team",
+      href: "/team",
+      icon: Users,
     },
   ];
 
@@ -227,6 +236,15 @@ export default function MobileSidebar({
             <MenuSection
               title="TOOLS"
               items={tools}
+              pathname={pathname}
+              onClose={onClose}
+            />
+          )}
+
+          {isOwner && (
+            <MenuSection
+              title="TEAM"
+              items={team}
               pathname={pathname}
               onClose={onClose}
             />
