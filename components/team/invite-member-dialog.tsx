@@ -9,6 +9,7 @@ import PermissionGroup from "./permission-group";
 import { usePermissions } from "@/lib/permissions";
 import { PERMISSIONS, ROLES, ALL_PERMISSIONS } from "@/lib/permissions";
 import { groupPermissionsByCategory } from "@/lib/permissions";
+import { supabase } from "@/lib/supabase";
 
 type Props = {
   isOpen: boolean;
@@ -24,6 +25,11 @@ type FormData = {
   permissions: Set<string>;
 };
 
+type FieldErrors = {
+  full_name?: string;
+  email?: string;
+};
+
 export default function InviteMemberDialog({ isOpen, onClose, farmId, onSuccess }: Props) {
   const { can } = usePermissions();
   const [formData, setFormData] = useState<FormData>({
@@ -36,6 +42,7 @@ export default function InviteMemberDialog({ isOpen, onClose, farmId, onSuccess 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   const permissionsByCategory = groupPermissionsByCategory();
   const canManageUsers = can(PERMISSIONS.SETTINGS_MANAGE_USERS);
@@ -183,34 +190,46 @@ export default function InviteMemberDialog({ isOpen, onClose, farmId, onSuccess 
     setLoading(true);
     setError(null);
     setSuccess(false);
+    setFieldErrors({});
 
     // Validation
+    const errors: FieldErrors = {};
+    
     if (!formData.full_name.trim()) {
-      setError("Please enter the team member's full name");
-      setLoading(false);
-      return;
+      errors.full_name = "Please enter the team member's full name";
     }
 
     if (!formData.email.trim()) {
-      setError("Please enter an email address");
-      setLoading(false);
-      return;
+      errors.email = "Please enter an email address";
+    } else {
+      // Basic email format validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email.trim())) {
+        errors.email = "Please enter a valid email address";
+      }
     }
 
-    // Basic email format validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email.trim())) {
-      setError("Please enter a valid email address");
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       setLoading(false);
       return;
     }
 
     try {
+      // Get the current session to include JWT in Authorization header
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+      };
+      
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
+      
       const response = await fetch("/api/team", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify({
           full_name: formData.full_name.trim(),
           email: formData.email.trim().toLowerCase(),
@@ -261,6 +280,7 @@ export default function InviteMemberDialog({ isOpen, onClose, farmId, onSuccess 
       permissions: new Set(),
     });
     setError(null);
+    setFieldErrors({});
     onClose();
   };
 
@@ -285,39 +305,66 @@ export default function InviteMemberDialog({ isOpen, onClose, farmId, onSuccess 
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6">
-          <div className="space-y-6">
-            {/* Name & Email */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Full Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.full_name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="John Doe"
-                />
-              </div>
+         {/* Form */}
+         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6">
+           <div className="space-y-6">
+             {/* Global Error */}
+             {error && !fieldErrors.full_name && !fieldErrors.email && (
+               <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+                 {error}
+               </div>
+             )}
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Email Address *
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                  className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="john@example.com"
-                />
-              </div>
-            </div>
+             {/* Name & Email */}
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               <div>
+                 <label className="block text-sm font-medium text-slate-700 mb-2">
+                   Full Name *
+                 </label>
+                 <input
+                   type="text"
+                   required
+                   value={formData.full_name}
+                   onChange={(e) => {
+                     setFormData(prev => ({ ...prev, full_name: e.target.value }));
+                     if (fieldErrors.full_name) {
+                       setFieldErrors(prev => ({ ...prev, full_name: undefined }));
+                     }
+                   }}
+                   className={`w-full px-4 py-2 rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                     fieldErrors.full_name ? "border-red-300 bg-red-50" : "border-slate-200"
+                   }`}
+                   placeholder="John Doe"
+                 />
+                 {fieldErrors.full_name && (
+                   <p className="mt-1.5 text-sm text-red-600">{fieldErrors.full_name}</p>
+                 )}
+               </div>
+
+               <div>
+                 <label className="block text-sm font-medium text-slate-700 mb-2">
+                   Email Address *
+                 </label>
+                 <input
+                   type="email"
+                   required
+                   value={formData.email}
+                   onChange={(e) => {
+                     setFormData(prev => ({ ...prev, email: e.target.value }));
+                     if (fieldErrors.email) {
+                       setFieldErrors(prev => ({ ...prev, email: undefined }));
+                     }
+                   }}
+                   className={`w-full px-4 py-2 rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                     fieldErrors.email ? "border-red-300 bg-red-50" : "border-slate-200"
+                   }`}
+                   placeholder="john@example.com"
+                 />
+                 {fieldErrors.email && (
+                   <p className="mt-1.5 text-sm text-red-600">{fieldErrors.email}</p>
+                 )}
+               </div>
+             </div>
 
             {/* Role Selection */}
             <RoleSelector
@@ -361,11 +408,11 @@ export default function InviteMemberDialog({ isOpen, onClose, farmId, onSuccess 
               </div>
             )}
 
-            {error && (
-              <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
-                {error}
-              </div>
-            )}
+             {error && fieldErrors.full_name && fieldErrors.email && (
+               <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+                 {error}
+               </div>
+             )}
 
             {success && (
               <div className="p-4 rounded-xl bg-green-50 border border-green-200 text-green-700 text-sm space-y-3">

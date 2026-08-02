@@ -7,6 +7,7 @@ import {
   getFlutterwavePublicKey,
 } from "@/lib/flutterwave";
 import { getSubscription } from "@/lib/subscription";
+import { supabase } from "@/lib/supabase";
 import {
   CheckCircle2,
   Clock,
@@ -25,8 +26,9 @@ declare global {
 }
 
 type SubscriptionData = {
-  plan: string;
+  plan: string | null;
   status: string;
+  selected_plan: string | null;
   billing_cycle: string | null;
   trial_start: string | null;
   trial_end: string | null;
@@ -92,8 +94,8 @@ export default function SubscriptionPage() {
     async function loadSubscription() {
       try {
         if (!profile?.farm_id) return;
-        const data = await getSubscription(profile.farm_id);
-        setSubscription(data);
+      const data = await getSubscription(profile.farm_id);
+      setSubscription(data);
       } catch (error) {
         console.error("Error loading subscription:", error);
       } finally {
@@ -125,12 +127,22 @@ export default function SubscriptionPage() {
   }, [profile]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
-  const getUserLimit = (plan: string | undefined) => {
-    switch ((plan || "").toLowerCase()) {
-      case "solo":     return 1;
-      case "team":     return 3;
-      case "business": return 6;
-      default:         return 1;
+  const getPlanName = (plan: string | null | undefined): string => {
+    if (!plan) return "—";
+    const planData = PLANS[plan as keyof typeof PLANS];
+    return planData?.name || plan;
+  };
+
+  const getAllowedUsers = (selectedPlan: string | null | undefined): number => {
+    switch ((selectedPlan || "").toLowerCase()) {
+      case "solo":
+        return 1;
+      case "team":
+        return 3;
+      case "business":
+        return 6;
+      default:
+        return 0;
     }
   };
 
@@ -149,6 +161,40 @@ export default function SubscriptionPage() {
       month: "short",
       day: "numeric",
     });
+  };
+
+  // ── selectTrialPlan ───────────────────────────────────────────────────────
+  const selectTrialPlan = async (plan: "solo" | "team" | "business") => {
+    try {
+      if (!profile?.farm_id) return;
+      
+      // Update only the selected_plan field, no payment
+const { data: updatedRows, error } = await supabase
+  .from("subscriptions")
+  .update({ selected_plan: plan })
+  .eq("farm_id", profile.farm_id)
+  .select();
+
+console.log("UPDATE RESULT:", updatedRows);
+console.log("UPDATE ERROR:", error);
+
+if (error) {
+  console.error("Update error:", error);
+  alert("Failed to update trial plan");
+  return;
+}
+      
+      // Optimistically update the UI immediately
+      setSubscription(prev => {
+        if (!prev) return null;
+        return { ...prev, selected_plan: plan };
+      });
+      
+      alert(`${PLANS[plan].name} trial selected successfully`);
+    } catch (error) {
+      console.error("Error selecting trial plan:", error);
+      alert("Failed to select trial plan");
+    }
   };
 
   // ── payNow ────────────────────────────────────────────────────────────────
@@ -225,18 +271,18 @@ export default function SubscriptionPage() {
   };
 
   // ── Derived display values ────────────────────────────────────────────────
-  const currentPlanKey = (subscription?.plan || "").toLowerCase() as
+  const currentWorkspaceKey = (subscription?.selected_plan || "").toLowerCase() as
     | "solo"
     | "team"
     | "business"
     | "";
 
-  const currentPlanName =
-    currentPlanKey && PLANS[currentPlanKey]
-      ? PLANS[currentPlanKey].name
-      : subscription?.plan || "—";
+  const currentWorkspaceName =
+    currentWorkspaceKey && PLANS[currentWorkspaceKey]
+      ? PLANS[currentWorkspaceKey].name
+      : getPlanName(subscription?.selected_plan);
 
-  const status = (subscription?.status || "trial") as
+  const subscriptionStatus = (subscription?.status || "trial") as
     | "active"
     | "trial"
     | "expired"
@@ -247,23 +293,26 @@ export default function SubscriptionPage() {
     subscription?.billing_cycle === "annual" ? "Annual" : "Monthly";
 
   const renewalSubLabel =
-    status === "trial" ? "Trial ends in" : "Next Renewal";
+    subscriptionStatus === "trial" ? "Trial ends in" : "Next Renewal";
 
   const renewalValue =
-    status === "trial"
+    subscriptionStatus === "trial"
       ? `${getDaysRemaining()} day${getDaysRemaining() !== 1 ? "s" : ""} left`
       : formatDate(subscription?.next_billing_date || null);
 
-  const userLimit = getUserLimit(subscription?.plan);
+  const allowedUsers = getAllowedUsers(subscription?.selected_plan);
 
   function planRibbon(planKey: string) {
-    if (!currentPlanKey) {
+    if (!currentWorkspaceKey) {
       return { label: "Subscribe", style: "bg-gray-100 text-gray-600 border-gray-200", isElevated: false };
     }
-    const currentIdx = PLAN_ORDER.indexOf(currentPlanKey as any);
+    const currentIdx = PLAN_ORDER.indexOf(currentWorkspaceKey as any);
     const thisIdx    = PLAN_ORDER.indexOf(planKey as any);
-    if (planKey === currentPlanKey) {
+    if (planKey === currentWorkspaceKey) {
       return { label: "Current Plan", style: "bg-blue-600 text-white border-blue-600 shadow-sm", isElevated: true };
+    }
+    if (subscriptionStatus === "trial") {
+      return { label: `Choose ${PLANS[planKey as keyof typeof PLANS]?.name || planKey} Trial`, style: "bg-indigo-100 text-indigo-700 border-indigo-200", isElevated: false };
     }
     if (thisIdx > currentIdx) {
       return { label: "Upgrade",   style: "bg-indigo-100 text-indigo-700 border-indigo-200", isElevated: false };
@@ -272,7 +321,7 @@ export default function SubscriptionPage() {
   }
 
   function statusBadgeClass() {
-    switch (status) {
+    switch (subscriptionStatus) {
       case "active":    return "bg-green-50 text-green-600 border-green-200";
       case "trial":     return "bg-amber-50 text-amber-600 border-amber-200";
       case "expired":   return "bg-red-50 text-red-600 border-red-200";
@@ -283,11 +332,11 @@ export default function SubscriptionPage() {
   }
 
   function statusLabel() {
-    return status.charAt(0).toUpperCase() + status.slice(1);
+    return subscriptionStatus.charAt(0).toUpperCase() + subscriptionStatus.slice(1);
   }
 
   function statusIcon() {
-    switch (status) {
+    switch (subscriptionStatus) {
       case "active":    return <CheckCircle2 className="w-3.5 h-3.5 mr-1" />;
       case "trial":     return <Clock className="w-3.5 h-3.5 mr-1" />;
       case "expired":   return <AlertCircle className="w-3.5 h-3.5 mr-1" />;
@@ -297,7 +346,7 @@ export default function SubscriptionPage() {
   }
 
   function overviewBorderClass() {
-    switch (status) {
+    switch (subscriptionStatus) {
       case "active":  return "border-l-green-500";
       case "trial":   return "border-l-amber-400";
       case "expired": return "border-l-red-500";
@@ -306,7 +355,7 @@ export default function SubscriptionPage() {
   }
 
   function overviewGlowClass() {
-    switch (status) {
+    switch (subscriptionStatus) {
       case "active":  return "from-green-50/50";
       case "trial":   return "from-amber-50/50";
       case "expired": return "from-red-50/50";
@@ -386,9 +435,31 @@ export default function SubscriptionPage() {
               ) : (
                 <div className="flex items-center justify-between">
                   <span className="text-2xl font-semibold tracking-tight text-gray-900">
-                    {currentPlanName}
+                    {currentWorkspaceName}
                   </span>
                   <span className={`inline-flex items-center border rounded-full px-2.5 py-0.5 text-xs font-medium ${statusBadgeClass()}`}>
+                    {statusLabel()}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Subscription Status */}
+          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-md hover:scale-[1.01] transition-all duration-200">
+            <div className="px-6 pt-6 pb-2">
+              <p className="text-sm font-medium text-gray-500">Subscription Status</p>
+            </div>
+            <div className="px-6 pb-6">
+              {subLoading ? (
+                <div className="space-y-2">
+                  <div className="h-7 w-24 bg-gray-200 rounded animate-pulse" />
+                  <div className="h-5 w-16 bg-gray-200 rounded-full animate-pulse" />
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <span className={`inline-flex items-center border rounded-full px-2.5 py-0.5 text-xs font-medium ${statusBadgeClass()}`}>
+                    {statusIcon()}
                     {statusLabel()}
                   </span>
                 </div>
@@ -415,10 +486,10 @@ export default function SubscriptionPage() {
             </div>
           </div>
 
-          {/* User Limit */}
+          {/* Allowed Users */}
           <div className="bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-md hover:scale-[1.01] transition-all duration-200">
             <div className="px-6 pt-6 pb-2">
-              <p className="text-sm font-medium text-gray-500">User Limit</p>
+              <p className="text-sm font-medium text-gray-500">Allowed Users</p>
             </div>
             <div className="px-6 pb-6">
               {subLoading ? (
@@ -426,9 +497,9 @@ export default function SubscriptionPage() {
               ) : (
                 <div className="flex items-center justify-between">
                   <span className="text-2xl font-semibold tracking-tight text-gray-900">
-                    {userLimit}{" "}
+                    {allowedUsers}{" "}
                     <span className="text-base font-normal text-gray-500">
-                      User{userLimit !== 1 ? "s" : ""}
+                      User{allowedUsers !== 1 ? "s" : ""}
                     </span>
                   </span>
                   <Users className="w-5 h-5 text-gray-400" strokeWidth={2} />
@@ -448,7 +519,9 @@ export default function SubscriptionPage() {
               ) : (
                 <div className="flex items-center justify-between">
                   <span className="text-2xl font-semibold tracking-tight text-gray-900">
-                    {subscription?.billing_cycle ? billingCycleLabel : "Trial"}
+                    {subscriptionStatus === "trial" 
+                      ? formatDate(subscription?.trial_start || null)
+                      : (subscription?.billing_cycle ? billingCycleLabel : "Trial")}
                   </span>
                   <div className="flex items-center gap-1.5 p-1 bg-gray-100 rounded-full border border-gray-200">
                     <div className={`w-2.5 h-2.5 rounded-full shadow-sm ${subscription?.billing_cycle !== "annual" ? "bg-blue-600" : "bg-transparent"}`} />
@@ -494,7 +567,7 @@ export default function SubscriptionPage() {
                     </p>
                     <div className="flex items-center gap-3">
                       <h3 className="text-3xl font-bold tracking-tight text-gray-900">
-                        {currentPlanName}
+                        {currentWorkspaceName}
                       </h3>
                       <span
                         className={`inline-flex items-center border rounded-full px-2.5 py-0.5 text-xs font-medium shadow-sm ${statusBadgeClass()}`}
@@ -506,9 +579,9 @@ export default function SubscriptionPage() {
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-gray-500">User Limit</p>
+                    <p className="text-sm font-medium text-gray-500">Allowed Users</p>
                     <p className="text-lg font-medium text-gray-900">
-                      {userLimit} user{userLimit !== 1 ? "s" : ""}
+                      {allowedUsers} user{allowedUsers !== 1 ? "s" : ""}
                     </p>
                   </div>
 
@@ -521,10 +594,10 @@ export default function SubscriptionPage() {
 
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-gray-500">
-                      {status === "trial" ? "Trial Ends" : "Renewal Date"}
+                      {subscriptionStatus === "trial" ? "Trial Ends" : "Renewal Date"}
                     </p>
                     <p className="text-lg font-medium text-gray-900">
-                      {status === "trial"
+                      {subscriptionStatus === "trial"
                         ? formatDate(subscription?.trial_end || null)
                         : formatDate(subscription?.next_billing_date || null)}
                     </p>
@@ -548,7 +621,7 @@ export default function SubscriptionPage() {
             {PLAN_ORDER.map((planKey) => {
               const plan   = PLANS[planKey];
               const ribbon = planRibbon(planKey);
-              const isCurrentPlan = planKey === currentPlanKey;
+              const isCurrentPlan = planKey === currentWorkspaceKey;
 
               return (
                 <div
@@ -631,20 +704,22 @@ export default function SubscriptionPage() {
       : "bg-white text-gray-900 border border-gray-200 hover:bg-gray-50 shadow-sm"
   }`}
   disabled={loading || isCurrentPlan}
-  onClick={() => payNow(planKey, "monthly")}
+  onClick={() => subscriptionStatus === "trial" ? selectTrialPlan(planKey) : payNow(planKey, "monthly")}
 >
   {isCurrentPlan ? (
     <span className="flex items-center justify-center gap-2">
       <CheckCircle2 className="w-4 h-4" />
       Current Plan
     </span>
+  ) : subscriptionStatus === "trial" ? (
+    `Choose ${plan.name} Trial`
   ) : (
     "Subscribe Monthly"
   )}
 </button>
                     <button
                       className="w-full h-11 text-base rounded-lg font-medium text-gray-600 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      disabled={loading}
+                      disabled={loading || subscriptionStatus === "trial"}
                       onClick={() => payNow(planKey, "annual")}
                     >
                       {isCurrentPlan ? "Renew Annual" : "Subscribe Annual"}

@@ -10,6 +10,7 @@ export async function getSubscription(
       .eq("farm_id", farmId)
       .single();
 
+
   if (error) {
     throw error;
   }

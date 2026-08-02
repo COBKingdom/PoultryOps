@@ -2,20 +2,18 @@ import { NextResponse } from "next/server";
 import { requirePermission } from "@/lib/permissions/api";
 import { PERMISSIONS } from "@/lib/permissions";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { createUser } from "@/lib/users/create-user";
 
 export async function GET(request: Request) {
   try {
     const result = await requirePermission(PERMISSIONS.TEAM_VIEW, request);
     
     if (!result.success) {
-      console.log("Permission check failed:", result);
       return NextResponse.json(
         { error: result.error },
         { status: result.statusCode }
       );
     }
-
-    console.log("Authenticated user:", result.userId, "role:", result.role);
 
     // Get farm ID from user's profile
     const { data: profile, error: profileError } = await supabaseAdmin
@@ -24,17 +22,12 @@ export async function GET(request: Request) {
       .eq("id", result.userId)
       .single();
 
-    console.log("Profile query result:", { profile, profileError });
-
     if (profileError || !profile?.farm_id) {
-      console.log("Farm not found for user:", result.userId);
       return NextResponse.json(
         { error: "Farm not found" },
         { status: 404 }
       );
     }
-
-    console.log("Fetching members for farm:", profile.farm_id);
 
     // Get all team members for this farm
     const { data: members, error: membersError } = await supabaseAdmin
@@ -49,12 +42,6 @@ export async function GET(request: Request) {
       .eq("farm_id", profile.farm_id)
       .order("created_at", { ascending: true });
 
-    console.log("Members query result:", { 
-      membersCount: members?.length, 
-      membersError,
-      members: members?.slice(0, 2) // Log first 2 members for debugging
-    });
-
     if (membersError) {
       console.error("Error fetching team members:", membersError);
       return NextResponse.json(
@@ -63,7 +50,6 @@ export async function GET(request: Request) {
       );
     }
 
-    console.log("Returning members:", members?.length || 0);
     return NextResponse.json({ members: members || [] });
   } catch (error) {
     console.error("Error in GET /api/team:", error);
@@ -112,30 +98,22 @@ export async function POST(request: Request) {
     // Generate temporary password
     const temporaryPassword = generateTemporaryPassword();
 
-    // Call the centralized user creation service
-    const createUserResponse = await fetch("/api/users/create", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email: email.trim().toLowerCase(),
-        password: temporaryPassword,
-        fullName: full_name.trim(),
-        farmId: profile.farm_id,
-        role: role,
-        permissions: permissions || [],
-        sendInvitation: true,
-        invitedBy: result.userId,
-      }),
+    // Call the shared user creation service directly (no HTTP call)
+    const createUserResult = await createUser({
+      email: email.trim().toLowerCase(),
+      password: temporaryPassword,
+      fullName: full_name.trim(),
+      farmId: profile.farm_id,
+      role: role,
+      permissions: permissions || [],
+      sendInvitation: true,
+      invitedBy: result.userId,
     });
 
-    const createUserData = await createUserResponse.json();
-
-    if (!createUserResponse.ok) {
+    if (!createUserResult.success) {
       return NextResponse.json(
-        { error: createUserData.error || "Failed to create user" },
-        { status: createUserResponse.status }
+        { error: createUserResult.error || "Failed to create user" },
+        { status: 400 }
       );
     }
 
@@ -143,10 +121,10 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         success: true,
-        userId: createUserData.userId,
-        invitationId: createUserData.invitationId,
+        userId: createUserResult.userId,
+        invitationId: createUserResult.invitationId,
         temporaryPassword,
-        message: createUserData.message || "Invitation sent successfully",
+        message: createUserResult.message || "Invitation sent successfully",
       },
       { status: 201 }
     );
