@@ -46,11 +46,11 @@ export default function CreateUserForm({
               "Content-Type":
                 "application/json",
             },
-            body: JSON.stringify({
+              body: JSON.stringify({
               fullName,
               email,
               password,
-              role: "data_entry",
+              role: "staff",
               farmId,
             }),
           }

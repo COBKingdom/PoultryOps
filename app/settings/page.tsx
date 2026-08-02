@@ -1,9 +1,12 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDashboard } from "@/hooks/useDashboard";
-import { useUsers } from "@/hooks/useUsers";
+import { getSubscription } from "@/lib/subscription";
+import { PLANS } from "@/lib/plans";
+import { supabase } from "@/lib/supabase";
 
 import AppShell from "@/components/layout/app-shell";
 import OwnerOnly from "@/components/auth/owner-only";
@@ -18,12 +21,63 @@ import {
   XCircle,
 } from "lucide-react";
 
+type SubscriptionData = {
+  plan: string | null;
+  status: string;
+  selected_plan: string | null;
+  billing_cycle: string | null;
+  trial_start: string | null;
+  trial_end: string | null;
+  next_billing_date: string | null;
+};
+
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   const { data, loading: dashLoading } = useDashboard();
-  const farmId = data?.farm?.id;
-  const { users, loading: usersLoading } = useUsers(farmId);
+
+  const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
+  const [subLoading, setSubLoading] = useState(true);
+  const [teamMembers, setTeamMembers] = useState<number>(0);
+  const [teamLoading, setTeamLoading] = useState(true);
+
+  // ── Load subscription from the shared service (same as /settings/subscription) ──
+  useEffect(() => {
+    async function loadSubscription() {
+      try {
+        if (!profile?.farm_id) return;
+        const data = await getSubscription(profile.farm_id);
+        setSubscription(data);
+      } catch (error) {
+        console.error("Error loading subscription:", error);
+      } finally {
+        setSubLoading(false);
+      }
+    }
+    loadSubscription();
+  }, [profile]);
+
+  // ── Load team members from the same API as the /team page ──
+  useEffect(() => {
+    async function loadTeamMembers() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const headers: HeadersInit = { "Content-Type": "application/json" };
+        if (session?.access_token) {
+          headers.Authorization = `Bearer ${session.access_token}`;
+        }
+        const response = await fetch("/api/team", { headers });
+        if (!response.ok) return;
+        const data = await response.json();
+        setTeamMembers(data.members?.length || 0);
+      } catch (error) {
+        console.error("Error loading team members:", error);
+      } finally {
+        setTeamLoading(false);
+      }
+    }
+    loadTeamMembers();
+  }, []);
 
   if (dashLoading) {
     return (
@@ -45,26 +99,40 @@ export default function SettingsPage() {
     );
   }
 
-  const plan = data?.subscription?.plan || "trial";
-  const status = data?.subscription?.status || "trial";
+  // ── Derived from the shared subscription service + PLANS (same as /settings/subscription) ──
+  const selectedPlanKey = (subscription?.selected_plan || "").toLowerCase() as
+    | "solo"
+    | "team"
+    | "business"
+    | "";
 
-  const userLimit =
-    plan === "business"
-      ? 6
-      : plan === "team"
-      ? 3
-      : 1;
+  const currentPlanName =
+    selectedPlanKey && PLANS[selectedPlanKey]
+      ? PLANS[selectedPlanKey].name
+      : "—";
+
+  const allowedUsers =
+    selectedPlanKey && PLANS[selectedPlanKey]
+      ? PLANS[selectedPlanKey].users
+      : 0;
+
+  const subscriptionStatus = (subscription?.status || "trial") as
+    | "active"
+    | "trial"
+    | "expired"
+    | "pending"
+    | "cancelled";
 
   const planLabel =
-    plan === "trial"
-      ? "14-Day Trial"
-      : plan.charAt(0).toUpperCase() + plan.slice(1) + " Plan";
+    subscriptionStatus === "trial"
+      ? `${currentPlanName} Trial`
+      : `${currentPlanName} Plan`;
 
   const farm = data?.farm;
 
-  // Status badge helpers (kept inline, no logic changes)
+  // Status badge helpers
   const statusBadgeClass = () => {
-    switch (status) {
+    switch (subscriptionStatus) {
       case "active":
         return "bg-green-50 text-green-700 border-green-200";
       case "trial":
@@ -81,7 +149,7 @@ export default function SettingsPage() {
   };
 
   const statusIcon = () => {
-    switch (status) {
+    switch (subscriptionStatus) {
       case "active":
         return <CheckCircle2 className="w-3.5 h-3.5 mr-1" />;
       case "trial":
@@ -95,7 +163,7 @@ export default function SettingsPage() {
     }
   };
 
-  const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+  const statusLabel = subscriptionStatus.charAt(0).toUpperCase() + subscriptionStatus.slice(1);
 
   return (
     <OwnerOnly>
@@ -120,12 +188,14 @@ export default function SettingsPage() {
                   <div className="w-11 h-11 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
                     <CreditCard className="w-5 h-5" />
                   </div>
-                  <span
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${statusBadgeClass()} capitalize`}
-                  >
-                    {statusIcon()}
-                    {statusLabel}
-                  </span>
+                  {!subLoading && (
+                    <span
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${statusBadgeClass()} capitalize`}
+                    >
+                      {statusIcon()}
+                      {statusLabel}
+                    </span>
+                  )}
                 </div>
 
                 <div className="mt-4">
@@ -141,19 +211,19 @@ export default function SettingsPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-slate-500">Current Plan</span>
                     <span className="font-semibold text-slate-900">
-                      {planLabel}
+                      {subLoading ? "—" : planLabel}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-slate-500">Status</span>
                     <span className="font-semibold text-slate-900 capitalize">
-                      {statusLabel}
+                      {subLoading ? "—" : statusLabel}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-slate-500">User Limit</span>
                     <span className="font-semibold text-slate-900">
-                      {userLimit} {userLimit === 1 ? "User" : "Users"}
+                      {subLoading ? "—" : `${allowedUsers} ${allowedUsers === 1 ? "User" : "Users"}`}
                     </span>
                   </div>
                 </div>
@@ -168,17 +238,12 @@ export default function SettingsPage() {
             </Link>
 
             {/* CARD 2 — TEAM MANAGEMENT */}
-            <Link href="/settings/users" className="group block">
+            <Link href="/team" className="group block">
               <div className="h-full flex flex-col bg-white rounded-xl border border-slate-200/80 p-6 shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-200">
                 <div className="flex items-start justify-between gap-3">
                   <div className="w-11 h-11 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
                     <Users className="w-5 h-5" />
                   </div>
-                  {!usersLoading && (
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
-                      {users.length} / {userLimit} Active
-                    </span>
-                  )}
                 </div>
 
                 <div className="mt-4">
@@ -194,15 +259,13 @@ export default function SettingsPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-slate-500">Team Members</span>
                     <span className="font-semibold text-slate-900">
-                      {usersLoading
-                        ? "—"
-                        : `${users.length} Member${users.length !== 1 ? "s" : ""}`}
+                      {teamLoading ? "—" : `${teamMembers} Member${teamMembers !== 1 ? "s" : ""}`}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-slate-500">Max Allowed</span>
                     <span className="font-semibold text-slate-900">
-                      {userLimit} User{userLimit !== 1 ? "s" : ""}
+                      {subLoading ? "—" : `${allowedUsers} User${allowedUsers !== 1 ? "s" : ""}`}
                     </span>
                   </div>
                 </div>

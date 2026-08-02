@@ -60,7 +60,8 @@ const { data: subscription, error: subscriptionError } = await admin
     const { count, error: countError } = await admin
       .from("farm_users")
       .select("*", { count: "exact", head: true })
-      .eq("farm_id", farmId);
+      .eq("farm_id", farmId)
+      .neq("role", "owner");
 
     if (countError) {
       return {
@@ -249,9 +250,6 @@ if (currentUsers >= maxUsers) {
     };
   } catch (error) {
     console.error("Error in createUser:", error);
-    return {
-      success: false,
-      error: "Server error",
-    };
+    throw error;
   }
 }

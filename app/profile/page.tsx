@@ -57,8 +57,8 @@ export default function ProfilePage() {
         return "Farm Owner";
       case "manager":
         return "Farm Manager";
-      case "data_entry":
-        return "Data Entry Specialist";
+      case "staff":
+        return "Staff Member";
       case "worker":
         return "Farm Worker";
       default:

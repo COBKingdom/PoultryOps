@@ -2,8 +2,6 @@
 
 import React from "react";
 
-import { useRouter } from "next/navigation";
-
 import { User, Mail, Shield, Calendar } from "lucide-react";
 
 import MemberStatusBadge from "./member-status-badge";
@@ -23,7 +21,14 @@ type Props = {
 };
 
 export default function MemberCard({ member, isSelected, onClick }: Props) {
-  const router = useRouter();
+  const getInitials = (name: string | null | undefined): string => {
+    if (!name) return "U";
+    const parts = name.trim().split(" ");
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name.charAt(0).toUpperCase();
+  };
 
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return "Never";
@@ -61,17 +66,17 @@ export default function MemberCard({ member, isSelected, onClick }: Props) {
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-lg">
-            {(member.full_name ?? "U").charAt(0).toUpperCase()}
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+            {getInitials(member.full_name)}
           </div>
-          <div>
-            <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors truncate">
               {member.full_name ?? (member.role === "owner" ? "Farm Owner" : "Unknown User")}
             </h3>
-            <p className="text-sm text-slate-500 flex items-center gap-1">
-              <Mail size={14} />
-              {member.email ?? "no-email@example.com"}
+            <p className="text-sm text-slate-500 flex items-center gap-1 truncate">
+              <Mail size={14} className="flex-shrink-0" />
+              <span className="truncate">{member.email ?? "no-email@example.com"}</span>
             </p>
           </div>
         </div>
@@ -104,7 +109,7 @@ export default function MemberCard({ member, isSelected, onClick }: Props) {
         <button
           onClick={(e) => {
             e.stopPropagation();
-            router.push(`/team/${member.id}`);
+            onClick(member.id);
           }}
           className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors inline-flex items-center justify-center gap-1.5"
         >

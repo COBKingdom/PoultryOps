@@ -10,8 +10,8 @@ export async function POST(req: Request) {
       password,
       fullName,
       farmId,
-      role = "data_entry",
-      permissions = [],
+    role = "staff",
+    permissions = [],
       sendInvitation = false,
       invitedBy,
     } = body;

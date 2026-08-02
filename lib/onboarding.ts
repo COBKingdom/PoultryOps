@@ -6,6 +6,7 @@ type CreateFarmParams = {
   farmName: string;
   farmType: string;
   currency: string;
+  selectedPlan: string;
 };
 
 export async function createFarmAndTrial({
@@ -13,6 +14,7 @@ export async function createFarmAndTrial({
   farmName,
   farmType,
   currency,
+  selectedPlan,
 }: CreateFarmParams) {
   // Create Farm
 
@@ -75,9 +77,9 @@ export async function createFarmAndTrial({
   const trialEnd =
     new Date();
 
-trialEnd.setDate(
-  trialEnd.getDate() + 14
-);
+  trialEnd.setDate(
+    trialEnd.getDate() + 14
+  );
 
   const {
     error: subscriptionError,
@@ -85,8 +87,12 @@ trialEnd.setDate(
     .from("subscriptions")
     .insert({
       farm_id: farm.id,
-      plan: "trial",
+      plan: null,
       status: "trial",
+      selected_plan: selectedPlan,
+      billing_cycle: null,
+      payment_reference: null,
+      next_billing_date: null,
       trial_start: trialStart,
       trial_end: trialEnd,
     });

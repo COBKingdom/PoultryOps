@@ -8,6 +8,7 @@ import PermissionGroup from "./permission-group";
 import { usePermissions } from "@/lib/permissions";
 import { PERMISSIONS, ALL_PERMISSIONS } from "@/lib/permissions";
 import { groupPermissionsByCategory } from "@/lib/permissions";
+import { supabase } from "@/lib/supabase";
 
 type Props = {
   memberId: string;
@@ -37,29 +38,67 @@ export default function MemberWorkspace({ memberId, onClose }: Props) {
 
   const permissionsByCategory = groupPermissionsByCategory();
 
-  // Mock data - replace with actual API call
+  // Load member data from API
   useEffect(() => {
-    // TODO: Replace with actual API call
-    const mockMember: Member = {
-      id: memberId,
-      full_name: memberId === "1" ? "Farm Owner" : "Team Member",
-      email: memberId === "1" ? "owner@farm.com" : "member@farm.com",
-      role: memberId === "1" ? "owner" : "staff",
-      status: "active",
-      created_at: "2024-01-01",
-      last_sign_in_at: new Date().toISOString(),
-      permissions: memberId === "1" 
-        ? ALL_PERMISSIONS.slice(0, 10) // Owner has all permissions
-        : [
-            PERMISSIONS.DASHBOARD_VIEW,
-            PERMISSIONS.FLOCKS_VIEW,
-            PERMISSIONS.EGG_PRODUCTION_VIEW,
-            PERMISSIONS.FEED_VIEW,
-          ],
-    };
+    async function loadMember() {
+      try {
+        setLoading(true);
+        
+        // Get the current session to include JWT in Authorization header
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        const headers: HeadersInit = {
+          "Content-Type": "application/json",
+        };
+        
+        if (session?.access_token) {
+          headers.Authorization = `Bearer ${session.access_token}`;
+        }
+        
+        const response = await fetch(`/api/team/${memberId}`, {
+          headers,
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to load member details`);
+        }
 
-    setMember(mockMember);
-    setLoading(false);
+        const data = await response.json();
+        const memberData = data.member;
+        
+        // Get member permissions
+        const permResponse = await fetch(`/api/permissions?userId=${memberId}`, {
+          headers,
+        });
+        
+        let userPermissions: string[] = [];
+        if (permResponse.ok) {
+          const permData = await permResponse.json();
+          userPermissions = permData.permissions || [];
+        }
+        
+        setMember({
+          id: memberData.id,
+          full_name: memberData.full_name,
+          email: memberData.email,
+          role: memberData.role,
+          status: memberData.status || "active",
+          created_at: memberData.created_at,
+          last_sign_in_at: memberData.last_sign_in_at,
+          permissions: userPermissions,
+        });
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Failed to load member details";
+        console.error("Error loading member:", err);
+        setError(errorMessage);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (memberId) {
+      loadMember();
+    }
   }, [memberId]);
 
   const handlePermissionChange = async (permission: string, checked: boolean) => {

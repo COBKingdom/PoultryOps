@@ -135,7 +135,7 @@ export async function sendWelcomeEmail(
  * No deduplication — invitations may be resent.
  * Not logged to email_events.
  *
- * role must be one of the farm_users.role values: 'owner' | 'data_entry'
+ * role must be one of the farm_users.role values: 'owner' | 'manager' | 'staff'
  */
 export async function sendInvitationEmail(
   email: string,

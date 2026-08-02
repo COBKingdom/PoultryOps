@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  PLANS,
   getFlutterwavePublicKey,
 } from "@/lib/flutterwave";
+import { PLANS, PLAN_FEATURES, PLAN_ORDER, ANNUAL_SAVINGS } from "@/lib/plans";
 import { getSubscription } from "@/lib/subscription";
 import { supabase } from "@/lib/supabase";
 import {
@@ -46,37 +46,6 @@ type PaymentRecord = {
   created_at: string;
 };
 
-const PLAN_ORDER = ["solo", "team", "business"] as const;
-
-const PLAN_FEATURES: Record<string, string[]> = {
-  solo: [
-    "1 user",
-    "Core farm tracking",
-    "Basic analytics",
-    "Email support",
-  ],
-  team: [
-    "Up to 3 users",
-    "Full farm management",
-    "Advanced analytics",
-    "Priority support",
-    "API access",
-  ],
-  business: [
-    "Up to 6 users",
-    "Full farm management",
-    "Custom analytics",
-    "Dedicated support",
-    "API access",
-    "Priority onboarding",
-  ],
-};
-
-const ANNUAL_SAVINGS: Record<string, string> = {
-  solo:     "Saves ₦12,000",
-  team:     "Saves ₦18,000",
-  business: "Saves ₦24,000",
-};
 
 export default function SubscriptionPage() {
   const { profile } = useAuth();

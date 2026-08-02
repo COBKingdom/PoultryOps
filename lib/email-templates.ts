@@ -110,7 +110,7 @@ export function invitationEmailTemplate(
 ): { subject: string; html: string } {
   const frontendUrl = process.env.FRONTEND_URL ?? ""
   const loginUrl = `${frontendUrl}/login`
-  const roleDisplay = role === "data_entry" ? "Data Entry" : role === "manager" ? "Manager" : "User"
+  const roleDisplay = role === "staff" ? "Staff" : role === "manager" ? "Manager" : role === "owner" ? "Owner" : "User"
 
   const body = `
     <p style="color:#374151;font-size:15px;margin:0 0 20px;line-height:1.6;">Hello,</p>

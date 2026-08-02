@@ -15,12 +15,14 @@ type AuthContextType = {
   user: User | null;
   profile: any | null;
   loading: boolean;
+  refreshProfile: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   profile: null,
   loading: true,
+  refreshProfile: async () => {},
 });
 
 export function AuthProvider({
@@ -36,6 +38,27 @@ export function AuthProvider({
 
   const [loading, setLoading] =
     useState(true);
+
+  const refreshProfile = async () => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        const { data: profile } =
+          await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", user.id)
+            .single();
+
+        setProfile(profile);
+      }
+    } catch (error) {
+      console.error("Error refreshing profile:", error);
+    }
+  };
 
   useEffect(() => {
     async function loadUser() {
@@ -105,6 +128,7 @@ export function AuthProvider({
         user,
         profile,
         loading,
+        refreshProfile,
       }}
     >
       {children}
