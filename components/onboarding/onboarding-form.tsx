@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { createFarmAndTrial } from "@/lib/onboarding";
-import { refreshProfile } from "@/contexts/AuthContext";
 import { PLANS, PLAN_FEATURES, PLAN_ORDER, ANNUAL_SAVINGS } from "@/lib/plans";
 import { Check } from "lucide-react";
 
@@ -14,7 +13,7 @@ type PlanKey = "solo" | "team" | "business";
 export default function OnboardingForm() {
   const router = useRouter();
 
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
 
   const [farmName, setFarmName] = useState("");
   const [farmType, setFarmType] = useState("Poultry");
