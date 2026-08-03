@@ -135,6 +135,7 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
       // Get the current session to include JWT in Authorization header
       const { data: { session } } = await supabase.auth.getSession();
       
+      
       const headers: HeadersInit = {
         "Content-Type": "application/json",
       };

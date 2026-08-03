@@ -139,16 +139,18 @@ if (currentUsers >= maxUsers) {
       };
     }
 
-    // Update profile with must_change_password flag
+    // Create/update profile with must_change_password flag.
+    // The profile row may not exist yet (no DB trigger auto-creates it),
+    // so use an upsert to ensure the invited user has a profile.
     const { error: profileError } = await admin
       .from("profiles")
-      .update({
+      .upsert({
+        id: userId,
         full_name: fullName,
         farm_id: farmId,
         role: role,
         must_change_password: true,
-      })
-      .eq("id", userId);
+      });
 
     if (profileError) {
       return {

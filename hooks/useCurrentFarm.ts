@@ -42,9 +42,10 @@ export function useCurrentFarm(): UseCurrentFarmResult {
         .eq("id", profile.farm_id)
         .single();
 
-      if (error) {
-        throw error;
-      }
+if (error) {
+  console.error("Farm query error:", error);
+  throw error;
+}
 
       setFarm(farm);
     } catch (err) {

@@ -172,6 +172,7 @@ export async function sendTrialEmail(
     trial_expired: trialExpiredTemplate,
   }[type]
 
+
   const { subject, html } = templateFn(farmName)
   await dispatchEmail(email, subject, html)
   await recordEmailEvent(userId, type, email, { farmName })

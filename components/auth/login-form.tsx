@@ -52,7 +52,7 @@ export default function LoginForm() {
       } =
         await supabase
           .from("profiles")
-          .select("farm_id")
+          .select("farm_id, must_change_password")
           .eq("id", user.id)
           .single();
 
@@ -65,6 +65,18 @@ export default function LoginForm() {
       ) {
         router.push(
           "/onboarding"
+        );
+
+        return;
+      }
+
+      // First-login flow: invited users with a temporary password
+      // must change it before accessing the dashboard.
+      if (
+        profile?.must_change_password
+      ) {
+        router.push(
+          "/reset-password"
         );
 
         return;

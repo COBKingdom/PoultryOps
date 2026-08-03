@@ -48,6 +48,39 @@ export default function ResetPasswordPage() {
         throw error;
       }
 
+      // First-login flow: if the user was required to change their
+      // temporary password, clear the flag and go straight to the dashboard.
+      const {
+        data: { user },
+      } =
+        await supabase.auth.getUser();
+
+      if (user) {
+        const { data: profile } =
+          await supabase
+            .from("profiles")
+            .select("must_change_password")
+            .eq("id", user.id)
+            .single();
+
+        if (
+          profile?.must_change_password
+        ) {
+          await supabase
+            .from("profiles")
+            .update({
+              must_change_password: false,
+            })
+            .eq("id", user.id);
+
+          router.push(
+            "/dashboard"
+          );
+
+          return;
+        }
+      }
+
       router.push(
         "/login?reset=success"
       );

@@ -139,3 +139,25 @@ export function AuthProvider({
 export function useAuth() {
   return useContext(AuthContext);
 }
+
+export async function refreshProfile() {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      return profile;
+    }
+  } catch (error) {
+    console.error("Error refreshing profile:", error);
+  }
+  
+  return null;
+}
