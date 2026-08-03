@@ -1,10 +1,9 @@
 import {
   Bird,
   Egg,
-  DollarSign,
-  Receipt,
   TrendingUp,
-  TrendingDown,
+  ReceiptText,
+  Wallet,
   Activity,
 } from "lucide-react";
 
@@ -41,13 +40,16 @@ export default function KpiCard({
     title;
 
   let displayValue =
-    value;
+    Number(value).toLocaleString(undefined, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    });
 
   const numericValue =
     Number(value);
 
   if (
-    title.includes("Bird")
+    title.includes("Available Bird")
   ) {
     Icon = Bird;
 
@@ -58,7 +60,22 @@ export default function KpiCard({
       "text-blue-600";
 
     subtitle =
-      "Active flock";
+      "Current birds on the farm";
+  }
+
+  if (
+    title.includes("Starting Bird")
+  ) {
+    Icon = Bird;
+
+    iconBg =
+      "bg-indigo-100";
+
+    iconColor =
+      "text-indigo-600";
+
+    subtitle =
+      "Birds originally registered";
   }
 
   if (
@@ -79,7 +96,7 @@ export default function KpiCard({
   if (
     title.includes("Revenue")
   ) {
-    Icon = DollarSign;
+    Icon = TrendingUp;
 
     iconBg =
       "bg-green-100";
@@ -103,7 +120,7 @@ export default function KpiCard({
   if (
     title.includes("Expense")
   ) {
-    Icon = Receipt;
+    Icon = ReceiptText;
 
     iconBg =
       "bg-red-100";
@@ -127,6 +144,8 @@ export default function KpiCard({
   if (
     title.includes("Profit")
   ) {
+    Icon = Wallet;
+
     subtitle =
       "Net performance";
 
@@ -142,9 +161,6 @@ export default function KpiCard({
       displayTitle =
         "Profit";
 
-      Icon =
-        TrendingUp;
-
       iconBg =
         "bg-green-100";
 
@@ -156,9 +172,6 @@ export default function KpiCard({
     } else {
       displayTitle =
         "Loss";
-
-      Icon =
-        TrendingDown;
 
       iconBg =
         "bg-red-100";

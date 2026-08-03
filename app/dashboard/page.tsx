@@ -86,7 +86,10 @@ export default function DashboardPage() {
               font-medium
             "
           >
-            {currentBirds} Birds
+            {Number(currentBirds).toLocaleString(undefined, {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2,
+            })} Birds
           </div>
 
           <div
@@ -100,7 +103,10 @@ export default function DashboardPage() {
               font-medium
             "
           >
-            Production {productionPercentage}%
+            Production {Number(productionPercentage).toLocaleString(undefined, {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2,
+            })}%
           </div>
 
         </div>

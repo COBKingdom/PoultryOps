@@ -57,3 +57,23 @@ export async function getTotalMortality(
     ) || 0
   );
 }
+
+export async function getFlockMortality(
+  flockId: string
+) {
+  const { data, error } =
+    await supabase
+      .from("mortality")
+      .select("quantity")
+      .eq("flock_id", flockId);
+
+  if (error) throw error;
+
+  return (
+    data?.reduce(
+      (sum, row) =>
+        sum + row.quantity,
+      0
+    ) || 0
+  );
+}

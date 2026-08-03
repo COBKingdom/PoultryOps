@@ -21,7 +21,10 @@ export default function OperationsSummary({
           </p>
 
           <h3 className="text-3xl font-bold mt-2">
-            {report.feed}kg
+            {Number(report.feed).toLocaleString(undefined, {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2,
+            })}kg
           </h3>
 
         </div>
@@ -33,7 +36,10 @@ export default function OperationsSummary({
           </p>
 
           <h3 className="text-3xl font-bold mt-2 text-red-600">
-            {report.mortality}
+            {Number(report.mortality).toLocaleString(undefined, {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2,
+            })}
           </h3>
 
         </div>
@@ -45,7 +51,10 @@ export default function OperationsSummary({
           </p>
 
           <h3 className="text-3xl font-bold mt-2">
-            {report.healthRecords || 0}
+            {Number(report.healthRecords || 0).toLocaleString(undefined, {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2,
+            })}
           </h3>
 
         </div>
@@ -57,7 +66,10 @@ export default function OperationsSummary({
           </p>
 
           <h3 className="text-3xl font-bold mt-2">
-            {report.feedInventory || 0}
+            {Number(report.feedInventory || 0).toLocaleString(undefined, {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2,
+            })}
           </h3>
 
         </div>

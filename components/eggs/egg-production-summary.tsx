@@ -55,7 +55,10 @@ export default function EggProductionSummary({
         </p>
 
         <h3 className="text-3xl font-bold">
-          {todayEggs}
+          {Number(todayEggs).toLocaleString(undefined, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2,
+          })}
         </h3>
 
         <p className="text-sm text-slate-500">
@@ -79,7 +82,10 @@ export default function EggProductionSummary({
         </p>
 
         <h3 className="text-3xl font-bold text-blue-600">
-          {totalEggs}
+          {Number(totalEggs).toLocaleString(undefined, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2,
+          })}
         </h3>
       </div>
 
@@ -89,7 +95,10 @@ export default function EggProductionSummary({
         </p>
 
         <h3 className="text-3xl font-bold text-amber-600">
-          {crackedEggs}
+          {Number(crackedEggs).toLocaleString(undefined, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2,
+          })}
         </h3>
       </div>
 

@@ -35,7 +35,10 @@ export default function FeedList({
 
               <div>
                 Quantity: {
-                  record.quantity_kg
+                  Number(record.quantity_kg).toLocaleString(undefined, {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 2,
+                  })
                 } kg
               </div>
 

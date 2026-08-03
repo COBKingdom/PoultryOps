@@ -9,7 +9,7 @@ import { useCurrentFarm } from "@/hooks/useCurrentFarm";
 
 import AppShell from "@/components/layout/app-shell";
 
-import { getFlockById } from "@/lib/flocks";
+import { getFlockById, getFlockAvailableBirds } from "@/lib/flocks";
 
 import {
   ArrowLeft,
@@ -22,9 +22,9 @@ import {
   FileText,
   Egg,
   Beef,
-  DollarSign,
-  Receipt,
   TrendingUp,
+  ReceiptText,
+  Wallet,
   Activity,
   Loader2,
   Home,
@@ -41,6 +41,7 @@ export default function FlockWorkspacePage() {
   const { farm } = useCurrentFarm();
 
   const [flock, setFlock] = useState<any>(null);
+  const [availableBirds, setAvailableBirds] = useState(0);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>("overview");
 
@@ -54,6 +55,9 @@ export default function FlockWorkspacePage() {
         setLoading(true);
         const data = await getFlockById(flockId);
         setFlock(data);
+
+        const available = await getFlockAvailableBirds(flockId);
+        setAvailableBirds(available);
       } catch (error) {
         console.error("Error loading flock:", error);
       } finally {
@@ -253,7 +257,10 @@ export default function FlockWorkspacePage() {
                 {flock.quantity && (
                   <span className="flex items-center gap-2 font-medium">
                     <Activity size={18} className="text-slate-600" />
-                    {Number(flock.quantity).toLocaleString()} birds
+                    {Number(flock.quantity).toLocaleString(undefined, {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 2,
+                    })} birds
                   </span>
                 )}
               </div>
@@ -293,8 +300,19 @@ export default function FlockWorkspacePage() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             <KpiCard
-              title="Current Birds"
-              value={Number(flock.quantity).toLocaleString()}
+              title="Available Birds"
+              value={Number(availableBirds).toLocaleString(undefined, {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2,
+              })}
+            />
+
+            <KpiCard
+              title="Starting Birds"
+              value={Number(flock.quantity).toLocaleString(undefined, {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2,
+              })}
             />
             {flock.age_weeks && (
               <KpiCard
@@ -367,7 +385,7 @@ export default function FlockWorkspacePage() {
                   <p className="mt-3 text-sm text-slate-400">No records yet</p>
                 </div>
                 <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-slate-200">
-                  <DollarSign size={26} className="text-slate-400" />
+                  <TrendingUp size={26} className="text-slate-400" />
                 </div>
               </div>
             </div>
@@ -381,7 +399,7 @@ export default function FlockWorkspacePage() {
                   <p className="mt-3 text-sm text-slate-400">No records yet</p>
                 </div>
                 <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-slate-200">
-                  <Receipt size={26} className="text-slate-400" />
+                  <ReceiptText size={26} className="text-slate-400" />
                 </div>
               </div>
             </div>
@@ -395,7 +413,7 @@ export default function FlockWorkspacePage() {
                   <p className="mt-3 text-sm text-slate-400">No records yet</p>
                 </div>
                 <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-slate-200">
-                  <TrendingUp size={26} className="text-slate-400" />
+                  <Wallet size={26} className="text-slate-400" />
                 </div>
               </div>
             </div>

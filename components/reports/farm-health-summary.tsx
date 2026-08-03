@@ -16,11 +16,14 @@ export default function FarmHealthSummary({
 
         <div className="bg-slate-50 rounded-xl p-4">
           <p className="text-sm text-slate-500">
-            Current Birds
+            Available Birds
           </p>
 
           <h3 className="text-3xl font-bold mt-2">
-            {report.currentBirds}
+            {Number(report.availableBirds).toLocaleString(undefined, {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2,
+            })}
           </h3>
         </div>
 
@@ -30,7 +33,10 @@ export default function FarmHealthSummary({
           </p>
 
           <h3 className="text-3xl font-bold mt-2 text-red-600">
-            {report.mortality}
+            {Number(report.mortality).toLocaleString(undefined, {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2,
+            })}
           </h3>
         </div>
 
@@ -40,7 +46,10 @@ export default function FarmHealthSummary({
           </p>
 
           <h3 className="text-3xl font-bold mt-2">
-            {report.healthRecords || 0}
+            {Number(report.healthRecords || 0).toLocaleString(undefined, {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2,
+            })}
           </h3>
         </div>
 
@@ -50,7 +59,10 @@ export default function FarmHealthSummary({
           </p>
 
           <h3 className="text-3xl font-bold mt-2">
-            {report.vaccinations || 0}
+            {Number(report.vaccinations || 0).toLocaleString(undefined, {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2,
+            })}
           </h3>
         </div>
 

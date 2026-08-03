@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useMemo,
   useState,
 } from "react";
 
@@ -12,7 +13,12 @@ import { useMortality } from "@/hooks/useMortality";
 
 import { getFarmFlocks } from "@/lib/flocks";
 
+import { Activity } from "lucide-react";
+
 import AppShell from "@/components/layout/app-shell";
+import OperationsKpiCard from "@/components/operations/operations-kpi-card";
+import OperationsToolbar from "@/components/operations/operations-toolbar";
+import OperationsPagination from "@/components/operations/operations-pagination";
 
 import AddMortalityForm from "@/components/mortality/add-mortality-form";
 import MortalityList from "@/components/mortality/mortality-list";
@@ -39,6 +45,13 @@ export default function MortalityPage() {
     farmId
   );
 
+  const [searchQuery, setSearchQuery] =
+    useState("");
+
+  const [currentPage, setCurrentPage] =
+    useState(1);
+  const pageSize = 10;
+
   useEffect(() => {
     async function load() {
       if (!farmId) return;
@@ -54,19 +67,34 @@ export default function MortalityPage() {
     load();
   }, [farmId]);
 
-  const today =
-    new Date()
-      .toISOString()
-      .split("T")[0];
+  // ── Compute KPI values ────────────────────────────────────────────────────
+  const kpiValues = useMemo(() => {
+    const today =
+      new Date()
+        .toISOString()
+        .split("T")[0];
 
-  const todayMortality =
-    records
-      .filter(
-        (record) =>
-          record.mortality_date ===
-          today
-      )
-      .reduce(
+    const todayMortality =
+      records
+        .filter(
+          (record) =>
+            record.mortality_date ===
+            today
+        )
+        .reduce(
+          (
+            sum,
+            record
+          ) =>
+            sum +
+            Number(
+              record.quantity
+            ),
+          0
+        );
+
+    const totalMortality =
+      records.reduce(
         (
           sum,
           record
@@ -78,27 +106,91 @@ export default function MortalityPage() {
         0
       );
 
-  const totalMortality =
-    records.reduce(
-      (
-        sum,
-        record
-      ) =>
-        sum +
-        Number(
-          record.quantity
-        ),
-      0
-    );
+    const recordCount =
+      records.length;
 
-  const recordCount =
-    records.length;
+    return { todayMortality, totalMortality, recordCount };
+  }, [records]);
+
+  // ── Filter records by search query ────────────────────────────────────────
+  const filteredRecords = useMemo(() => {
+    if (!searchQuery.trim()) return records;
+
+    const query = searchQuery.toLowerCase();
+
+    return records.filter(
+      (record) =>
+        record.flocks?.flock_name?.toLowerCase().includes(query) ||
+        record.mortality_date?.toLowerCase().includes(query) ||
+        String(record.quantity).includes(query)
+    );
+  }, [records, searchQuery]);
+
+  // ── Paginate filtered records ─────────────────────────────────────────────
+  const totalItems = filteredRecords.length;
+  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+  const startIndex = (currentPage - 1) * pageSize;
+  const paginatedRecords = filteredRecords.slice(
+    startIndex,
+    startIndex + pageSize
+  );
+
+  // Reset to page 1 when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  const kpiCards = (
+    <>
+      <OperationsKpiCard
+        label="Today"
+        value={kpiValues.todayMortality}
+        icon={<Activity size={20} />}
+        valueColor="red"
+        iconBg="red"
+      />
+      <OperationsKpiCard
+        label="Total Mortality"
+        value={kpiValues.totalMortality}
+        icon={<Activity size={20} />}
+        valueColor="red"
+        iconBg="red"
+      />
+      <OperationsKpiCard
+        label="Records"
+        value={kpiValues.recordCount}
+        icon={<Activity size={20} />}
+        valueColor="blue"
+        iconBg="blue"
+      />
+    </>
+  );
+
+  const toolbar = (
+    <OperationsToolbar
+      searchPlaceholder="Search mortality records..."
+      searchValue={searchQuery}
+      onSearchChange={setSearchQuery}
+    />
+  );
+
+  const pagination = (
+    <OperationsPagination
+      current={currentPage}
+      total={totalPages}
+      pageSize={pageSize}
+      totalItems={totalItems}
+      onPageChange={setCurrentPage}
+    />
+  );
 
   if (loading) {
     return (
-      <div className="p-6">
-        Loading...
-      </div>
+      <AppShell email={user?.email}>
+        <div className="space-y-6">
+          <div />
+        </div>
+      </AppShell>
     );
   }
 
@@ -106,63 +198,52 @@ export default function MortalityPage() {
     <AppShell
       email={user?.email}
     >
-      <div className="p-6 space-y-6">
+      <div className="space-y-6">
 
-        <h1 className="text-4xl font-bold">
-          Mortality Management
-        </h1>
+        {/* ── Page Title ─────────────────────────────────────────────────── */}
+        <h1 className="text-2xl font-bold text-slate-900">Mortality Management</h1>
 
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* ── KPI cards section ─────────────────────────────────────────── */}
+        {kpiCards && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {kpiCards}
+          </div>
+        )}
 
-          <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm">
-            <p className="text-slate-500 text-sm">
-              Today
-            </p>
+        {/* ── Filter / Search toolbar ───────────────────────────────────── */}
+        {toolbar && (
+          <div className="flex items-center justify-between">
+            {toolbar}
+          </div>
+        )}
 
-            <p className="text-4xl font-bold mt-2 text-red-600">
-              {todayMortality}
-            </p>
-
-            <p className="text-slate-500 mt-1">
-              Birds
-            </p>
+        {/* ── Main content: Quick Entry + Records list ─────────────────── */}
+        <div className="grid lg:grid-cols-12 gap-6 items-start">
+          {/* Quick Entry — first on mobile, right column on desktop */}
+          <div className="lg:col-span-4 lg:order-last">
+            <div className="lg:sticky lg:top-20 space-y-4">
+              <AddMortalityForm
+                farmId={farmId}
+                flocks={flocks}
+                onSaved={refresh}
+              />
+            </div>
           </div>
 
-          <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm">
-            <p className="text-slate-500 text-sm">
-              Total Mortality
-            </p>
-
-            <p className="text-4xl font-bold mt-2 text-red-600">
-              {totalMortality}
-            </p>
-
-            <p className="text-slate-500 mt-1">
-              Birds
-            </p>
+          {/* Records list — second on mobile, left column on desktop */}
+          <div className="lg:col-span-8 lg:order-first">
+            <MortalityList
+              records={paginatedRecords}
+            />
           </div>
-
-          <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm">
-            <p className="text-slate-500 text-sm">
-              Records
-            </p>
-
-            <p className="text-4xl font-bold mt-2">
-              {recordCount}
-            </p>
-          </div>
-
         </div>
 
-        <MortalityList
-          records={records}
-        />
-
-        <AddMortalityForm
-          farmId={farmId}
-          flocks={flocks}
-          onSaved={refresh}
-        />
+        {/* ── Pagination area ───────────────────────────────────────────── */}
+        {pagination && (
+          <div className="flex items-center justify-center pt-4">
+            {pagination}
+          </div>
+        )}
 
       </div>
     </AppShell>

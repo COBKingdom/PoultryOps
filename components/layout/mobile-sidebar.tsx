@@ -16,8 +16,8 @@ import {
   HeartPulse,
   Receipt,
   ShoppingCart,
-  FileBarChart,
   BarChart3,
+  ChartColumn,
   Settings,
   Upload,
   User,
@@ -103,12 +103,12 @@ export default function MobileSidebar({
     {
       name: "Reports",
       href: "/reports",
-      icon: FileBarChart,
+      icon: BarChart3,
     },
     {
       name: "Analytics",
       href: "/analytics",
-      icon: BarChart3,
+      icon: ChartColumn,
     },
   ];
 

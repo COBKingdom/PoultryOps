@@ -160,7 +160,10 @@ export default function FlockCard({
             <p className="text-xs font-medium">Birds</p>
           </div>
           <p className="text-base font-bold text-slate-900">
-            {displayValue(Number(flock.quantity).toLocaleString())}
+            {displayValue(Number(flock.quantity).toLocaleString(undefined, {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2,
+            }))}
           </p>
         </div>
 

@@ -136,7 +136,10 @@ export default function FeedStockSummary({
           </p>
 
           <h3 className="text-3xl font-bold mt-2">
-            {totalPurchased}
+            {Number(totalPurchased).toLocaleString(undefined, {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2,
+            })}
           </h3>
 
           <p className="text-sm text-slate-500">
@@ -150,7 +153,10 @@ export default function FeedStockSummary({
           </p>
 
           <h3 className="text-3xl font-bold mt-2">
-            {totalConsumed}
+            {Number(totalConsumed).toLocaleString(undefined, {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2,
+            })}
           </h3>
 
           <p className="text-sm text-slate-500">
@@ -164,7 +170,10 @@ export default function FeedStockSummary({
           </p>
 
           <h3 className="text-3xl font-bold mt-2 text-blue-600">
-            {totalRemaining}
+            {Number(totalRemaining).toLocaleString(undefined, {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2,
+            })}
           </h3>
 
           <p className="text-sm text-slate-500">
@@ -231,7 +240,10 @@ export default function FeedStockSummary({
                     </span>
 
                     <span className="font-semibold">
-                      {item.purchased}kg
+                      {Number(item.purchased).toLocaleString(undefined, {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 2,
+                      })}kg
                     </span>
                   </div>
 
@@ -241,7 +253,10 @@ export default function FeedStockSummary({
                     </span>
 
                     <span className="font-semibold">
-                      {item.consumed}kg
+                      {Number(item.consumed).toLocaleString(undefined, {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 2,
+                      })}kg
                     </span>
                   </div>
 
@@ -252,7 +267,10 @@ export default function FeedStockSummary({
                     </span>
 
                     <span className="font-bold text-blue-600">
-                      {item.remaining}kg
+                      {Number(item.remaining).toLocaleString(undefined, {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 2,
+                      })}kg
                     </span>
 
                   </div>

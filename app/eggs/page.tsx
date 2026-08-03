@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -9,38 +9,38 @@ import { useEggProduction } from "@/hooks/useEggProduction";
 
 import { getFarmFlocks } from "@/lib/flocks";
 
+import { Egg, TrendingUp } from "lucide-react";
+
 import AppShell from "@/components/layout/app-shell";
+import OperationsKpiCard from "@/components/operations/operations-kpi-card";
+import OperationsToolbar from "@/components/operations/operations-toolbar";
+import OperationsPagination from "@/components/operations/operations-pagination";
 
 import AddEggForm from "@/components/eggs/add-egg-form";
 import EggProductionList from "@/components/eggs/egg-production-list";
-import EggProductionSummary from "@/components/eggs/egg-production-summary";
+
 
 export default function EggsPage() {
-  const { user } =
-    useAuth();
+  const { user, profile } = useAuth();
 
   const { farm, loading: farmLoading } = useCurrentFarm();
 
   const farmId = farm?.id;
 
-  const [flocks, setFlocks] =
-    useState<any[]>([]);
+  const [flocks, setFlocks] = useState<any[]>([]);
 
-const {
-  records,
-  refresh,
-} = useEggProduction(
-  farmId
-);
+  const { records, loading: recordsLoading, refresh } = useEggProduction(farmId);
+
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   useEffect(() => {
     async function load() {
       if (!farmId) return;
 
-      const result =
-        await getFarmFlocks(
-          farmId
-        );
+      const result = await getFarmFlocks(farmId);
 
       setFlocks(result);
     }
@@ -48,43 +48,173 @@ const {
     load();
   }, [farmId]);
 
+  // ── Compute KPI values (same logic as EggProductionSummary) ──────────────
+  const today = new Date().toISOString().split("T")[0];
+
+  const kpiValues = useMemo(() => {
+    const todayEggs = records
+      .filter((record) => record.production_date === today)
+      .reduce((sum, record) => sum + Number(record.egg_count), 0);
+
+    const totalEggs = records.reduce(
+      (sum, record) => sum + Number(record.egg_count),
+      0
+    );
+
+    const crackedEggs = records.reduce(
+      (sum, record) => sum + Number(record.cracked_eggs || 0),
+      0
+    );
+
+    return { todayEggs, totalEggs, crackedEggs };
+  }, [records, today]);
+
+  // ── Filter records by search query ────────────────────────────────────────
+  const filteredRecords = useMemo(() => {
+    if (!searchQuery.trim()) return records;
+
+    const query = searchQuery.toLowerCase();
+
+    return records.filter(
+      (record) =>
+        record.flocks?.flock_name?.toLowerCase().includes(query) ||
+        record.production_date?.toLowerCase().includes(query) ||
+        String(record.egg_count).includes(query)
+    );
+  }, [records, searchQuery]);
+
+  // ── Paginate filtered records ─────────────────────────────────────────────
+  const totalItems = filteredRecords.length;
+  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+  const startIndex = (currentPage - 1) * pageSize;
+  const paginatedRecords = filteredRecords.slice(
+    startIndex,
+    startIndex + pageSize
+  );
+
+  // Reset to page 1 when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  const kpiCards = (
+    <>
+      <OperationsKpiCard
+        label="Today"
+        value={kpiValues.todayEggs}
+        sublabel="Eggs"
+        icon={<Egg size={20} />}
+        valueColor="amber"
+        iconBg="amber"
+      />
+      <OperationsKpiCard
+        label="Records"
+        value={records.length}
+        icon={<TrendingUp size={20} />}
+        valueColor="blue"
+        iconBg="blue"
+      />
+      <OperationsKpiCard
+        label="Total Eggs"
+        value={kpiValues.totalEggs}
+        icon={<Egg size={20} />}
+        valueColor="blue"
+        iconBg="blue"
+      />
+      <OperationsKpiCard
+        label="Cracked Eggs"
+        value={kpiValues.crackedEggs}
+        icon={<Egg size={20} />}
+        valueColor="amber"
+        iconBg="amber"
+      />
+    </>
+  );
+
+  const toolbar = (
+    <OperationsToolbar
+      searchPlaceholder="Search production records..."
+      searchValue={searchQuery}
+      onSearchChange={setSearchQuery}
+    />
+  );
+
+  const pagination = (
+    <OperationsPagination
+      current={currentPage}
+      total={totalPages}
+      pageSize={pageSize}
+      totalItems={totalItems}
+      onPageChange={setCurrentPage}
+    />
+  );
+
   if (farmLoading) {
     return (
       <AppShell email={user?.email}>
-        <div className="flex items-center justify-center h-96">
-          <div className="text-center">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
-            <p className="mt-4 text-slate-600">Loading...</p>
-          </div>
+        <div className="space-y-6">
+          <div />
         </div>
       </AppShell>
     );
   }
 
   return (
-    <AppShell
-      email={user?.email}
-    >
-      <div className="p-6 space-y-6">
+    <AppShell email={user?.email}>
+      <div className="space-y-6">
+        {/* ── Page Title ─────────────────────────────────────────────────── */}
+        <h1 className="text-2xl font-bold text-slate-900">Egg Production</h1>
 
-        <h1 className="text-3xl font-bold">
-          Egg Production
-        </h1>
+        {/* ── KPI cards section ─────────────────────────────────────────── */}
+        {kpiCards && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {kpiCards}
+          </div>
+        )}
 
-        <EggProductionSummary
-          records={records}
-        />
+        {/* ── Filter / Search toolbar ───────────────────────────────────── */}
+        {toolbar && (
+          <div className="flex items-center justify-between">
+            {toolbar}
+          </div>
+        )}
 
-        <EggProductionList
-          records={records}
-        />
+        {/* ── Main content: Quick Entry + Activity list ─────────────────── */}
+        <div className="grid lg:grid-cols-12 gap-6 items-start">
+          {/* Quick Entry — first on mobile, right column on desktop */}
+          <div className="lg:col-span-4 lg:order-last">
+            <div className="lg:sticky lg:top-20 space-y-4">
+              <AddEggForm
+                farmId={farmId}
+                flocks={flocks}
+                onSaved={refresh}
+              />
+            </div>
+          </div>
 
-         <AddEggForm
-          farmId={farmId}
-          flocks={flocks}
-          onSaved={refresh}
-        />
+          {/* Activity list container (spans 8 of 12 columns on desktop) */}
+          <div className="lg:col-span-8 lg:order-first">
+            {recordsLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="h-16 bg-slate-200 rounded-xl animate-pulse"
+                  />
+                ))}
+              </div>
+            ) : (
+              <EggProductionList records={paginatedRecords} />
+            )}
+          </div>
+        </div>
 
+        {/* ── Pagination area ───────────────────────────────────────────── */}
+        {pagination && (
+          <div className="flex items-center justify-center pt-4">
+            {pagination}
+          </div>
+        )}
       </div>
     </AppShell>
   );

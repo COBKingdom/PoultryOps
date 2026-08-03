@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { getTotalBirds } from "@/lib/flocks";
+import { getAvailableBirds } from "@/lib/flocks";
 import type { DateRange } from "@/lib/date-ranges";
 
 /**
@@ -20,7 +20,7 @@ import type { DateRange } from "@/lib/date-ranges";
  */
 
 export interface FarmReport {
-  currentBirds: number;
+  availableBirds: number;
   eggs: number;
   feed: number;
   mortality: number;
@@ -113,15 +113,16 @@ async function getRevenueInRange(farmId: string, range: DateRange): Promise<numb
  * Generates a full farm report for the given date range.
  *
  * All time-series metrics (eggs, feed, mortality, revenue, expenses) are
- * filtered server-side by the supplied DateRange. The current bird count
- * is a live snapshot (not date-filtered).
+ * filtered server-side by the supplied DateRange. The available bird count
+ * is a live snapshot (not date-filtered) and uses the shared calculation:
+ * Starting Birds − Total Mortality − Birds Sold.
  */
 export async function getFarmReport(
   farmId: string,
   range: DateRange
 ): Promise<FarmReport> {
-  const [birds, eggs, feed, mortality, expenses, revenue] = await Promise.all([
-    getTotalBirds(farmId),
+  const [availableBirds, eggs, feed, mortality, expenses, revenue] = await Promise.all([
+    getAvailableBirds(farmId),
     getEggsInRange(farmId, range),
     getFeedInRange(farmId, range),
     getMortalityInRange(farmId, range),
@@ -130,7 +131,7 @@ export async function getFarmReport(
   ]);
 
   return {
-    currentBirds: birds - mortality,
+    availableBirds,
     eggs,
     feed,
     mortality,

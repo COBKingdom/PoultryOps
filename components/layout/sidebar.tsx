@@ -18,8 +18,8 @@ import {
   HeartPulse,
   Receipt,
   ShoppingCart,
-  FileBarChart,
   BarChart3,
+  ChartColumn,
   Settings,
   User,
   LogOut,
@@ -100,13 +100,13 @@ const insights = [
   {
     name: "Reports",
     href: "/reports",
-    icon: FileBarChart,
+    icon: BarChart3,
     permission: PERMISSIONS.REPORTS_VIEW,
   },
   {
     name: "Analytics",
     href: "/analytics",
-    icon: BarChart3,
+    icon: ChartColumn,
     permission: PERMISSIONS.ANALYTICS_VIEW,
   },
 ];

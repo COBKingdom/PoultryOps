@@ -55,7 +55,10 @@ export default function SalesSummary({
         </p>
 
         <h3 className="text-3xl font-bold">
-          {todaySales}
+          {Number(todaySales).toLocaleString(undefined, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2,
+          })}
         </h3>
       </div>
 
@@ -65,7 +68,10 @@ export default function SalesSummary({
         </p>
 
         <h3 className="text-3xl font-bold text-green-600">
-          {totalRevenue}
+          {Number(totalRevenue).toLocaleString(undefined, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2,
+          })}
         </h3>
       </div>
 
@@ -85,7 +91,10 @@ export default function SalesSummary({
         </p>
 
         <h3 className="text-3xl font-bold text-blue-600">
-          {totalQuantity}
+          {Number(totalQuantity).toLocaleString(undefined, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2,
+          })}
         </h3>
       </div>
 

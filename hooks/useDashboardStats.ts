@@ -6,7 +6,7 @@ import {
 } from "react";
 
 import {
-  getTotalBirds,
+  getAvailableBirds,
 } from "@/lib/flocks";
 
 import {
@@ -69,7 +69,7 @@ export function useDashboardStats(
         if (!farmId) return;
 
         const birds =
-          await getTotalBirds(
+          await getAvailableBirds(
             farmId
           );
 
@@ -94,7 +94,7 @@ export function useDashboardStats(
           );
 
         const birdsAlive =
-          birds - mortality;
+          birds;
 
         setCurrentBirds(
           birdsAlive

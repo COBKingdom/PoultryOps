@@ -50,7 +50,10 @@ export default function HealthList({
                 <div className="text-right">
 
                   <p className="font-bold text-red-600">
-                    {record.cost}
+                    {Number(record.cost).toLocaleString(undefined, {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 2,
+                    })}
                   </p>
 
                 </div>

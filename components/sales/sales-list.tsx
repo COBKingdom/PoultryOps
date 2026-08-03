@@ -1,5 +1,4 @@
 import {
-  DollarSign,
   ShoppingCart,
 } from "lucide-react";
 
@@ -82,7 +81,10 @@ export default function SalesList({
                   </p>
 
                   <p className="font-bold text-lg">
-                    {record.quantity}
+                    {Number(record.quantity).toLocaleString(undefined, {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 2,
+                    })}
                   </p>
 
                 </div>
@@ -94,7 +96,10 @@ export default function SalesList({
                   </p>
 
                   <p className="font-bold text-lg">
-                    {record.unit_price}
+                    {Number(record.unit_price).toLocaleString(undefined, {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 2,
+                    })}
                   </p>
 
                 </div>
@@ -106,7 +111,10 @@ export default function SalesList({
                   </p>
 
                   <p className="font-bold text-lg text-green-600">
-                    {record.total_amount}
+                    {Number(record.total_amount).toLocaleString(undefined, {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 2,
+                    })}
                   </p>
 
                 </div>

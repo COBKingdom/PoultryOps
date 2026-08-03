@@ -11,7 +11,7 @@ export default function ExportButtons({
   function exportProduction() {
     const csv =
 `Metric,Value
-Current Birds,${report.currentBirds}
+Available Birds,${report.availableBirds}
 Today's Eggs,${report.eggs}
 Feed Used,${report.feed}
 Mortality,${report.mortality}`;

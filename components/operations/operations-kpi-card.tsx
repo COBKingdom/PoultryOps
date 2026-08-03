@@ -52,7 +52,10 @@ export default function OperationsKpiCard({
           <p
             className={`text-3xl font-bold mt-1 ${colorMap.value[valueColor]}`}
           >
-            {value}
+            {Number(value).toLocaleString(undefined, {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2,
+            })}
           </p>
           {sublabel && (
             <p className="text-slate-400 text-xs mt-1">{sublabel}</p>

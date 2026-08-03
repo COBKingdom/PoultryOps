@@ -57,7 +57,10 @@ export default function ExpenseList({
                     font-bold
                   "
                 >
-                  {record.amount}
+                  {Number(record.amount).toLocaleString(undefined, {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 2,
+                  })}
                 </div>
 
               </div>

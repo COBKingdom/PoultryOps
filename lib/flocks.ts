@@ -1,4 +1,6 @@
 import { supabase } from "@/lib/supabase";
+import { getTotalBirdsSold } from "@/lib/sales";
+import { getTotalMortality, getFlockMortality } from "@/lib/mortality";
 
 export async function createFlock(
   flock: any
@@ -99,6 +101,33 @@ export async function getTotalBirds(
     ) || 0
   );
 }
+
+/**
+ * Shared source of truth for the operational bird figure.
+ *
+ * Available Birds =
+ *   Starting Birds (sum of flock quantities)
+ *   − Total Mortality (all mortality records)
+ *   − Birds Sold (bird-related sale records)
+ *
+ * Used by Dashboard, Reports, Analytics and Flocks so every
+ * surface shows the same calculation.
+ */
+export async function getAvailableBirds(
+  farmId: string
+) {
+  const [startingBirds, mortality, birdsSold] =
+    await Promise.all([
+      getTotalBirds(farmId),
+      getTotalMortality(farmId),
+      getTotalBirdsSold(farmId),
+    ]);
+
+  return Math.max(
+    0,
+    startingBirds - mortality - birdsSold
+  );
+}
 export async function getTotalFlocks(
   farmId: string
 ) {
@@ -145,4 +174,25 @@ export async function getFlockById(
   if (error) throw error;
 
   return data;
+}
+
+/**
+ * Available birds for a single flock:
+ * Starting Birds (flock.quantity) − Flock Mortality − Birds Sold.
+ */
+export async function getFlockAvailableBirds(
+  flockId: string
+) {
+  const flock = await getFlockById(flockId);
+  if (!flock) return 0;
+
+  const [mortality, birdsSold] = await Promise.all([
+    getFlockMortality(flockId),
+    getTotalBirdsSold(flock.farm_id),
+  ]);
+
+  return Math.max(
+    0,
+    Number(flock.quantity) - mortality - birdsSold
+  );
 }

@@ -62,7 +62,10 @@ export default function MortalityList({
                     font-bold
                   "
                 >
-                  {record.quantity}
+                  {Number(record.quantity).toLocaleString(undefined, {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 2,
+                  })}
                 </div>
 
               </div>

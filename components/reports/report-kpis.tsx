@@ -1,6 +1,6 @@
 import {
   TrendingUp,
-  TrendingDown,
+  ReceiptText,
   Wallet,
   AlertTriangle,
 } from "lucide-react";
@@ -33,7 +33,10 @@ export default function ReportKpis({
             </p>
 
             <h3 className="text-4xl font-bold text-green-600 mt-2">
-              {report.revenue}
+              {Number(report.revenue).toLocaleString(undefined, {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2,
+              })}
             </h3>
 
           </div>
@@ -62,14 +65,17 @@ export default function ReportKpis({
             </p>
 
             <h3 className="text-4xl font-bold text-red-600 mt-2">
-              {report.expenses}
+              {Number(report.expenses).toLocaleString(undefined, {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2,
+              })}
             </h3>
 
           </div>
 
           <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center">
 
-            <TrendingDown
+            <ReceiptText
               size={24}
               className="text-red-600"
             />
@@ -97,7 +103,10 @@ export default function ReportKpis({
                   : "text-red-600"
               }`}
             >
-              {report.profit}
+              {Number(report.profit).toLocaleString(undefined, {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2,
+              })}
             </h3>
 
           </div>
@@ -134,7 +143,10 @@ export default function ReportKpis({
             </p>
 
             <h3 className="text-4xl font-bold text-amber-600 mt-2">
-              {report.mortality}
+              {Number(report.mortality).toLocaleString(undefined, {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2,
+              })}
             </h3>
 
           </div>

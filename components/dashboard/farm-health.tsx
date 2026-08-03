@@ -30,11 +30,14 @@ export default function FarmHealth({
           />
 
           <p className="text-sm text-slate-600">
-            Bird Population
+            Available Birds
           </p>
 
           <p className="font-bold text-slate-900">
-            {currentBirds}
+            {Number(currentBirds).toLocaleString(undefined, {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2,
+            })}
           </p>
         </div>
 
@@ -49,7 +52,10 @@ export default function FarmHealth({
           </p>
 
           <p className="font-bold text-slate-900">
-            {productionPercentage}%
+            {Number(productionPercentage).toLocaleString(undefined, {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2,
+            })}%
           </p>
         </div>
 

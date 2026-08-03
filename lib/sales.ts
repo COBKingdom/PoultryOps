@@ -55,3 +55,47 @@ export async function getTotalRevenue(
     ) || 0
   );
 }
+
+const BIRD_SALE_TYPES = [
+  "Live Bird Sales",
+  "Spent Layer Sales",
+  "Broiler Sales",
+  "Cockerel Sales",
+];
+
+/**
+ * Total number of birds sold from the farm.
+ * Only bird-related sale types count toward birds removed from the flock.
+ */
+export async function getTotalBirdsSold(
+  farmId: string
+) {
+  const { data, error } =
+    await supabase
+      .from("sales")
+      .select("quantity, item_type")
+      .eq("farm_id", farmId);
+
+  if (error) throw error;
+
+  return (
+    data?.reduce(
+      (sum, row) => {
+        if (
+          BIRD_SALE_TYPES.includes(
+            row.item_type
+          )
+        ) {
+          return (
+            sum +
+            Number(
+              row.quantity
+            )
+          );
+        }
+        return sum;
+      },
+      0
+    ) || 0
+  );
+}

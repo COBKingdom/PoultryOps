@@ -6,7 +6,14 @@ import { useDashboard } from "@/hooks/useDashboard";
 import { useFeedInventory } from "@/hooks/useFeedInventory";
 import { useFeed } from "@/hooks/useFeed";
 
+import { useEffect, useMemo, useState } from "react";
+
+import { Package } from "lucide-react";
+
 import AppShell from "@/components/layout/app-shell";
+import OperationsKpiCard from "@/components/operations/operations-kpi-card";
+import OperationsToolbar from "@/components/operations/operations-toolbar";
+import OperationsPagination from "@/components/operations/operations-pagination";
 
 import AddFeedStockForm from "@/components/feed-inventory/add-feed-stock-form";
 import FeedStockList from "@/components/feed-inventory/feed-stock-list";
@@ -38,11 +45,68 @@ export default function FeedInventoryPage() {
     farmId
   );
 
+  const [searchQuery, setSearchQuery] =
+    useState("");
+
+  const [currentPage, setCurrentPage] =
+    useState(1);
+  const pageSize = 10;
+
+
+  // ── Filter records by search query ────────────────────────────────────────
+  const filteredRecords = useMemo(() => {
+    if (!searchQuery.trim()) return inventoryRecords;
+
+    const query = searchQuery.toLowerCase();
+
+    return inventoryRecords.filter(
+      (record) =>
+        record.flocks?.flock_name?.toLowerCase().includes(query) ||
+        record.feed_type?.toLowerCase().includes(query) ||
+        String(record.quantity).includes(query)
+    );
+  }, [inventoryRecords, searchQuery]);
+
+  // ── Paginate filtered records ─────────────────────────────────────────────
+  const totalItems = filteredRecords.length;
+  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+  const startIndex = (currentPage - 1) * pageSize;
+  const paginatedRecords = filteredRecords.slice(
+    startIndex,
+    startIndex + pageSize
+  );
+
+  // Reset to page 1 when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+
+  const toolbar = (
+    <OperationsToolbar
+      searchPlaceholder="Search inventory records..."
+      searchValue={searchQuery}
+      onSearchChange={setSearchQuery}
+    />
+  );
+
+  const pagination = (
+    <OperationsPagination
+      current={currentPage}
+      total={totalPages}
+      pageSize={pageSize}
+      totalItems={totalItems}
+      onPageChange={setCurrentPage}
+    />
+  );
+
   if (loading) {
     return (
-      <div className="p-6">
-        Loading...
-      </div>
+      <AppShell email={user?.email}>
+        <div className="space-y-6">
+          <div />
+        </div>
+      </AppShell>
     );
   }
 
@@ -50,30 +114,49 @@ export default function FeedInventoryPage() {
     <AppShell
       email={user?.email}
     >
-      <div className="p-6 space-y-6">
+      <div className="space-y-6">
 
-        <h1 className="text-3xl font-bold">
-          Feed Inventory
-        </h1>
+        {/* ── Page Title ─────────────────────────────────────────────────── */}
+        <h1 className="text-2xl font-bold text-slate-900">Feed Inventory</h1>
 
-        <FeedStockSummary
-          inventoryRecords={
-            inventoryRecords
-          }
-          feedRecords={
-            feedRecords
-          }
+        {/* ── KPI cards section ─────────────────────────────────────────── */}
+        <FeedStockSummary 
+          inventoryRecords={inventoryRecords}
+          feedRecords={feedRecords}
         />
 
-        <FeedStockList
-          records={
-            inventoryRecords
-          }
-        />
+        {/* ── Filter / Search toolbar ───────────────────────────────────── */}
+        {toolbar && (
+          <div className="flex items-center justify-between">
+            {toolbar}
+          </div>
+        )}
 
-        <AddFeedStockForm
-          farmId={farmId}
-        />
+        {/* ── Main content: Quick Entry + Records list ─────────────────── */}
+        <div className="grid lg:grid-cols-12 gap-6 items-start">
+          {/* Quick Entry — first on mobile, right column on desktop */}
+          <div className="lg:col-span-4 lg:order-last">
+            <div className="lg:sticky lg:top-20 space-y-4">
+              <AddFeedStockForm
+                farmId={farmId}
+              />
+            </div>
+          </div>
+
+          {/* Records list — second on mobile, left column on desktop */}
+          <div className="lg:col-span-8 lg:order-first">
+            <FeedStockList
+              records={paginatedRecords}
+            />
+          </div>
+        </div>
+
+        {/* ── Pagination area ───────────────────────────────────────────── */}
+        {pagination && (
+          <div className="flex items-center justify-center pt-4">
+            {pagination}
+          </div>
+        )}
 
       </div>
     </AppShell>

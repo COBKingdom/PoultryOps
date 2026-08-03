@@ -5,7 +5,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useCurrentFarm } from "@/hooks/useCurrentFarm";
 import { useExpenses } from "@/hooks/useExpenses";
 
+import { useEffect, useMemo, useState } from "react";
+
+import { ReceiptText, Wallet, ClipboardList } from "lucide-react";
+
 import AppShell from "@/components/layout/app-shell";
+import OperationsKpiCard from "@/components/operations/operations-kpi-card";
+import OperationsToolbar from "@/components/operations/operations-toolbar";
+import OperationsPagination from "@/components/operations/operations-pagination";
 
 import AddExpenseForm from "@/components/expenses/add-expense-form";
 import ExpenseList from "@/components/expenses/expense-list";
@@ -23,44 +30,126 @@ export default function ExpensesPage() {
     farm?.id
   );
 
+  const [searchQuery, setSearchQuery] =
+    useState("");
+
+  const [currentPage, setCurrentPage] =
+    useState(1);
+  const pageSize = 10;
+
+  // ── Compute KPI values ────────────────────────────────────────────────────
   const today =
     new Date()
       .toISOString()
       .split("T")[0];
 
-  const todayExpenses =
-    records
-      .filter(
-        (record) =>
-          record.expense_date ===
-          today
-      )
-      .reduce(
+  const kpiValues = useMemo(() => {
+    const todayExpenses =
+      records
+        .filter(
+          (record) =>
+            record.expense_date ===
+            today
+        )
+        .reduce(
+          (sum, record) =>
+            sum +
+            Number(record.amount),
+          0
+        );
+
+    const totalExpenses =
+      records.reduce(
         (sum, record) =>
           sum +
           Number(record.amount),
         0
       );
 
-  const totalExpenses =
-    records.reduce(
-      (sum, record) =>
-        sum +
-        Number(record.amount),
-      0
-    );
+    const transactionCount =
+      records.length;
 
-  const transactionCount =
-    records.length;
+    return { todayExpenses, totalExpenses, transactionCount };
+  }, [records, today]);
+
+  // ── Filter records by search query ────────────────────────────────────────
+  const filteredRecords = useMemo(() => {
+    if (!searchQuery.trim()) return records;
+
+    const query = searchQuery.toLowerCase();
+
+    return records.filter(
+      (record) =>
+        record.description?.toLowerCase().includes(query) ||
+        record.category?.toLowerCase().includes(query) ||
+        String(record.amount).includes(query)
+    );
+  }, [records, searchQuery]);
+
+  // ── Paginate filtered records ─────────────────────────────────────────────
+  const totalItems = filteredRecords.length;
+  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+  const startIndex = (currentPage - 1) * pageSize;
+  const paginatedRecords = filteredRecords.slice(
+    startIndex,
+    startIndex + pageSize
+  );
+
+  // Reset to page 1 when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  const kpiCards = (
+    <>
+      <OperationsKpiCard
+        label="Today"
+        value={kpiValues.todayExpenses}
+        sublabel="expenses"
+        icon={<ReceiptText size={20} />}
+        valueColor="red"
+        iconBg="red"
+      />
+      <OperationsKpiCard
+        label="Total Expenses"
+        value={kpiValues.totalExpenses}
+        icon={<Wallet size={20} />}
+        valueColor="red"
+        iconBg="red"
+      />
+      <OperationsKpiCard
+        label="Transactions"
+        value={kpiValues.transactionCount}
+        icon={<ClipboardList size={20} />}
+        valueColor="blue"
+        iconBg="blue"
+      />
+    </>
+  );
+
+  const toolbar = (
+    <OperationsToolbar
+      searchPlaceholder="Search expense records..."
+      searchValue={searchQuery}
+      onSearchChange={setSearchQuery}
+    />
+  );
+
+  const pagination = (
+    <OperationsPagination
+      current={currentPage}
+      total={totalPages}
+      pageSize={pageSize}
+      totalItems={totalItems}
+      onPageChange={setCurrentPage}
+    />
+  );
 
   if (farmLoading) {
     return (
       <AppShell email={user?.email}>
-        <div className="flex items-center justify-center h-96">
-          <div className="text-center">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
-            <p className="mt-4 text-slate-600">Loading...</p>
-          </div>
+        <div className="space-y-6">
+          <div />
         </div>
       </AppShell>
     );
@@ -72,52 +161,49 @@ export default function ExpensesPage() {
     >
       <div className="space-y-6">
 
-        <h1 className="text-4xl font-bold">
-          Expenses Management
-        </h1>
+        {/* ── Page Title ─────────────────────────────────────────────────── */}
+        <h1 className="text-2xl font-bold text-slate-900">Expenses Management</h1>
 
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* ── KPI cards section ─────────────────────────────────────────── */}
+        {kpiCards && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {kpiCards}
+          </div>
+        )}
 
-          <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm">
-            <p className="text-slate-500 text-sm">
-              Today
-            </p>
+        {/* ── Filter / Search toolbar ───────────────────────────────────── */}
+        {toolbar && (
+          <div className="flex items-center justify-between">
+            {toolbar}
+          </div>
+        )}
 
-            <p className="text-4xl font-bold mt-2 text-red-600">
-              {todayExpenses}
-            </p>
+        {/* ── Main content: Quick Entry + Records list ─────────────────── */}
+        <div className="grid lg:grid-cols-12 gap-6 items-start">
+          {/* Quick Entry — first on mobile, right column on desktop */}
+          <div className="lg:col-span-4 lg:order-last">
+            <div className="lg:sticky lg:top-20 space-y-4">
+              <AddExpenseForm
+                farmId={farm?.id}
+                onSaved={refresh}
+              />
+            </div>
           </div>
 
-          <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm">
-            <p className="text-slate-500 text-sm">
-              Total Expenses
-            </p>
-
-            <p className="text-4xl font-bold mt-2 text-red-600">
-              {totalExpenses}
-            </p>
+          {/* Records list — second on mobile, left column on desktop */}
+          <div className="lg:col-span-8 lg:order-first">
+            <ExpenseList
+              records={paginatedRecords}
+            />
           </div>
-
-          <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm">
-            <p className="text-slate-500 text-sm">
-              Transactions
-            </p>
-
-            <p className="text-4xl font-bold mt-2">
-              {transactionCount}
-            </p>
-          </div>
-
         </div>
 
-        <ExpenseList
-          records={records}
-        />
-
-        <AddExpenseForm
-          farmId={farm?.id}
-           onSaved={refresh}
-        />
+        {/* ── Pagination area ───────────────────────────────────────────── */}
+        {pagination && (
+          <div className="flex items-center justify-center pt-4">
+            {pagination}
+          </div>
+        )}
 
       </div>
     </AppShell>

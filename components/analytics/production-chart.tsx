@@ -62,12 +62,19 @@ export default function ProductionChart({
 
           <div className="bg-slate-50 rounded-2xl p-4">
             <p className="text-sm text-slate-500">
-              Current Birds
+              Available Birds
             </p>
 
             <h3 className="text-3xl font-bold text-slate-900 mt-2">
-              {birds}
+              {Number(birds).toLocaleString(undefined, {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2,
+              })}
             </h3>
+
+            <p className="text-xs text-slate-400 mt-1">
+              Current birds on the farm
+            </p>
           </div>
 
           <div className="bg-slate-50 rounded-2xl p-4">
@@ -76,7 +83,10 @@ export default function ProductionChart({
             </p>
 
             <h3 className="text-3xl font-bold text-blue-600 mt-2">
-              {eggs}
+              {Number(eggs).toLocaleString(undefined, {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2,
+              })}
             </h3>
           </div>
 

@@ -85,7 +85,10 @@ export default function FlockViewModal({ isOpen, onClose, flock }: Props) {
                     <p className="text-xs">Birds</p>
                   </div>
                   <p className="text-lg font-bold text-slate-900">
-                    {Number(flock.quantity).toLocaleString()}
+                    {Number(flock.quantity).toLocaleString(undefined, {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 2,
+                    })}
                   </p>
                 </div>
 

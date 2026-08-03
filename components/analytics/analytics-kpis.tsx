@@ -82,12 +82,19 @@ export default function AnalyticsKpis({
 
       <div className="bg-white rounded-2xl border p-5 shadow-sm">
         <p className="text-slate-500 text-sm">
-          Current Birds
+          Available Birds
         </p>
 
         <h3 className="text-3xl font-bold text-purple-600 mt-2">
-          {currentBirds}
+          {Number(currentBirds).toLocaleString(undefined, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2,
+          })}
         </h3>
+
+        <p className="text-xs text-slate-400 mt-1">
+          Current birds on the farm
+        </p>
       </div>
     </div>
   );

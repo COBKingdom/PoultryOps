@@ -84,7 +84,7 @@ export default function FarmHero({
               <Bird size={18} />
 
               <span className="text-sm">
-                Active Birds
+                Available Birds
               </span>
 
             </div>
@@ -96,7 +96,10 @@ export default function FarmHero({
                 font-bold
               "
             >
-              {currentBirds}
+              {Number(currentBirds).toLocaleString(undefined, {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2,
+              })}
             </div>
           </div>
 
@@ -125,7 +128,10 @@ export default function FarmHero({
                 font-bold
               "
             >
-              {productionPercentage}%
+              {Number(productionPercentage).toLocaleString(undefined, {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2,
+              })}%
             </div>
           </div>
 

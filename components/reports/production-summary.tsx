@@ -17,11 +17,14 @@ export default function ProductionSummary({
         <div className="bg-slate-50 rounded-xl p-4">
 
           <p className="text-sm text-slate-500">
-            Current Birds
+            Available Birds
           </p>
 
           <h3 className="text-3xl font-bold mt-2">
-            {report.currentBirds}
+            {Number(report.availableBirds).toLocaleString(undefined, {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2,
+            })}
           </h3>
 
         </div>
@@ -33,7 +36,10 @@ export default function ProductionSummary({
           </p>
 
           <h3 className="text-3xl font-bold mt-2">
-            {report.eggs}
+            {Number(report.eggs).toLocaleString(undefined, {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2,
+            })}
           </h3>
 
         </div>
@@ -45,7 +51,10 @@ export default function ProductionSummary({
           </p>
 
           <h3 className="text-3xl font-bold mt-2">
-            {report.feed}kg
+            {Number(report.feed).toLocaleString(undefined, {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2,
+            })}kg
           </h3>
 
         </div>
@@ -57,7 +66,10 @@ export default function ProductionSummary({
           </p>
 
           <h3 className="text-3xl font-bold mt-2 text-red-600">
-            {report.mortality}
+            {Number(report.mortality).toLocaleString(undefined, {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2,
+            })}
           </h3>
 
         </div>

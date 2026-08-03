@@ -21,7 +21,10 @@ export default function FinancialSummary({
           </span>
 
           <span className="font-bold text-green-600">
-            {report.revenue}
+            {Number(report.revenue).toLocaleString(undefined, {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2,
+            })}
           </span>
 
         </div>
@@ -33,7 +36,10 @@ export default function FinancialSummary({
           </span>
 
           <span className="font-bold text-red-600">
-            {report.expenses}
+            {Number(report.expenses).toLocaleString(undefined, {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2,
+            })}
           </span>
 
         </div>
@@ -51,7 +57,10 @@ export default function FinancialSummary({
                 : "text-red-600"
             }`}
           >
-            {report.profit}
+            {Number(report.profit).toLocaleString(undefined, {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2,
+            })}
           </span>
 
         </div>

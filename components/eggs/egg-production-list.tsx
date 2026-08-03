@@ -79,7 +79,10 @@ export default function EggProductionList({
                 </p>
 
                 <p className="text-2xl font-bold text-slate-900">
-                  {record.egg_count}
+                  {Number(record.egg_count).toLocaleString(undefined, {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 2,
+                  })}
                 </p>
 
               </div>
@@ -91,7 +94,10 @@ export default function EggProductionList({
                 </p>
 
                 <p className="text-2xl font-bold text-amber-600">
-                  {record.cracked_eggs || 0}
+                  {Number(record.cracked_eggs || 0).toLocaleString(undefined, {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 2,
+                  })}
                 </p>
 
               </div>

@@ -77,7 +77,10 @@ export default function HealthStats({
         </p>
 
         <h3 className="text-4xl font-bold mt-2 text-red-600">
-          {totalCost}
+          {Number(totalCost).toLocaleString(undefined, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2,
+          })}
         </h3>
       </div>
     </div>
