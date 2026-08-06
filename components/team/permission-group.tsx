@@ -42,14 +42,24 @@ export default function PermissionGroup({
     return icons[category] || "📌";
   };
 
+  // Group permissions by CRUD actions
+  const crudOrder = ["view", "create", "update", "delete", "export", "execute", "manage", "invite", "edit", "remove", "assign_roles"];
+  const sortedPermissions = [...permissions].sort((a, b) => {
+    const aAction = a.split(".")[1];
+    const bAction = b.split(".")[1];
+    const aIndex = crudOrder.indexOf(aAction);
+    const bIndex = crudOrder.indexOf(bAction);
+    return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
+  });
+
   return (
-    <div className="border border-slate-200 rounded-xl p-4 bg-white">
-      <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+    <div className="border border-slate-200 rounded-md p-2 bg-white">
+      <h3 className="text-xs font-medium text-slate-700 mb-1.5 flex items-center gap-1">
         <span>{getCategoryIcon(title)}</span>
         {title}
       </h3>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
-        {permissions.map((permission) => {
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-1">
+        {sortedPermissions.map((permission) => {
           const hasPermission = userPermissions.has(permission);
           return (
             <PermissionCheckbox

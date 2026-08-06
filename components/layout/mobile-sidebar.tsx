@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/lib/permissions";
+import { PERMISSIONS } from "@/lib/permissions";
 import { supabase } from "@/lib/supabase";
 
 import {
@@ -41,6 +43,7 @@ export default function MobileSidebar({
 
   const { profile } =
     useAuth();
+  const { can } = usePermissions();
 
   const isOwner =
     profile?.role === "owner";
@@ -58,31 +61,37 @@ export default function MobileSidebar({
       name: "Flocks",
       href: "/flocks",
       icon: Bird,
+      permission: PERMISSIONS.FLOCKS_VIEW,
     },
     {
       name: "Egg Production",
       href: "/eggs",
       icon: Egg,
+      permission: PERMISSIONS.EGGS_VIEW,
     },
     {
       name: "Feed",
       href: "/feed",
       icon: Wheat,
+      permission: PERMISSIONS.FEED_VIEW,
     },
     {
       name: "Feed Inventory",
       href: "/feed-inventory",
       icon: Package,
+      permission: PERMISSIONS.FEED_INVENTORY_VIEW,
     },
     {
       name: "Mortality",
       href: "/mortality",
       icon: AlertTriangle,
+      permission: PERMISSIONS.MORTALITY_VIEW,
     },
     {
       name: "Health",
       href: "/health",
       icon: HeartPulse,
+      permission: PERMISSIONS.HEALTH_VIEW,
     },
   ];
 
@@ -91,11 +100,13 @@ export default function MobileSidebar({
       name: "Expenses",
       href: "/expenses",
       icon: Receipt,
+      permission: PERMISSIONS.EXPENSES_VIEW,
     },
     {
       name: "Sales",
       href: "/sales",
       icon: ShoppingCart,
+      permission: PERMISSIONS.SALES_VIEW,
     },
   ];
 
@@ -104,11 +115,13 @@ export default function MobileSidebar({
       name: "Reports",
       href: "/reports",
       icon: BarChart3,
+      permission: PERMISSIONS.REPORTS_VIEW,
     },
     {
       name: "Analytics",
       href: "/analytics",
       icon: ChartColumn,
+      permission: PERMISSIONS.ANALYTICS_VIEW,
     },
   ];
 
@@ -117,6 +130,7 @@ export default function MobileSidebar({
       name: "Migration",
       href: "/migration",
       icon: Upload,
+      permission: PERMISSIONS.MIGRATION_VIEW,
     },
   ];
 
@@ -125,6 +139,7 @@ export default function MobileSidebar({
       name: "Team",
       href: "/team",
       icon: Users,
+      permission: PERMISSIONS.TEAM_VIEW,
     },
   ];
 
@@ -199,7 +214,7 @@ export default function MobileSidebar({
 
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
 
-          {isOwner && (
+          {isOwner && can(PERMISSIONS.DASHBOARD_VIEW) && (
             <MenuItem
               pathname={pathname}
               href="/dashboard"
@@ -211,40 +226,40 @@ export default function MobileSidebar({
 
           <MenuSection
             title="OPERATIONS"
-            items={operations}
+            items={operations.filter(item => can(item.permission))}
             pathname={pathname}
             onClose={onClose}
           />
 
           <MenuSection
             title="FINANCE"
-            items={finance}
+            items={finance.filter(item => can(item.permission))}
             pathname={pathname}
             onClose={onClose}
           />
 
-          {isOwner && (
+          {isOwner && can(PERMISSIONS.REPORTS_VIEW) && (
             <MenuSection
               title="INSIGHTS"
-              items={insights}
+              items={insights.filter(item => can(item.permission))}
               pathname={pathname}
               onClose={onClose}
             />
           )}
 
-          {isOwner && (
+          {isOwner && can(PERMISSIONS.MIGRATION_VIEW) && (
             <MenuSection
               title="TOOLS"
-              items={tools}
+              items={tools.filter(item => can(item.permission))}
               pathname={pathname}
               onClose={onClose}
             />
           )}
 
-          {isOwner && (
+          {isOwner && can(PERMISSIONS.TEAM_VIEW) && (
             <MenuSection
               title="TEAM"
-              items={team}
+              items={team.filter(item => can(item.permission))}
               pathname={pathname}
               onClose={onClose}
             />
@@ -262,7 +277,7 @@ export default function MobileSidebar({
             onClose={onClose}
           />
 
-          {isOwner && (
+          {isOwner && can(PERMISSIONS.SETTINGS_VIEW) && (
             <MenuItem
               pathname={pathname}
               href="/settings"

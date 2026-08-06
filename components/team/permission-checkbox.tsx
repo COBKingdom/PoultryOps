@@ -20,7 +20,7 @@ export default function PermissionCheckbox({
   return (
     <label
       className={`
-        flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors
+        flex items-center gap-1 py-0.5 px-1 rounded cursor-pointer transition-colors
         ${disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-slate-50"}
       `}
     >
@@ -29,9 +29,9 @@ export default function PermissionCheckbox({
         checked={checked}
         onChange={(e) => onChange(permission, e.target.checked)}
         disabled={disabled}
-        className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 focus:ring-2"
+        className="w-3 h-3 rounded border-slate-300 text-blue-600 focus:ring-blue-500 focus:ring-1"
       />
-      <span className="text-sm text-slate-700">{label}</span>
+      <span className="text-xs text-slate-700 truncate">{label}</span>
     </label>
   );
 }

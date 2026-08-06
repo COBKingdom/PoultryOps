@@ -53,7 +53,7 @@ export default function Sidebar() {
       name: "Egg Production",
       href: "/eggs",
       icon: Egg,
-      permission: PERMISSIONS.EGG_PRODUCTION_VIEW,
+      permission: PERMISSIONS.EGGS_VIEW,
     },
     {
       name: "Feed",

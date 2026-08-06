@@ -60,43 +60,43 @@ export default function InviteMemberDialog({ isOpen, onClose, farmId, onSuccess 
             // Flocks
             PERMISSIONS.FLOCKS_VIEW,
             PERMISSIONS.FLOCKS_CREATE,
-            PERMISSIONS.FLOCKS_UPDATE,
+            PERMISSIONS.FLOCKS_EDIT,
             PERMISSIONS.FLOCKS_DELETE,
             PERMISSIONS.FLOCKS_ARCHIVE,
-            // Egg Production
-            PERMISSIONS.EGG_PRODUCTION_VIEW,
-            PERMISSIONS.EGG_PRODUCTION_CREATE,
-            PERMISSIONS.EGG_PRODUCTION_UPDATE,
-            PERMISSIONS.EGG_PRODUCTION_DELETE,
+            // Eggs
+            PERMISSIONS.EGGS_VIEW,
+            PERMISSIONS.EGGS_CREATE,
+            PERMISSIONS.EGGS_EDIT,
+            PERMISSIONS.EGGS_DELETE,
             // Feed
             PERMISSIONS.FEED_VIEW,
             PERMISSIONS.FEED_CREATE,
-            PERMISSIONS.FEED_UPDATE,
+            PERMISSIONS.FEED_EDIT,
             PERMISSIONS.FEED_DELETE,
             // Feed Inventory
             PERMISSIONS.FEED_INVENTORY_VIEW,
             PERMISSIONS.FEED_INVENTORY_CREATE,
-            PERMISSIONS.FEED_INVENTORY_UPDATE,
+            PERMISSIONS.FEED_INVENTORY_EDIT,
             PERMISSIONS.FEED_INVENTORY_DELETE,
             // Health
             PERMISSIONS.HEALTH_VIEW,
             PERMISSIONS.HEALTH_CREATE,
-            PERMISSIONS.HEALTH_UPDATE,
+            PERMISSIONS.HEALTH_EDIT,
             PERMISSIONS.HEALTH_DELETE,
             // Mortality
             PERMISSIONS.MORTALITY_VIEW,
             PERMISSIONS.MORTALITY_CREATE,
-            PERMISSIONS.MORTALITY_UPDATE,
+            PERMISSIONS.MORTALITY_EDIT,
             PERMISSIONS.MORTALITY_DELETE,
             // Sales
             PERMISSIONS.SALES_VIEW,
             PERMISSIONS.SALES_CREATE,
-            PERMISSIONS.SALES_UPDATE,
+            PERMISSIONS.SALES_EDIT,
             PERMISSIONS.SALES_DELETE,
             // Expenses
             PERMISSIONS.EXPENSES_VIEW,
             PERMISSIONS.EXPENSES_CREATE,
-            PERMISSIONS.EXPENSES_UPDATE,
+            PERMISSIONS.EXPENSES_EDIT,
             PERMISSIONS.EXPENSES_DELETE,
             // Reports
             PERMISSIONS.REPORTS_VIEW,
@@ -112,44 +112,44 @@ export default function InviteMemberDialog({ isOpen, onClose, farmId, onSuccess 
             PERMISSIONS.SETTINGS_VIEW,
             PERMISSIONS.SETTINGS_EDIT,
           ]);
-        
+          
         case ROLES.STAFF:
-          // Staff: Limited operational access (view, create, update - no delete)
+          // Staff: Limited operational access (view, create, edit - no delete)
           return new Set([
             // Dashboard
             PERMISSIONS.DASHBOARD_VIEW,
             // Flocks
             PERMISSIONS.FLOCKS_VIEW,
             PERMISSIONS.FLOCKS_CREATE,
-            PERMISSIONS.FLOCKS_UPDATE,
-            // Egg Production
-            PERMISSIONS.EGG_PRODUCTION_VIEW,
-            PERMISSIONS.EGG_PRODUCTION_CREATE,
-            PERMISSIONS.EGG_PRODUCTION_UPDATE,
+            PERMISSIONS.FLOCKS_EDIT,
+            // Eggs
+            PERMISSIONS.EGGS_VIEW,
+            PERMISSIONS.EGGS_CREATE,
+            PERMISSIONS.EGGS_EDIT,
             // Feed
             PERMISSIONS.FEED_VIEW,
             PERMISSIONS.FEED_CREATE,
-            PERMISSIONS.FEED_UPDATE,
+            PERMISSIONS.FEED_EDIT,
             // Feed Inventory
             PERMISSIONS.FEED_INVENTORY_VIEW,
             PERMISSIONS.FEED_INVENTORY_CREATE,
-            PERMISSIONS.FEED_INVENTORY_UPDATE,
+            PERMISSIONS.FEED_INVENTORY_EDIT,
             // Health
             PERMISSIONS.HEALTH_VIEW,
             PERMISSIONS.HEALTH_CREATE,
-            PERMISSIONS.HEALTH_UPDATE,
+            PERMISSIONS.HEALTH_EDIT,
             // Mortality
             PERMISSIONS.MORTALITY_VIEW,
             PERMISSIONS.MORTALITY_CREATE,
-            PERMISSIONS.MORTALITY_UPDATE,
+            PERMISSIONS.MORTALITY_EDIT,
             // Sales
             PERMISSIONS.SALES_VIEW,
             PERMISSIONS.SALES_CREATE,
-            PERMISSIONS.SALES_UPDATE,
+            PERMISSIONS.SALES_EDIT,
             // Expenses
             PERMISSIONS.EXPENSES_VIEW,
             PERMISSIONS.EXPENSES_CREATE,
-            PERMISSIONS.EXPENSES_UPDATE,
+            PERMISSIONS.EXPENSES_EDIT,
           ]);
         
         default:
