@@ -13,6 +13,8 @@ import { createFlock, updateFlock, archiveFlock } from "@/lib/flocks";
 import FlockModal from "@/components/flocks/flock-modal";
 import FlockCard from "@/components/flocks/flock-card";
 
+import { canEdit } from "@/lib/permissions";
+
 import { Plus, Package, RefreshCw } from "lucide-react";
 
 export default function FlocksPage() {
@@ -66,6 +68,14 @@ export default function FlocksPage() {
   }
 
   function handleEdit(flock: any) {
+    // Check Edit Governance
+    const governanceResult = canEdit(user, flock);
+
+    if (!governanceResult.allowed) {
+      alert(governanceResult.reason || "You cannot edit this flock at this time.");
+      return;
+    }
+
     setEditingFlock(flock);
     setIsModalOpen(true);
   }

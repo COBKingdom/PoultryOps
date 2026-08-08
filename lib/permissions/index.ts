@@ -84,6 +84,16 @@ export {
   formatPermissionForDisplay,
 } from "./utils";
 
+// Governance (client-safe - Edit and Delete governance foundation)
+export {
+  canEdit,
+  canDelete,
+  type GovernanceUser,
+  type GovernanceRecord,
+  type EditGovernanceResult,
+  type DeleteGovernanceResult,
+} from "./governance";
+
 /**
  * SERVER-SIDE IMPORTS
  * 

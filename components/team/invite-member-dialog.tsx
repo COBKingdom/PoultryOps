@@ -116,8 +116,6 @@ export default function InviteMemberDialog({ isOpen, onClose, farmId, onSuccess 
         case ROLES.STAFF:
           // Staff: Limited operational access (view, create, edit - no delete)
           return new Set([
-            // Dashboard
-            PERMISSIONS.DASHBOARD_VIEW,
             // Flocks
             PERMISSIONS.FLOCKS_VIEW,
             PERMISSIONS.FLOCKS_CREATE,

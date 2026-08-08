@@ -178,11 +178,48 @@ if (currentUsers >= maxUsers) {
 
     // Assign permissions if provided
     if (permissions && Array.isArray(permissions) && permissions.length > 0) {
-      const permissionInserts = permissions.map((permissionCode: string) => ({
-        user_id: userId,
-        permission_code: permissionCode,
-        granted: true,
-      }));
+      // Fetch all permissions for the role template to determine which were deselected
+      const { data: roleTemplatePerms } = await admin
+        .from("role_templates")
+        .select(`
+          role_template_permissions(
+            permission:permissions(code)
+          )
+        `)
+        .eq("role", role)
+        .single();
+
+      const templatePermissionCodes = new Set<string>();
+      if (roleTemplatePerms && Array.isArray((roleTemplatePerms as any).role_template_permissions)) {
+        for (const entry of (roleTemplatePerms as any).role_template_permissions) {
+          if (entry?.permission?.code) {
+            templatePermissionCodes.add(entry.permission.code);
+          }
+        }
+      }
+
+      // Build permission overrides: selected = granted: true, deselected template perms = granted: false
+      const permissionInserts: any[] = [];
+
+      // Add granted overrides for selected permissions
+      for (const permissionCode of permissions) {
+        permissionInserts.push({
+          user_id: userId,
+          permission_code: permissionCode,
+          granted: true,
+        });
+      }
+
+      // Add revoked overrides for template permissions that were not selected
+      for (const templateCode of templatePermissionCodes) {
+        if (!permissions.includes(templateCode)) {
+          permissionInserts.push({
+            user_id: userId,
+            permission_code: templateCode,
+            granted: false,
+          });
+        }
+      }
 
       const { error: permError } = await admin
         .from("user_permissions")
