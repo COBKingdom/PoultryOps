@@ -1,11 +1,13 @@
-import { Egg } from "lucide-react";
+import { Egg, Pencil } from "lucide-react";
 
 type Props = {
   records: any[];
+  onEdit: (record: any) => void;
 };
 
 export default function EggProductionList({
   records,
+  onEdit,
 }: Props) {
   return (
     <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
@@ -51,21 +53,48 @@ export default function EggProductionList({
 
               </div>
 
-              <div
-                className="
-                  w-12
-                  h-12
-                  rounded-2xl
-                  bg-amber-100
-                  flex
-                  items-center
-                  justify-center
-                "
-              >
-                <Egg
-                  size={24}
-                  className="text-amber-600"
-                />
+              <div className="flex items-center gap-3">
+
+                <div
+                  className="
+                    w-12
+                    h-12
+                    rounded-2xl
+                    bg-amber-100
+                    flex
+                    items-center
+                    justify-center
+                  "
+                >
+                  <Egg
+                    size={24}
+                    className="text-amber-600"
+                  />
+                </div>
+
+                <button
+                  onClick={() => onEdit(record)}
+                  className="
+                    rounded-xl
+                    border
+                    border-blue-200
+                    bg-blue-50
+                    px-4
+                    py-2
+                    text-sm
+                    font-semibold
+                    text-blue-700
+                    transition
+                    hover:bg-blue-100
+                    flex
+                    items-center
+                    gap-2
+                  "
+                >
+                  <Pencil size={16} />
+                  Edit
+                </button>
+
               </div>
 
             </div>

@@ -101,3 +101,16 @@ export async function getTodayCrackedEggs(
 
   return total;
 }
+
+export async function updateEggProduction(
+  id: string,
+  record: any
+) {
+  const { error } =
+    await supabase
+      .from("egg_production")
+      .update(record)
+      .eq("id", id);
+
+  if (error) throw error;
+}

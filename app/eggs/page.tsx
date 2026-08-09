@@ -9,6 +9,8 @@ import { useEggProduction } from "@/hooks/useEggProduction";
 
 import { getFarmFlocks } from "@/lib/flocks";
 
+import { canEdit } from "@/lib/permissions/governance";
+
 import { Egg, TrendingUp } from "lucide-react";
 
 import AppShell from "@/components/layout/app-shell";
@@ -18,6 +20,7 @@ import OperationsPagination from "@/components/operations/operations-pagination"
 
 import AddEggForm from "@/components/eggs/add-egg-form";
 import EggProductionList from "@/components/eggs/egg-production-list";
+import EditEggForm from "@/components/eggs/edit-egg-form";
 
 
 export default function EggsPage() {
@@ -35,6 +38,9 @@ export default function EggsPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
+
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingRecord, setEditingRecord] = useState<any | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -149,9 +155,30 @@ export default function EggsPage() {
     />
   );
 
+  function handleEditRecord(record: any) {
+    // Check Edit Governance
+    const governanceResult = canEdit(
+      { id: user?.id || "", role: profile?.role || "" },
+      record
+    );
+
+    if (!governanceResult.allowed) {
+      alert(governanceResult.reason || "You cannot edit this record at this time.");
+      return;
+    }
+
+    setEditingRecord(record);
+    setIsEditModalOpen(true);
+  }
+
+  function handleCloseEditModal() {
+    setIsEditModalOpen(false);
+    setEditingRecord(null);
+  }
+
   if (farmLoading) {
     return (
-      <AppShell email={user?.email}>
+      <AppShell email={user?.email || ""}>
         <div className="space-y-6">
           <div />
         </div>
@@ -160,7 +187,7 @@ export default function EggsPage() {
   }
 
   return (
-    <AppShell email={user?.email}>
+    <AppShell email={user?.email || ""}>
       <div className="space-y-6">
         {/* ── Page Title ─────────────────────────────────────────────────── */}
         <h1 className="text-2xl font-bold text-slate-900">Egg Production</h1>
@@ -204,7 +231,10 @@ export default function EggsPage() {
                 ))}
               </div>
             ) : (
-              <EggProductionList records={paginatedRecords} />
+              <EggProductionList
+                records={paginatedRecords}
+                onEdit={handleEditRecord}
+              />
             )}
           </div>
         </div>
@@ -213,6 +243,22 @@ export default function EggsPage() {
         {pagination && (
           <div className="flex items-center justify-center pt-4">
             {pagination}
+          </div>
+        )}
+
+        {/* ── Edit Modal ───────────────────────────────────────────────── */}
+        {isEditModalOpen && editingRecord && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+              <EditEggForm
+                record={editingRecord}
+                flocks={flocks}
+                onClose={handleCloseEditModal}
+                onSaved={refresh}
+                user={user}
+                profile={profile}
+              />
+            </div>
           </div>
         )}
       </div>

@@ -18,7 +18,7 @@ import { canEdit } from "@/lib/permissions";
 import { Plus, Package, RefreshCw } from "lucide-react";
 
 export default function FlocksPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   const { farm, loading: farmLoading, error: farmError, retry: retryFarm } = useCurrentFarm();
 
@@ -69,7 +69,10 @@ export default function FlocksPage() {
 
   function handleEdit(flock: any) {
     // Check Edit Governance
-    const governanceResult = canEdit(user, flock);
+    const governanceResult = canEdit(
+      { id: user?.id || "", role: profile?.role || "" },
+      flock
+    );
 
     if (!governanceResult.allowed) {
       alert(governanceResult.reason || "You cannot edit this flock at this time.");
