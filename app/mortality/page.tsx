@@ -13,6 +13,8 @@ import { useMortality } from "@/hooks/useMortality";
 
 import { getFarmFlocks } from "@/lib/flocks";
 
+import { canEdit } from "@/lib/permissions/governance";
+
 import { Activity } from "lucide-react";
 
 import AppShell from "@/components/layout/app-shell";
@@ -22,9 +24,10 @@ import OperationsPagination from "@/components/operations/operations-pagination"
 
 import AddMortalityForm from "@/components/mortality/add-mortality-form";
 import MortalityList from "@/components/mortality/mortality-list";
+import EditMortalityForm from "@/components/mortality/edit-mortality-form";
 
 export default function MortalityPage() {
-  const { user } =
+  const { user, profile } =
     useAuth();
 
   const {
@@ -51,6 +54,11 @@ export default function MortalityPage() {
   const [currentPage, setCurrentPage] =
     useState(1);
   const pageSize = 10;
+
+  const [isEditModalOpen, setIsEditModalOpen] =
+    useState(false);
+  const [editingRecord, setEditingRecord] =
+    useState<any | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -139,6 +147,27 @@ export default function MortalityPage() {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery]);
+
+  function handleEditRecord(record: any) {
+    // Check Edit Governance
+    const governanceResult = canEdit(
+      { id: user?.id || "", role: profile?.role || "" },
+      record
+    );
+
+    if (!governanceResult.allowed) {
+      alert(governanceResult.reason || "You cannot edit this record at this time.");
+      return;
+    }
+
+    setEditingRecord(record);
+    setIsEditModalOpen(true);
+  }
+
+  function handleCloseEditModal() {
+    setIsEditModalOpen(false);
+    setEditingRecord(null);
+  }
 
   const kpiCards = (
     <>
@@ -234,6 +263,7 @@ export default function MortalityPage() {
           <div className="lg:col-span-8 lg:order-first">
             <MortalityList
               records={paginatedRecords}
+              onEdit={handleEditRecord}
             />
           </div>
         </div>
@@ -242,6 +272,22 @@ export default function MortalityPage() {
         {pagination && (
           <div className="flex items-center justify-center pt-4">
             {pagination}
+          </div>
+        )}
+
+        {/* ── Edit Modal ───────────────────────────────────────────────── */}
+        {isEditModalOpen && editingRecord && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+              <EditMortalityForm
+                record={editingRecord}
+                flocks={flocks}
+                onClose={handleCloseEditModal}
+                onSaved={refresh}
+                user={user}
+                profile={profile}
+              />
+            </div>
           </div>
         )}
 

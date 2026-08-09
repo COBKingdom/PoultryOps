@@ -52,3 +52,21 @@ export async function getTotalExpenses(
     ) || 0
   );
 }
+
+export async function updateExpense(
+  id: string,
+  updates: {
+    expense_date: string;
+    category: string;
+    amount: number;
+    notes: string;
+  }
+) {
+  const { error } =
+    await supabase
+      .from("expenses")
+      .update(updates)
+      .eq("id", id);
+
+  if (error) throw error;
+}

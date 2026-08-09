@@ -66,3 +66,21 @@ export async function getTodayFeed(
     ) || 0
   );
 }
+
+export async function updateFeedRecord(
+  id: string,
+  updates: {
+    flock_id: string;
+    feed_date: string;
+    feed_type: string;
+    quantity_kg: number;
+  }
+) {
+  const { error } =
+    await supabase
+      .from("feed_records")
+      .update(updates)
+      .eq("id", id);
+
+  if (error) throw error;
+}

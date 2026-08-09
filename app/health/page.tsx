@@ -8,6 +8,8 @@ import { useFlocks } from "@/hooks/useFlocks";
 
 import { useEffect, useMemo, useState } from "react";
 
+import { canEdit } from "@/lib/permissions/governance";
+
 import { Activity } from "lucide-react";
 
 import AppShell from "@/components/layout/app-shell";
@@ -17,9 +19,10 @@ import OperationsPagination from "@/components/operations/operations-pagination"
 
 import AddHealthForm from "@/components/health/add-health-form";
 import HealthList from "@/components/health/health-list";
+import EditHealthForm from "@/components/health/edit-health-form";
 
 export default function HealthPage() {
-  const { user } =
+  const { user, profile } =
     useAuth();
 
   const {
@@ -36,12 +39,12 @@ export default function HealthPage() {
     farmId
   );
 
-const {
-  records,
-  refresh,
-} = useHealth(
-  farmId
-);
+  const {
+    records,
+    refresh,
+  } = useHealth(
+    farmId
+  );
 
   const [searchQuery, setSearchQuery] =
     useState("");
@@ -49,6 +52,11 @@ const {
   const [currentPage, setCurrentPage] =
     useState(1);
   const pageSize = 10;
+
+  const [isEditModalOpen, setIsEditModalOpen] =
+    useState(false);
+  const [editingRecord, setEditingRecord] =
+    useState<any | null>(null);
 
   // ── Compute KPI values ────────────────────────────────────────────────────
   const kpiValues = useMemo(() => {
@@ -88,6 +96,27 @@ const {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery]);
+
+  function handleEditRecord(record: any) {
+    // Check Edit Governance
+    const governanceResult = canEdit(
+      { id: user?.id || "", role: profile?.role || "" },
+      record
+    );
+
+    if (!governanceResult.allowed) {
+      alert(governanceResult.reason || "You cannot edit this record at this time.");
+      return;
+    }
+
+    setEditingRecord(record);
+    setIsEditModalOpen(true);
+  }
+
+  function handleCloseEditModal() {
+    setIsEditModalOpen(false);
+    setEditingRecord(null);
+  }
 
   const kpiCards = (
     <>
@@ -176,6 +205,7 @@ const {
           <div className="lg:col-span-8 lg:order-first">
             <HealthList
               records={paginatedRecords}
+              onEdit={handleEditRecord}
             />
           </div>
         </div>
@@ -184,6 +214,22 @@ const {
         {pagination && (
           <div className="flex items-center justify-center pt-4">
             {pagination}
+          </div>
+        )}
+
+        {/* ── Edit Modal ───────────────────────────────────────────────── */}
+        {isEditModalOpen && editingRecord && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+              <EditHealthForm
+                record={editingRecord}
+                flocks={flocks}
+                onClose={handleCloseEditModal}
+                onSaved={refresh}
+                user={user}
+                profile={profile}
+              />
+            </div>
           </div>
         )}
 

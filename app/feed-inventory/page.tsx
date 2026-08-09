@@ -8,6 +8,8 @@ import { useFeed } from "@/hooks/useFeed";
 
 import { useEffect, useMemo, useState } from "react";
 
+import { canEdit } from "@/lib/permissions/governance";
+
 import { Package } from "lucide-react";
 
 import AppShell from "@/components/layout/app-shell";
@@ -18,9 +20,10 @@ import OperationsPagination from "@/components/operations/operations-pagination"
 import AddFeedStockForm from "@/components/feed-inventory/add-feed-stock-form";
 import FeedStockList from "@/components/feed-inventory/feed-stock-list";
 import FeedStockSummary from "@/components/feed-inventory/feed-stock-summary";
+import EditFeedStockForm from "@/components/feed-inventory/edit-feed-stock-form";
 
 export default function FeedInventoryPage() {
-  const { user } =
+  const { user, profile } =
     useAuth();
 
   const {
@@ -34,6 +37,7 @@ export default function FeedInventoryPage() {
   const {
     records:
       inventoryRecords,
+    refresh,
   } = useFeedInventory(
     farmId
   );
@@ -51,6 +55,11 @@ export default function FeedInventoryPage() {
   const [currentPage, setCurrentPage] =
     useState(1);
   const pageSize = 10;
+
+  const [isEditModalOpen, setIsEditModalOpen] =
+    useState(false);
+  const [editingRecord, setEditingRecord] =
+    useState<any | null>(null);
 
 
   // ── Filter records by search query ────────────────────────────────────────
@@ -81,6 +90,26 @@ export default function FeedInventoryPage() {
     setCurrentPage(1);
   }, [searchQuery]);
 
+  function handleEditRecord(record: any) {
+    // Check Edit Governance
+    const governanceResult = canEdit(
+      { id: user?.id || "", role: profile?.role || "" },
+      record
+    );
+
+    if (!governanceResult.allowed) {
+      alert(governanceResult.reason || "You cannot edit this record at this time.");
+      return;
+    }
+
+    setEditingRecord(record);
+    setIsEditModalOpen(true);
+  }
+
+  function handleCloseEditModal() {
+    setIsEditModalOpen(false);
+    setEditingRecord(null);
+  }
 
   const toolbar = (
     <OperationsToolbar
@@ -147,6 +176,7 @@ export default function FeedInventoryPage() {
           <div className="lg:col-span-8 lg:order-first">
             <FeedStockList
               records={paginatedRecords}
+              onEdit={handleEditRecord}
             />
           </div>
         </div>
@@ -155,6 +185,21 @@ export default function FeedInventoryPage() {
         {pagination && (
           <div className="flex items-center justify-center pt-4">
             {pagination}
+          </div>
+        )}
+
+        {/* ── Edit Modal ───────────────────────────────────────────────── */}
+        {isEditModalOpen && editingRecord && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+              <EditFeedStockForm
+                record={editingRecord}
+                onClose={handleCloseEditModal}
+                onSaved={refresh}
+                user={user}
+                profile={profile}
+              />
+            </div>
           </div>
         )}
 

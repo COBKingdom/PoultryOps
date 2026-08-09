@@ -39,3 +39,23 @@ export async function getHealthRecords(
 
   return data;
 }
+
+export async function updateHealth(
+  id: string,
+  updates: {
+    flock_id: string;
+    health_date: string;
+    treatment_name: string;
+    category: string;
+    cost: number;
+    notes: string;
+  }
+) {
+  const { error } =
+    await supabase
+      .from("health")
+      .update(updates)
+      .eq("id", id);
+
+  if (error) throw error;
+}

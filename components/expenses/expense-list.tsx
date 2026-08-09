@@ -1,23 +1,24 @@
+import { Pencil } from "lucide-react";
+
 type Props = {
   records: any[];
+  onEdit: (record: any) => void;
 };
 
 export default function ExpenseList({
   records,
+  onEdit,
 }: Props) {
   return (
     <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
 
       <div className="mb-6">
-
-        <h2 className="text-2xl font-bold">
+        <h2 className="text-2xl font-bold text-slate-900">
           Expense Records
         </h2>
-
         <p className="text-slate-500 mt-1">
           Recent farm expenses
         </p>
-
       </div>
 
       <div className="space-y-4">
@@ -31,46 +32,71 @@ export default function ExpenseList({
                 border-slate-200
                 rounded-3xl
                 p-5
+                hover:shadow-md
+                transition-all
               "
             >
               <div className="flex items-start justify-between">
 
-                <div>
-
-                  <h3 className="font-bold text-xl">
+                <div className="flex-1">
+                  <h3 className="font-bold text-xl text-slate-900">
                     {record.category}
                   </h3>
-
                   <p className="text-slate-500 text-sm mt-1">
                     {record.expense_date}
                   </p>
-
                 </div>
 
-                <div
-                  className="
-                    px-4
-                    py-2
-                    rounded-2xl
-                    bg-red-100
-                    text-red-700
-                    font-bold
-                  "
-                >
-                  {Number(record.amount).toLocaleString(undefined, {
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 2,
-                  })}
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => onEdit(record)}
+                    className="
+                      rounded-xl
+                      border
+                      border-blue-200
+                      bg-blue-50
+                      px-4
+                      py-2
+                      text-sm
+                      font-semibold
+                      text-blue-700
+                      transition
+                      hover:bg-blue-100
+                      flex
+                      items-center
+                      gap-2
+                    "
+                  >
+                    <Pencil size={16} />
+                    Edit
+                  </button>
+
+                  <div
+                    className="
+                      px-4
+                      py-2
+                      rounded-2xl
+                      bg-red-100
+                      text-red-700
+                      font-bold
+                    "
+                  >
+                    {Number(record.amount).toLocaleString(undefined, {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 2,
+                    })}
+                  </div>
                 </div>
 
               </div>
 
               {record.notes && (
-                <p className="mt-4 text-slate-600">
-                  {record.notes}
-                </p>
+                <div className="mt-4 border-t pt-3">
+                  <p className="text-sm text-slate-600">
+                    {record.notes}
+                  </p>
+                </div>
               )}
-
             </div>
           )
         )}

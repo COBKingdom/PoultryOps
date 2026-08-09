@@ -13,6 +13,8 @@ import { useFeed } from "@/hooks/useFeed";
 
 import { getFarmFlocks } from "@/lib/flocks";
 
+import { canEdit } from "@/lib/permissions/governance";
+
 import { TrendingUp } from "lucide-react";
 
 import AppShell from "@/components/layout/app-shell";
@@ -23,9 +25,10 @@ import OperationsPagination from "@/components/operations/operations-pagination"
 import AddFeedForm from "@/components/feed/add-feed-form";
 import FeedList from "@/components/feed/feed-list";
 import FeedSummary from "@/components/feed/feed-summary";
+import EditFeedForm from "@/components/feed/edit-feed-form";
 
 export default function FeedPage() {
-  const { user } =
+  const { user, profile } =
     useAuth();
 
   const {
@@ -52,6 +55,11 @@ export default function FeedPage() {
   const [currentPage, setCurrentPage] =
     useState(1);
   const pageSize = 10;
+
+  const [isEditModalOpen, setIsEditModalOpen] =
+    useState(false);
+  const [editingRecord, setEditingRecord] =
+    useState<any | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -97,6 +105,26 @@ export default function FeedPage() {
     setCurrentPage(1);
   }, [searchQuery]);
 
+  function handleEditRecord(record: any) {
+    // Check Edit Governance
+    const governanceResult = canEdit(
+      { id: user?.id || "", role: profile?.role || "" },
+      record
+    );
+
+    if (!governanceResult.allowed) {
+      alert(governanceResult.reason || "You cannot edit this record at this time.");
+      return;
+    }
+
+    setEditingRecord(record);
+    setIsEditModalOpen(true);
+  }
+
+  function handleCloseEditModal() {
+    setIsEditModalOpen(false);
+    setEditingRecord(null);
+  }
 
   const toolbar = (
     <OperationsToolbar
@@ -162,6 +190,7 @@ export default function FeedPage() {
           <div className="lg:col-span-8 lg:order-first">
             <FeedList
               records={paginatedRecords}
+              onEdit={handleEditRecord}
             />
           </div>
         </div>
@@ -170,6 +199,22 @@ export default function FeedPage() {
         {pagination && (
           <div className="flex items-center justify-center pt-4">
             {pagination}
+          </div>
+        )}
+
+        {/* ── Edit Modal ───────────────────────────────────────────────── */}
+        {isEditModalOpen && editingRecord && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+              <EditFeedForm
+                record={editingRecord}
+                flocks={flocks}
+                onClose={handleCloseEditModal}
+                onSaved={refresh}
+                user={user}
+                profile={profile}
+              />
+            </div>
           </div>
         )}
 

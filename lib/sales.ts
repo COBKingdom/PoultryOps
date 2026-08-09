@@ -99,3 +99,23 @@ export async function getTotalBirdsSold(
     ) || 0
   );
 }
+
+export async function updateSale(
+  id: string,
+  updates: {
+    sale_date: string;
+    item_type: string;
+    quantity: number;
+    unit_price: number;
+    total_amount: number;
+    notes: string;
+  }
+) {
+  const { error } =
+    await supabase
+      .from("sales")
+      .update(updates)
+      .eq("id", id);
+
+  if (error) throw error;
+}

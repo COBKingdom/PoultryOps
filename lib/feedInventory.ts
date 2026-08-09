@@ -55,3 +55,22 @@ export async function getTotalFeedPurchased(
     ) || 0
   );
 }
+
+export async function updateFeedStock(
+  id: string,
+  updates: {
+    purchase_date: string;
+    feed_type: string;
+    quantity_kg: number;
+    cost: number;
+    supplier: string;
+  }
+) {
+  const { error } =
+    await supabase
+      .from("feed_inventory")
+      .update(updates)
+      .eq("id", id);
+
+  if (error) throw error;
+}

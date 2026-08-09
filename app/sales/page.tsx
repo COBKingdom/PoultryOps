@@ -7,6 +7,8 @@ import { useSales } from "@/hooks/useSales";
 
 import { useEffect, useMemo, useState } from "react";
 
+import { canEdit } from "@/lib/permissions/governance";
+
 import { ShoppingCart, TrendingUp, ClipboardList } from "lucide-react";
 
 import AppShell from "@/components/layout/app-shell";
@@ -16,9 +18,10 @@ import OperationsPagination from "@/components/operations/operations-pagination"
 
 import AddSaleForm from "@/components/sales/add-sale-form";
 import SalesList from "@/components/sales/sales-list";
+import EditSaleForm from "@/components/sales/edit-sale-form";
 
 export default function SalesPage() {
-  const { user } =
+  const { user, profile } =
     useAuth();
 
   const {
@@ -42,6 +45,11 @@ export default function SalesPage() {
   const [currentPage, setCurrentPage] =
     useState(1);
   const pageSize = 10;
+
+  const [isEditModalOpen, setIsEditModalOpen] =
+    useState(false);
+  const [editingRecord, setEditingRecord] =
+    useState<any | null>(null);
 
   // ── Compute KPI values ────────────────────────────────────────────────────
   const kpiValues = useMemo(() => {
@@ -87,6 +95,27 @@ export default function SalesPage() {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery]);
+
+  function handleEditRecord(record: any) {
+    // Check Edit Governance
+    const governanceResult = canEdit(
+      { id: user?.id || "", role: profile?.role || "" },
+      record
+    );
+
+    if (!governanceResult.allowed) {
+      alert(governanceResult.reason || "You cannot edit this record at this time.");
+      return;
+    }
+
+    setEditingRecord(record);
+    setIsEditModalOpen(true);
+  }
+
+  function handleCloseEditModal() {
+    setIsEditModalOpen(false);
+    setEditingRecord(null);
+  }
 
   const kpiCards = (
     <>
@@ -182,6 +211,7 @@ export default function SalesPage() {
           <div className="lg:col-span-8 lg:order-first">
             <SalesList
               records={paginatedRecords}
+              onEdit={handleEditRecord}
             />
           </div>
         </div>
@@ -190,6 +220,21 @@ export default function SalesPage() {
         {pagination && (
           <div className="flex items-center justify-center pt-4">
             {pagination}
+          </div>
+        )}
+
+        {/* ── Edit Modal ───────────────────────────────────────────────── */}
+        {isEditModalOpen && editingRecord && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+              <EditSaleForm
+                record={editingRecord}
+                onClose={handleCloseEditModal}
+                onSaved={refresh}
+                user={user}
+                profile={profile}
+              />
+            </div>
           </div>
         )}
 

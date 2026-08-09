@@ -77,3 +77,21 @@ export async function getFlockMortality(
     ) || 0
   );
 }
+
+export async function updateMortality(
+  id: string,
+  updates: {
+    flock_id: string;
+    mortality_date: string;
+    quantity: number;
+    reason: string;
+  }
+) {
+  const { error } =
+    await supabase
+      .from("mortality")
+      .update(updates)
+      .eq("id", id);
+
+  if (error) throw error;
+}
