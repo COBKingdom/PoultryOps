@@ -1,9 +1,13 @@
+import { formatCurrency } from "@/lib/currency";
+
 type Props = {
   report: any;
+  currency?: string;
 };
 
 export default function FinancialSummary({
   report,
+  currency,
 }: Props) {
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
@@ -21,10 +25,7 @@ export default function FinancialSummary({
           </span>
 
           <span className="font-bold text-green-600">
-            {Number(report.revenue).toLocaleString(undefined, {
-              minimumFractionDigits: 0,
-              maximumFractionDigits: 2,
-            })}
+            {formatCurrency(report.revenue, { currency })}
           </span>
 
         </div>
@@ -36,10 +37,7 @@ export default function FinancialSummary({
           </span>
 
           <span className="font-bold text-red-600">
-            {Number(report.expenses).toLocaleString(undefined, {
-              minimumFractionDigits: 0,
-              maximumFractionDigits: 2,
-            })}
+            {formatCurrency(report.expenses, { currency })}
           </span>
 
         </div>
@@ -57,10 +55,7 @@ export default function FinancialSummary({
                 : "text-red-600"
             }`}
           >
-            {Number(report.profit).toLocaleString(undefined, {
-              minimumFractionDigits: 0,
-              maximumFractionDigits: 2,
-            })}
+            {formatCurrency(report.profit, { currency })}
           </span>
 
         </div>

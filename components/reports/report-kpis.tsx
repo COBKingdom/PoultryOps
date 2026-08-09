@@ -5,12 +5,16 @@ import {
   AlertTriangle,
 } from "lucide-react";
 
+import { formatCurrency } from "@/lib/currency";
+
 type Props = {
   report: any;
+  currency?: string;
 };
 
 export default function ReportKpis({
   report,
+  currency,
 }: Props) {
   return (
     <div
@@ -33,10 +37,7 @@ export default function ReportKpis({
             </p>
 
             <h3 className="text-4xl font-bold text-green-600 mt-2">
-              {Number(report.revenue).toLocaleString(undefined, {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 2,
-              })}
+              {formatCurrency(report.revenue, { currency })}
             </h3>
 
           </div>
@@ -65,10 +66,7 @@ export default function ReportKpis({
             </p>
 
             <h3 className="text-4xl font-bold text-red-600 mt-2">
-              {Number(report.expenses).toLocaleString(undefined, {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 2,
-              })}
+              {formatCurrency(report.expenses, { currency })}
             </h3>
 
           </div>
@@ -103,10 +101,7 @@ export default function ReportKpis({
                   : "text-red-600"
               }`}
             >
-              {Number(report.profit).toLocaleString(undefined, {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 2,
-              })}
+              {formatCurrency(report.profit, { currency })}
             </h3>
 
           </div>

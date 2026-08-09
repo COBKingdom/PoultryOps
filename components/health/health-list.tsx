@@ -1,13 +1,16 @@
 import { Pencil } from "lucide-react";
+import { formatCurrency } from "@/lib/currency";
 
 type Props = {
   records: any[];
   onEdit: (record: any) => void;
+  currency?: string;
 };
 
 export default function HealthList({
   records,
   onEdit,
+  currency,
 }: Props) {
   return (
     <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
@@ -70,26 +73,26 @@ export default function HealthList({
                     <Pencil size={16} />
                     Edit
                   </button>
-
-                  <div className="text-right">
-                    <p className="font-bold text-red-600">
-                      {Number(record.cost).toLocaleString(undefined, {
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 2,
-                      })}
-                    </p>
-                  </div>
                 </div>
 
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+              <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
                 <div>
                   <p className="text-slate-500">
                     Flock
                   </p>
                   <p className="font-medium">
                     {record.flocks?.flock_name}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-slate-500">
+                    Cost
+                  </p>
+                  <p className="font-bold text-red-600">
+                    {formatCurrency(record.cost, { currency })}
                   </p>
                 </div>
 

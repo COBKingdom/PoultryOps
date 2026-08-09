@@ -130,6 +130,7 @@ export default function SalesPage() {
       <OperationsKpiCard
         label="Revenue"
         value={kpiValues.totalRevenue}
+        currency={farm?.currency}
         icon={<TrendingUp size={20} />}
         valueColor="green"
         iconBg="green"
@@ -212,6 +213,7 @@ export default function SalesPage() {
             <SalesList
               records={paginatedRecords}
               onEdit={handleEditRecord}
+              currency={farm?.currency}
             />
           </div>
         </div>

@@ -2,6 +2,8 @@
 
 import { ReactNode } from "react";
 
+import { formatCurrency } from "@/lib/currency";
+
 type OperationsKpiCardProps = {
   /** Label displayed above the value */
   label: string;
@@ -15,6 +17,8 @@ type OperationsKpiCardProps = {
   valueColor?: "slate" | "blue" | "green" | "red" | "amber" | "indigo";
   /** Optional background color for the icon container */
   iconBg?: "blue" | "green" | "red" | "amber" | "indigo" | "slate";
+  /** Optional ISO currency code to format the value as money (e.g. "NGN") */
+  currency?: string;
 };
 
 const colorMap = {
@@ -43,7 +47,15 @@ export default function OperationsKpiCard({
   icon,
   valueColor = "slate",
   iconBg = "slate",
+  currency,
 }: OperationsKpiCardProps) {
+  const displayValue = currency
+    ? formatCurrency(Number(value), { currency })
+    : Number(value).toLocaleString(undefined, {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      });
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
       <div className="flex items-center justify-between gap-3">
@@ -52,10 +64,7 @@ export default function OperationsKpiCard({
           <p
             className={`text-3xl font-bold mt-1 ${colorMap.value[valueColor]}`}
           >
-            {Number(value).toLocaleString(undefined, {
-              minimumFractionDigits: 0,
-              maximumFractionDigits: 2,
-            })}
+            {displayValue}
           </p>
           {sublabel && (
             <p className="text-slate-400 text-xs mt-1">{sublabel}</p>

@@ -1,11 +1,15 @@
 "use client";
 
+import { formatCurrency } from "@/lib/currency";
+
 type Props = {
   report: any;
+  currency?: string;
 };
 
 export default function ExportButtons({
   report,
+  currency,
 }: Props) {
 
   function exportProduction() {
@@ -25,9 +29,9 @@ Mortality,${report.mortality}`;
   function exportFinancial() {
     const csv =
 `Metric,Value
-Revenue,${report.revenue}
-Expenses,${report.expenses}
-Profit,${report.profit}`;
+Revenue,${formatCurrency(report.revenue, { currency })}
+Expenses,${formatCurrency(report.expenses, { currency })}
+Profit,${formatCurrency(report.profit, { currency })}`;
 
     downloadCsv(
       csv,

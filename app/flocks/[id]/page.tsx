@@ -10,6 +10,7 @@ import { useCurrentFarm } from "@/hooks/useCurrentFarm";
 import AppShell from "@/components/layout/app-shell";
 
 import { getFlockById, getFlockAvailableBirds } from "@/lib/flocks";
+import { formatCurrency } from "@/lib/currency";
 
 import {
   ArrowLeft,
@@ -500,13 +501,13 @@ export default function FlockWorkspacePage() {
                     {flock.purchase_cost && (
                       <div className="bg-slate-50 rounded-xl p-5 border border-slate-200">
                         <p className="text-xs text-slate-500 mb-2 uppercase tracking-wide font-semibold">Purchase Cost</p>
-                        <p className="text-base font-bold text-slate-900">{formatDate(flock.purchase_cost)}</p>
+                        <p className="text-base font-bold text-slate-900">{formatCurrency(flock.purchase_cost, { currency: farm?.currency })}</p>
                       </div>
                     )}
                     {flock.transport_cost && (
                       <div className="bg-slate-50 rounded-xl p-5 border border-slate-200">
                         <p className="text-xs text-slate-500 mb-2 uppercase tracking-wide font-semibold">Transport Cost</p>
-                        <p className="text-base font-bold text-slate-900">{formatDate(flock.transport_cost)}</p>
+                        <p className="text-base font-bold text-slate-900">{formatCurrency(flock.transport_cost, { currency: farm?.currency })}</p>
                       </div>
                     )}
                   </div>

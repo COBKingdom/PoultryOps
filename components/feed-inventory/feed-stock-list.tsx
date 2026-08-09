@@ -1,13 +1,16 @@
 import { Pencil } from "lucide-react";
+import { formatCurrency } from "@/lib/currency";
 
 type Props = {
   records: any[];
   onEdit: (record: any) => void;
+  currency?: string;
 };
 
 export default function FeedStockList({
   records,
   onEdit,
+  currency,
 }: Props) {
   return (
     <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
@@ -92,10 +95,7 @@ export default function FeedStockList({
                     Cost
                   </p>
                   <p className="text-2xl font-bold text-slate-900">
-                    {Number(record.cost).toLocaleString(undefined, {
-                      minimumFractionDigits: 0,
-                      maximumFractionDigits: 2,
-                    })}
+                    {formatCurrency(record.cost, { currency })}
                   </p>
                 </div>
 

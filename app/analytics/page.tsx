@@ -69,6 +69,7 @@ export default function AnalyticsPage() {
           <RevenueChart
             revenue={stats.totalRevenue}
             expenses={stats.totalExpenses}
+            currency={farm?.currency}
           />
 
           <ProductionChart

@@ -66,7 +66,16 @@ export default function HealthPage() {
       (record) => record.status === 'active' || record.status === 'treatment'
     ).length;
 
-    return { totalRecords, activeCases };
+    const totalCost = records.reduce(
+      (sum, record) =>
+        sum +
+        Number(
+          record.cost || 0
+        ),
+      0
+    );
+
+    return { totalRecords, activeCases, totalCost };
   }, [records]);
 
   // ── Filter records by search query ────────────────────────────────────────
@@ -133,6 +142,14 @@ export default function HealthPage() {
         icon={<Activity size={20} />}
         valueColor="amber"
         iconBg="amber"
+      />
+      <OperationsKpiCard
+        label="Total Cost"
+        value={kpiValues.totalCost}
+        currency={data?.farm?.currency}
+        icon={<Activity size={20} />}
+        valueColor="red"
+        iconBg="red"
       />
     </>
   );
@@ -206,6 +223,7 @@ export default function HealthPage() {
             <HealthList
               records={paginatedRecords}
               onEdit={handleEditRecord}
+              currency={data?.farm?.currency}
             />
           </div>
         </div>

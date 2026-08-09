@@ -1,9 +1,13 @@
+import { formatCurrency } from "@/lib/currency";
+
 type Props = {
   records: any[];
+  currency?: string;
 };
 
 export default function SalesSummary({
   records,
+  currency,
 }: Props) {
   const today =
     new Date()
@@ -55,10 +59,7 @@ export default function SalesSummary({
         </p>
 
         <h3 className="text-3xl font-bold">
-          {Number(todaySales).toLocaleString(undefined, {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 2,
-          })}
+          {formatCurrency(todaySales, { currency })}
         </h3>
       </div>
 
@@ -68,10 +69,7 @@ export default function SalesSummary({
         </p>
 
         <h3 className="text-3xl font-bold text-green-600">
-          {Number(totalRevenue).toLocaleString(undefined, {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 2,
-          })}
+          {formatCurrency(totalRevenue, { currency })}
         </h3>
       </div>
 

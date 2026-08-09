@@ -10,27 +10,46 @@ import {
   Cell,
 } from "recharts";
 
+import { formatCurrency } from "@/lib/currency";
+
 type Props = {
   revenue: number;
   expenses: number;
+  currency?: string;
+};
+
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  NGN: "₦",
+  USD: "$",
+  EUR: "€",
+  GBP: "£",
 };
 
 export default function RevenueChart({
   revenue,
   expenses,
+  currency,
 }: Props) {
+  // Display-only transform: chart axis/bar values are shown in millions.
   const data = [
     {
       name: "Revenue",
-      value: revenue,
+      value: Number((revenue / 1000000).toFixed(2)),
       color: "#16a34a",
     },
     {
       name: "Expenses",
-      value: expenses,
+      value: Number((expenses / 1000000).toFixed(2)),
       color: "#dc2626",
     },
   ];
+
+  const symbol = CURRENCY_SYMBOLS[currency || "NGN"] || "₦";
+
+  const formatAxisValue = (value: number) => {
+    if (value === 0) return `${symbol}0`;
+    return `${symbol}${value}m`;
+  };
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
@@ -51,12 +70,25 @@ export default function RevenueChart({
           width="100%"
           height="100%"
         >
-          <BarChart data={data}>
+          <BarChart
+            data={data}
+            margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
+          >
             <XAxis dataKey="name" />
 
-            <YAxis />
+            <YAxis
+              width={80}
+              tickFormatter={formatAxisValue}
+            />
 
-            <Tooltip />
+            <Tooltip
+              formatter={(value) =>
+                formatCurrency(
+                  Number(value) * 1000000,
+                  { currency }
+                )
+              }
+            />
 
             <Bar
               dataKey="value"
@@ -76,6 +108,10 @@ export default function RevenueChart({
         </ResponsiveContainer>
 
       </div>
+
+      <p className="text-xs text-slate-400 mt-3">
+        Amount ({symbol} millions)
+      </p>
 
     </div>
   );

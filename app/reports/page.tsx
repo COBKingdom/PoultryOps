@@ -89,7 +89,7 @@ export default function ReportsPage() {
           />
 
           {/* KPIs — recalculate based on selected period */}
-          <ReportKpis report={report} />
+          <ReportKpis report={report} currency={farm?.currency} />
 
           {/* Production & Operations */}
           <div className="grid lg:grid-cols-2 gap-6">
@@ -100,7 +100,7 @@ export default function ReportsPage() {
           {/* Farm Health & Export */}
           <div className="grid lg:grid-cols-2 gap-6">
             <FarmHealthSummary report={report} />
-            <ExportButtons report={report} />
+            <ExportButtons report={report} currency={farm?.currency} />
           </div>
         </div>
       </AppShell>

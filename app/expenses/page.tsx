@@ -134,6 +134,7 @@ export default function ExpensesPage() {
       <OperationsKpiCard
         label="Today"
         value={kpiValues.todayExpenses}
+        currency={farm?.currency}
         sublabel="expenses"
         icon={<ReceiptText size={20} />}
         valueColor="red"
@@ -142,6 +143,7 @@ export default function ExpensesPage() {
       <OperationsKpiCard
         label="Total Expenses"
         value={kpiValues.totalExpenses}
+        currency={farm?.currency}
         icon={<Wallet size={20} />}
         valueColor="red"
         iconBg="red"
@@ -224,6 +226,7 @@ export default function ExpensesPage() {
             <ExpenseList
               records={paginatedRecords}
               onEdit={handleEditRecord}
+              currency={farm?.currency}
             />
           </div>
         </div>

@@ -1,13 +1,16 @@
 import { Pencil, ShoppingCart } from "lucide-react";
+import { formatCurrency } from "@/lib/currency";
 
 type Props = {
   records: any[];
   onEdit: (record: any) => void;
+  currency?: string;
 };
 
 export default function SalesList({
   records,
   onEdit,
+  currency,
 }: Props) {
   return (
     <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
@@ -110,10 +113,7 @@ export default function SalesList({
                     Unit Price
                   </p>
                   <p className="font-bold text-lg">
-                    {Number(record.unit_price).toLocaleString(undefined, {
-                      minimumFractionDigits: 0,
-                      maximumFractionDigits: 2,
-                    })}
+                    {formatCurrency(record.unit_price, { currency })}
                   </p>
                 </div>
 
@@ -122,10 +122,7 @@ export default function SalesList({
                     Total
                   </p>
                   <p className="font-bold text-lg text-green-600">
-                    {Number(record.total_amount).toLocaleString(undefined, {
-                      minimumFractionDigits: 0,
-                      maximumFractionDigits: 2,
-                    })}
+                    {formatCurrency(record.total_amount, { currency })}
                   </p>
                 </div>
 

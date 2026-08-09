@@ -177,6 +177,7 @@ export default function FeedInventoryPage() {
             <FeedStockList
               records={paginatedRecords}
               onEdit={handleEditRecord}
+              currency={data?.farm?.currency}
             />
           </div>
         </div>

@@ -1,9 +1,13 @@
+import { formatCurrency } from "@/lib/currency";
+
 type Props = {
   records: any[];
+  currency?: string;
 };
 
 export default function HealthStats({
   records,
+  currency,
 }: Props) {
   const totalRecords =
     records.length;
@@ -77,10 +81,7 @@ export default function HealthStats({
         </p>
 
         <h3 className="text-4xl font-bold mt-2 text-red-600">
-          {Number(totalCost).toLocaleString(undefined, {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 2,
-          })}
+          {formatCurrency(totalCost, { currency })}
         </h3>
       </div>
     </div>
