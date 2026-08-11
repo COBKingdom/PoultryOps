@@ -23,27 +23,30 @@ export async function POST(request: Request) {
       error,
     } = await supabaseAdmin.auth.admin.getUserById(userId);
 
-    console.log("Supabase Admin Result");
-    console.log(user);
-    console.log(error);
-
     if (error) {
+      console.error("[send-welcome] User lookup failed:", error);
       throw error;
     }
 
     if (!user?.email) {
+      console.error("[send-welcome] User email not found for userId:", userId);
       throw new Error("User email not found.");
     }
 
-    console.log("Calling sendWelcomeEmail...");
+    console.log("[send-welcome] User resolved:", user.email);
 
-    await sendWelcomeEmail(
-      userId,
-      user.email,
-      farmName
-    );
+    try {
+      await sendWelcomeEmail(
+        userId,
+        user.email,
+        farmName
+      );
+    } catch (sendError) {
+      console.error("[send-welcome] Welcome email send failed:", sendError);
+      throw sendError;
+    }
 
-    console.log("Welcome email completed.");
+    console.log("[send-welcome] Welcome email completed.");
 
     return NextResponse.json({
       success: true,
@@ -51,7 +54,7 @@ export async function POST(request: Request) {
 
   } catch (error) {
 
-    console.error("SEND WELCOME FAILED");
+    console.error("[send-welcome] SEND WELCOME FAILED");
     console.error(error);
 
     return NextResponse.json(

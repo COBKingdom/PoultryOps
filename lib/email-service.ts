@@ -74,13 +74,20 @@ async function recordEmailEvent(
   metadata?: EmailEventMetadata
 ): Promise<void> {
   const supabase = getSupabase()
-  await supabase.from("email_events").insert({
+  const { error } = await supabase.from("email_events").insert({
     user_id: userId,
     event_type: eventType,
     email,
     sent_at: new Date().toISOString(),
     metadata: metadata ?? null,
   })
+
+  if (error) {
+    console.error("[email] Failed to record email event:", error)
+    return
+  }
+
+  console.log(`[email] Email event recorded: ${eventType} for ${email}`)
 }
 
 /**
@@ -124,9 +131,22 @@ export async function sendWelcomeEmail(
   email: string,
   farmName: string
 ): Promise<void> {
-  if (await emailAlreadySent(userId, "welcome")) return
+  if (await emailAlreadySent(userId, "welcome")) {
+    console.log(`[email] Welcome email skipped for user ${userId}: already sent`)
+    return
+  }
+
   const { subject, html } = welcomeEmailTemplate(farmName)
-  await dispatchEmail(email, subject, html)
+
+  try {
+    await dispatchEmail(email, subject, html)
+  } catch (error) {
+    console.error("[email] Welcome email send failed:", error)
+    throw error
+  }
+
+  console.log(`[email] Welcome email sent successfully to ${email}`)
+
   await recordEmailEvent(userId, "welcome", email, { farmName })
 }
 

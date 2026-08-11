@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     owner_id
   )
 `)
-    .eq("plan", "trial")
+    .eq("status", "trial")
 
   if (queryError) {
     return NextResponse.json(

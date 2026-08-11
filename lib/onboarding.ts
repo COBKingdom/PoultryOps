@@ -114,13 +114,21 @@ try {
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    console.error("Welcome email failed:", error);
+    let errorDetail = `HTTP ${response.status}`;
+    try {
+      const body = await response.json();
+      if (body?.error) {
+        errorDetail = body.error;
+      }
+    } catch {
+      // response body was not JSON — keep the HTTP status detail
+    }
+    console.error("[onboarding] Welcome email failed:", errorDetail);
   } else {
-    console.log("Welcome email request completed.");
+    console.log("[onboarding] Welcome email sent successfully");
   }
 } catch (error) {
-  console.error("Failed to call send-welcome API:", error);
+  console.error("[onboarding] Welcome email failed (request error):", error);
 }
   return farm;
 }
