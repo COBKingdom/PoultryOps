@@ -56,11 +56,36 @@ function getSupabase() {
  * Core send function. All emails go through here.
  * Reads EMAIL_FROM env var so the sender name is configurable per product.
  */
-async function dispatchEmail(to: string, subject: string, html: string): Promise<void> {
+async function dispatchEmail(
+  to: string,
+  subject: string,
+  html: string
+): Promise<void> {
   const resend = getResend()
   const from = process.env.EMAIL_FROM ?? "TrueOps <support@trueops.app>"
-  const { error } = await resend.emails.send({ from, to, subject, html })
-  if (error) throw new Error(`Resend delivery error: ${error.message}`)
+
+  console.log("[RESEND] Preparing email send:", {
+    to,
+    from,
+    subject,
+  })
+
+  const { error: resendError } = await resend.emails.send({
+    from,
+    to,
+    subject,
+    html,
+  })
+
+  if (resendError) {
+    console.error("[RESEND] Delivery error:", resendError)
+    throw new Error(`Resend delivery error: ${resendError.message}`)
+  }
+
+  console.log("[RESEND] Email accepted for delivery:", {
+    to,
+    subject,
+  })
 }
 
 /**
@@ -74,6 +99,7 @@ async function recordEmailEvent(
   metadata?: EmailEventMetadata
 ): Promise<void> {
   const supabase = getSupabase()
+
   const { error } = await supabase.from("email_events").insert({
     user_id: userId,
     event_type: eventType,
@@ -87,7 +113,9 @@ async function recordEmailEvent(
     return
   }
 
-  console.log(`[email] Email event recorded: ${eventType} for ${email}`)
+  console.log(
+    `[email] Email event recorded: ${eventType} for ${email}`
+  )
 }
 
 /**
@@ -95,14 +123,19 @@ async function recordEmailEvent(
  * Returns true if this event type has already been sent to this user.
  * Transactional events bypass this — they call dispatchEmail directly.
  */
-async function emailAlreadySent(userId: string, eventType: string): Promise<boolean> {
+async function emailAlreadySent(
+  userId: string,
+  eventType: string
+): Promise<boolean> {
   const supabase = getSupabase()
+
   const { data } = await supabase
     .from("email_events")
     .select("id")
     .eq("user_id", userId)
     .eq("event_type", eventType)
     .maybeSingle()
+
   return data !== null
 }
 
@@ -132,7 +165,9 @@ export async function sendWelcomeEmail(
   farmName: string
 ): Promise<void> {
   if (await emailAlreadySent(userId, "welcome")) {
-    console.log(`[email] Welcome email skipped for user ${userId}: already sent`)
+    console.log(
+      `[email] Welcome email skipped for user ${userId}: already sent`
+    )
     return
   }
 
@@ -155,7 +190,8 @@ export async function sendWelcomeEmail(
  * No deduplication — invitations may be resent.
  * Not logged to email_events.
  *
- * role must be one of the farm_users.role values: 'owner' | 'manager' | 'staff'
+ * role must be one of the farm_users.role values:
+ * 'owner' | 'manager' | 'staff'
  */
 export async function sendInvitationEmail(
   email: string,
@@ -163,12 +199,33 @@ export async function sendInvitationEmail(
   temporaryPassword: string,
   role: string
 ): Promise<void> {
-  const { subject, html } = invitationEmailTemplate(farmName, role, temporaryPassword)
-  
+  const {
+    subject,
+    html,
+  } = invitationEmailTemplate(
+    farmName,
+    role,
+    temporaryPassword
+  )
+
   // Replace placeholder with actual email
-  const htmlWithEmail = html.replace('{{email}}', email)
-  
-  await dispatchEmail(email, subject, htmlWithEmail)
+  const htmlWithEmail = html.replace("{{email}}", email)
+
+  console.log("[INVITATION EMAIL] Sending invitation:", {
+    email,
+    farmName,
+    role,
+  })
+
+  await dispatchEmail(
+    email,
+    subject,
+    htmlWithEmail
+  )
+
+  console.log(
+    `[INVITATION EMAIL] Successfully handed to Resend for ${email}`
+  )
 }
 
 /**
@@ -188,20 +245,27 @@ export async function sendTrialEmail(
 
   const templateFn = {
     trial_3_days: trial3DaysTemplate,
-    trial_1_day:  trial1DayTemplate,
+    trial_1_day: trial1DayTemplate,
     trial_expired: trialExpiredTemplate,
   }[type]
 
-
   const { subject, html } = templateFn(farmName)
+
   await dispatchEmail(email, subject, html)
-  await recordEmailEvent(userId, type, email, { farmName })
+
+  await recordEmailEvent(
+    userId,
+    type,
+    email,
+    { farmName }
+  )
 }
 
 /**
  * Sends a payment confirmation email.
  * Transactional — fires on every confirmed payment, no deduplication.
- * paymentReference comes from subscriptions.payment_reference or subscriptions.transaction_id.
+ * paymentReference comes from subscriptions.payment_reference
+ * or subscriptions.transaction_id.
  */
 export async function sendPaymentReceivedEmail(
   userId: string,
@@ -209,9 +273,25 @@ export async function sendPaymentReceivedEmail(
   farmName: string,
   paymentReference: string
 ): Promise<void> {
-  const { subject, html } = paymentReceivedTemplate(farmName, paymentReference)
+  const {
+    subject,
+    html,
+  } = paymentReceivedTemplate(
+    farmName,
+    paymentReference
+  )
+
   await dispatchEmail(email, subject, html)
-  await recordEmailEvent(userId, "payment_received", email, { farmName, paymentReference })
+
+  await recordEmailEvent(
+    userId,
+    "payment_received",
+    email,
+    {
+      farmName,
+      paymentReference,
+    }
+  )
 }
 
 /**
@@ -224,15 +304,32 @@ export async function sendSubscriptionActivatedEmail(
   farmName: string,
   planName: string
 ): Promise<void> {
-  const { subject, html } = subscriptionActivatedTemplate(farmName, planName)
+  const {
+    subject,
+    html,
+  } = subscriptionActivatedTemplate(
+    farmName,
+    planName
+  )
+
   await dispatchEmail(email, subject, html)
-  await recordEmailEvent(userId, "subscription_activated", email, { farmName, planName })
+
+  await recordEmailEvent(
+    userId,
+    "subscription_activated",
+    email,
+    {
+      farmName,
+      planName,
+    }
+  )
 }
 
 /**
  * Sends a subscription renewal confirmation.
  * Transactional — fires on every renewal, no deduplication.
- * renewalDate should be the new subscriptions.next_billing_date formatted as a string.
+ * renewalDate should be the new subscriptions.next_billing_date
+ * formatted as a string.
  */
 export async function sendSubscriptionRenewedEmail(
   userId: string,
@@ -241,7 +338,25 @@ export async function sendSubscriptionRenewedEmail(
   planName: string,
   renewalDate?: string
 ): Promise<void> {
-  const { subject, html } = subscriptionRenewedTemplate(farmName, planName, renewalDate)
+  const {
+    subject,
+    html,
+  } = subscriptionRenewedTemplate(
+    farmName,
+    planName,
+    renewalDate
+  )
+
   await dispatchEmail(email, subject, html)
-  await recordEmailEvent(userId, "subscription_renewed", email, { farmName, planName, renewalDate })
+
+  await recordEmailEvent(
+    userId,
+    "subscription_renewed",
+    email,
+    {
+      farmName,
+      planName,
+      renewalDate,
+    }
+  )
 }

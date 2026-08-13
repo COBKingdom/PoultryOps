@@ -252,9 +252,13 @@ if (currentUsers >= maxUsers) {
       }
     }
 
-    // Send invitation email if requested
-    if (sendInvitation) {
-      try {
+// Send invitation email if requested
+console.log("[INVITATION] sendInvitation:", sendInvitation);
+console.log("[INVITATION] Preparing email for:", email);
+
+if (sendInvitation) {
+  try {
+    console.log("[INVITATION] Entering email send block for:", email);
         const { sendInvitationEmail } = await import("@/lib/email-service");
         
         // Get farm name
