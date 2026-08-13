@@ -273,10 +273,17 @@ if (currentUsers >= maxUsers) {
           password,
           role
         );
-      } catch (emailError) {
-        console.error("Error sending invitation email:", emailError);
-        // Don't fail the request if email fails
-      }
+    } catch (emailError) {
+      console.error("[INVITATION EMAIL FAILED]", emailError);
+      return {
+        success: false,
+        userId,
+        invitationId,
+        error: `Invitation email failed: ${
+          emailError instanceof Error ? emailError.message : String(emailError)
+        }`,
+      };
+    }
     }
 
     return {
