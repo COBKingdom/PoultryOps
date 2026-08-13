@@ -673,22 +673,20 @@ if (error) {
       : "bg-white text-gray-900 border border-gray-200 hover:bg-gray-50 shadow-sm"
   }`}
   disabled={loading || isCurrentPlan}
-  onClick={() => subscriptionStatus === "trial" ? selectTrialPlan(planKey) : payNow(planKey, "monthly")}
+  onClick={() => payNow(planKey, "monthly")}
 >
   {isCurrentPlan ? (
     <span className="flex items-center justify-center gap-2">
       <CheckCircle2 className="w-4 h-4" />
       Current Plan
     </span>
-  ) : subscriptionStatus === "trial" ? (
-    `Choose ${plan.name} Trial`
-  ) : (
-    "Subscribe Monthly"
-  )}
+) : (
+  "Subscribe Monthly"
+)}
 </button>
                     <button
                       className="w-full h-11 text-base rounded-lg font-medium text-gray-600 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      disabled={loading || subscriptionStatus === "trial"}
+                      disabled={loading}
                       onClick={() => payNow(planKey, "annual")}
                     >
                       {isCurrentPlan ? "Renew Annual" : "Subscribe Annual"}
