@@ -113,6 +113,20 @@ const ownerId = farm.owner_id
 const farmName = farm.name || "your farm"
       const email = emailByOwnerId.get(ownerId)
 
+      // Persist expiry status independently of email delivery.
+      // The account must become expired based on trial_end regardless of
+      // whether Resend succeeds or fails. The email is a notification only.
+      // The .eq("status", "trial") filter makes this idempotent (won't
+      // re-update already-expired subscriptions) and safe (never touches
+      // active paid subscriptions).
+      if (type === "trial_expired") {
+        await supabase
+          .from("subscriptions")
+          .update({ status: "expired" })
+          .eq("farm_id", row.farm_id)
+          .eq("status", "trial")
+      }
+
       if (!email) {
         results.push({ ownerId, email: "", farmName, type, status: "error", reason: "no email in profiles" })
         return

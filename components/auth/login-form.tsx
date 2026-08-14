@@ -82,6 +82,21 @@ export default function LoginForm() {
         return;
       }
 
+      // Preserve intended destination if provided via ?next=
+      const params = new URLSearchParams(
+        window.location.search
+      );
+      const next = params.get("next");
+
+      if (
+        next &&
+        next.startsWith("/") &&
+        !next.startsWith("//")
+      ) {
+        router.push(next);
+        return;
+      }
+
       router.push(
         "/dashboard"
       );

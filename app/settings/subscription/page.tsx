@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   getFlutterwavePublicKey,
@@ -48,7 +49,8 @@ type PaymentRecord = {
 
 
 export default function SubscriptionPage() {
-  const { profile } = useAuth();
+  const router = useRouter();
+  const { user, profile, loading: authLoading } = useAuth();
 
   const [loading, setLoading] = useState(false);
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
@@ -57,6 +59,13 @@ export default function SubscriptionPage() {
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(true);
   const [paymentsError, setPaymentsError] = useState<string | null>(null);
+
+  // ── Auth guard: redirect unauthenticated users to login, preserving destination ──
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace("/login?next=/settings/subscription");
+    }
+  }, [authLoading, user, router]);
 
   // ── Load subscription ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -380,12 +389,29 @@ if (error) {
         {/* ── Header ───────────────────────────────────────────────────────── */}
         <header className="space-y-3">
           <h1 className="text-4xl font-semibold tracking-tight text-gray-900">
-            Billing &amp; Subscription
+            Billing & Subscription
           </h1>
           <p className="text-lg text-gray-500">
             Manage your subscription, billing and payments.
           </p>
         </header>
+
+        {/* ── Expired Account Banner ───────────────────────────────────────── */}
+        {subscriptionStatus === "expired" && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex items-center gap-3 flex-1">
+              <AlertCircle className="w-8 h-8 text-red-600 shrink-0" />
+              <div>
+                <h2 className="text-lg font-semibold text-red-800">
+                  Your PoultryOps trial has expired.
+                </h2>
+                <p className="text-sm text-red-700 mt-1">
+                  Select a plan below and subscribe to restore full access to your farm data.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── Section 1 — Summary Cards ────────────────────────────────────── */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -583,7 +609,7 @@ if (error) {
             <h2 className="text-2xl font-semibold tracking-tight text-gray-900">
               Available Plans
             </h2>
-            <p className="text-gray-500">Choose the right plan for your farm&apos;s needs.</p>
+            <p className="text-gray-500">Choose the right plan for your farm's needs.</p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -591,6 +617,13 @@ if (error) {
               const plan   = PLANS[planKey];
               const ribbon = planRibbon(planKey);
               const isCurrentPlan = planKey === currentWorkspaceKey;
+
+              // Monthly button label for the current plan
+              const monthlyLabel = isCurrentPlan
+                ? subscriptionStatus === "active"
+                  ? "Renew Monthly"
+                  : "Subscribe Monthly"
+                : "Subscribe Monthly";
 
               return (
                 <div
@@ -672,17 +705,10 @@ if (error) {
       ? "bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
       : "bg-white text-gray-900 border border-gray-200 hover:bg-gray-50 shadow-sm"
   }`}
-  disabled={loading || isCurrentPlan}
+  disabled={loading}
   onClick={() => payNow(planKey, "monthly")}
 >
-  {isCurrentPlan ? (
-    <span className="flex items-center justify-center gap-2">
-      <CheckCircle2 className="w-4 h-4" />
-      Current Plan
-    </span>
-) : (
-  "Subscribe Monthly"
-)}
+  {monthlyLabel}
 </button>
                     <button
                       className="w-full h-11 text-base rounded-lg font-medium text-gray-600 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -771,7 +797,7 @@ if (error) {
                             No payment history
                           </h3>
                           <p className="text-sm text-gray-500 max-w-sm mx-auto leading-relaxed">
-                            You haven&apos;t made any payments yet. Your first invoice will appear
+                            You haven't made any payments yet. Your first invoice will appear
                             here once processed.
                           </p>
                         </div>

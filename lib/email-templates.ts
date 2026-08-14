@@ -195,6 +195,7 @@ export function trial3DaysTemplate(farmName: string): { subject: string; html: s
 
 export function trial1DayTemplate(farmName: string): { subject: string; html: string } {
   const frontendUrl = process.env.FRONTEND_URL ?? ""
+  const subscriptionUrl = `${frontendUrl.replace(/\/$/, "")}/settings/subscription`
 
   const body = `
     <p style="color:#374151;font-size:15px;margin:0 0 20px;line-height:1.6;">Hello,</p>
@@ -211,7 +212,7 @@ export function trial1DayTemplate(farmName: string): { subject: string; html: st
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr>
         <td align="center" style="padding-bottom:28px;">
-          <a href="${frontendUrl}"
+          <a href="${subscriptionUrl}"
              style="display:inline-block;background:#dc2626;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:10px;">
             Upgrade Before It Expires &rarr;
           </a>
