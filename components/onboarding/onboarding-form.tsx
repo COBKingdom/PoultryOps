@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { createFarmAndTrial } from "@/lib/onboarding";
+import { createFarmAndTrial, FarmAlreadyExistsError } from "@/lib/onboarding";
 import { PLANS, PLAN_FEATURES, PLAN_ORDER, ANNUAL_SAVINGS } from "@/lib/plans";
 import { Check } from "lucide-react";
 
@@ -55,6 +55,22 @@ export default function OnboardingForm() {
       router.push("/dashboard");
     } catch (error: any) {
       console.error(error);
+
+      // Account already owns a farm (detected app-side or via the DB
+      // unique index on farms(owner_id)). Send the user to their
+      // existing dashboard instead of letting them create another farm.
+      if (error instanceof FarmAlreadyExistsError) {
+        setMessage(error.message);
+
+        // Refresh profile so it points to the existing farm
+        await refreshProfile();
+
+        setTimeout(() => {
+          router.push("/dashboard");
+        }, 1500);
+        return;
+      }
+
       setMessage(error.message || "Failed to create farm");
     } finally {
       setLoading(false);

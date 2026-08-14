@@ -9,6 +9,32 @@ type CreateFarmParams = {
   selectedPlan: string;
 };
 
+/**
+ * Thrown when the authenticated user already owns a farm.
+ *
+ * Business rule (current PoultryOps architecture):
+ * ONE AUTH ACCOUNT / EMAIL = ONE FARM OWNER = ONE FARM.
+ *
+ * The onboarding form catches this error and redirects the user
+ * to their existing farm/dashboard instead of creating another farm.
+ */
+export class FarmAlreadyExistsError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "FarmAlreadyExistsError";
+  }
+}
+
+/**
+ * Returns true when a PostgREST error is a unique-constraint violation
+ * (PostgreSQL SQLSTATE 23505). This is how we detect a lost race between
+ * two simultaneous onboarding requests — the database unique index on
+ * farms(owner_id) is the final protection.
+ */
+function isUniqueViolation(error: { code?: string; message?: string }): boolean {
+  return error?.code === "23505" || /unique constraint|duplicate key/i.test(error?.message ?? "");
+}
+
 export async function createFarmAndTrial({
   userId,
   farmName,
@@ -16,6 +42,31 @@ export async function createFarmAndTrial({
   currency,
   selectedPlan,
 }: CreateFarmParams) {
+  // =============================================================
+  // APPLICATION-LEVEL PROTECTION
+  // Prevent duplicate farms for the same owner.
+  // The DB unique index on farms(owner_id) is the final guard.
+  // =============================================================
+
+  const {
+    data: existingFarm,
+    error: existingFarmError,
+  } = await supabase
+    .from("farms")
+    .select("id, name")
+    .eq("owner_id", userId)
+    .maybeSingle();
+
+  if (existingFarmError) {
+    throw existingFarmError;
+  }
+
+  if (existingFarm) {
+    throw new FarmAlreadyExistsError(
+      "This account already has a farm. Redirecting you to your dashboard..."
+    );
+  }
+
   // Create Farm
 
   const {
@@ -34,6 +85,15 @@ export async function createFarmAndTrial({
     .single();
 
   if (farmError) {
+    // Race condition caught by the database unique index.
+    // Convert the raw PostgreSQL error into a useful message and
+    // send the user to their existing farm/dashboard.
+    if (isUniqueViolation(farmError)) {
+      throw new FarmAlreadyExistsError(
+        "This account already has a farm. Redirecting you to your dashboard..."
+      );
+    }
+
     throw farmError;
   }
 
