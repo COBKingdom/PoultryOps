@@ -59,6 +59,7 @@ export default function SubscriptionPage() {
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(true);
   const [paymentsError, setPaymentsError] = useState<string | null>(null);
+  const [farmName, setFarmName] = useState("");
 
   // ── Auth guard: redirect unauthenticated users to login, preserving destination ──
   useEffect(() => {
@@ -68,20 +69,34 @@ export default function SubscriptionPage() {
   }, [authLoading, user, router]);
 
   // ── Load subscription ─────────────────────────────────────────────────────
-  useEffect(() => {
-    async function loadSubscription() {
-      try {
-        if (!profile?.farm_id) return;
+useEffect(() => {
+  async function loadSubscription() {
+    try {
+      if (!profile?.farm_id) return;
+
       const data = await getSubscription(profile.farm_id);
       setSubscription(data);
-      } catch (error) {
-        console.error("Error loading subscription:", error);
-      } finally {
-        setSubLoading(false);
+
+      const { data: farm, error: farmError } = await supabase
+        .from("farms")
+        .select("name")
+        .eq("id", profile.farm_id)
+        .single();
+
+      if (farmError) {
+        console.error("Error loading farm name:", farmError);
+      } else {
+        setFarmName(farm?.name || "");
       }
+    } catch (error) {
+      console.error("Error loading subscription:", error);
+    } finally {
+      setSubLoading(false);
     }
-    loadSubscription();
-  }, [profile]);
+  }
+
+  loadSubscription();
+}, [profile]);
 
   // ── Load payment history ──────────────────────────────────────────────────
   async function loadPayments() {
@@ -205,10 +220,10 @@ if (error) {
         amount,
         currency: "NGN",
         payment_options: "card,banktransfer,ussd",
-        customer: {
-          email: profile.email || "customer@poultryops.com",
-          name: profile.full_name || "Farm Owner",
-        },
+customer: {
+  email: profile.email || "customer@poultryops.com",
+  name: farmName || "Farm Owner",
+},
         customizations: {
           title: "PoultryOps Subscription",
           description: `${selectedPlan.name} Plan`,
