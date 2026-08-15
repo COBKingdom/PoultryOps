@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 
-import { X, UserCheck, UserX, Shield, Mail, Calendar, Key } from "lucide-react";
+import { X, UserCheck, UserX, Shield, Mail, Calendar, Key, Trash2, AlertTriangle } from "lucide-react";
 
 import PermissionGroup from "./permission-group";
 import { usePermissions } from "@/lib/permissions";
@@ -32,6 +32,8 @@ export default function MemberWorkspace({ memberId, onClose }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const canEdit = can(PERMISSIONS.TEAM_EDIT);
   const canManageUsers = can(PERMISSIONS.SETTINGS_MANAGE_USERS);
@@ -167,6 +169,42 @@ export default function MemberWorkspace({ memberId, onClose }: Props) {
       setError(err instanceof Error ? err.message : "Failed to update status");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteMember = async () => {
+    if (!member) return;
+
+    setDeleting(true);
+    setError(null);
+    try {
+      // Get the current session to include JWT in Authorization header
+      const { data: { session } } = await supabase.auth.getSession();
+
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+      };
+
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`;
+      }
+
+      const response = await fetch(`/api/team/${member.id}`, {
+        method: "DELETE",
+        headers,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to delete member");
+      }
+
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete member");
+      setShowDeleteConfirm(false);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -309,12 +347,61 @@ export default function MemberWorkspace({ memberId, onClose }: Props) {
               </button>
 
               <button
-                disabled={saving}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={saving || deleting}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Key size={14} />
-                Reset Password
+                <Trash2 size={14} />
+                Delete Member
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Member Confirmation */}
+        {showDeleteConfirm && member && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+            <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+              <div className="flex items-start gap-4 mb-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-red-100">
+                  <AlertTriangle className="text-red-600" size={24} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">
+                    Delete {member.full_name ?? "this member"}?
+                  </h3>
+                  <p className="text-sm text-slate-500 mt-1">
+                    This action is permanent and cannot be undone.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mb-6 space-y-2">
+                <p className="text-sm text-slate-700">
+                  The member will be permanently removed and will no longer be able to access the farm. Their account will be deleted, along with all associated application records.
+                </p>
+                <p className="text-sm text-slate-500">
+                  Farm and business operational data will not be deleted.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={deleting}
+                  className="px-4 py-2 rounded-lg border border-slate-200 text-slate-700 font-medium hover:bg-slate-50 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteMember}
+                  disabled={deleting}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Trash2 size={16} />
+                  {deleting ? "Deleting..." : "Delete Permanently"}
+                </button>
+              </div>
             </div>
           </div>
         )}
