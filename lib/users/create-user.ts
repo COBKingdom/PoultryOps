@@ -19,6 +19,106 @@ export interface CreateUserResult {
   error?: string;
 }
 
+export interface UserLimitResult {
+  success: boolean;
+  error?: string;
+}
+
+/**
+ * Centralized subscription user-limit check.
+ *
+ * Enforces the non-owner user limits:
+ *   Solo     = 1 non-owner user
+ *   Team     = 3 non-owner users
+ *   Business = 6 non-owner users
+ *
+ * The owner is excluded from the count.
+ * Trial accounts use `selected_plan`; paid accounts use `plan`.
+ *
+ * This is the single source of truth for user-limit enforcement.
+ */
+export async function checkUserLimit(farmId: string): Promise<UserLimitResult> {
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  // Get subscription and check limits
+  const { data: subscription, error: subscriptionError } = await admin
+    .from("subscriptions")
+    .select("plan, selected_plan, status")
+    .eq("farm_id", farmId)
+    .single();
+
+  if (subscriptionError || !subscription) {
+    return {
+      success: false,
+      error: "Unable to verify subscription",
+    };
+  }
+
+  const { count, error: countError } = await admin
+    .from("farm_users")
+    .select("*", { count: "exact", head: true })
+    .eq("farm_id", farmId)
+    .neq("role", "owner");
+
+  if (countError) {
+    return {
+      success: false,
+      error: "Unable to verify user limits",
+    };
+  }
+
+  const currentUsers = count || 0;
+  let maxUsers = 1;
+  const effectivePlan =
+    subscription.status === "trial"
+      ? subscription.selected_plan
+      : subscription.plan;
+
+  switch (effectivePlan) {
+    case "solo":
+      maxUsers = 1;
+      break;
+
+    case "team":
+      maxUsers = 3;
+      break;
+
+    case "business":
+      maxUsers = 6;
+      break;
+
+    default:
+      maxUsers = 1;
+  }
+
+  if (currentUsers >= maxUsers) {
+    if (subscription.status === "trial") {
+      return {
+        success: false,
+        error: `Your ${effectivePlan.charAt(0).toUpperCase() + effectivePlan.slice(1)} Trial has reached its user limit.`,
+      };
+    }
+
+    if (effectivePlan === "solo") {
+      return {
+        success: false,
+        error:
+          "Solo plan supports one user only. Upgrade to Team or Business to add users.",
+      };
+    }
+
+    return {
+      success: false,
+      error: "User limit reached for your subscription plan.",
+    };
+  }
+
+  return { success: true };
+}
+
 export async function createUser(params: CreateUserParams): Promise<CreateUserResult> {
   try {
     const {
@@ -44,77 +144,15 @@ export async function createUser(params: CreateUserParams): Promise<CreateUserRe
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // Get subscription and check limits
-const { data: subscription, error: subscriptionError } = await admin
-  .from("subscriptions")
-  .select("plan, selected_plan, status")
-  .eq("farm_id", farmId)
-  .single();
-    if (subscriptionError || !subscription) {
+    // Enforce the centralized subscription user-limit check
+    const limitResult = await checkUserLimit(farmId);
+
+    if (!limitResult.success) {
       return {
         success: false,
-        error: "Unable to verify subscription",
+        error: limitResult.error,
       };
     }
-
-    const { count, error: countError } = await admin
-      .from("farm_users")
-      .select("*", { count: "exact", head: true })
-      .eq("farm_id", farmId)
-      .neq("role", "owner");
-
-    if (countError) {
-      return {
-        success: false,
-        error: "Unable to verify user limits",
-      };
-    }
-
-    const currentUsers = count || 0;
-    let maxUsers = 1;
-    const effectivePlan =
-  subscription.status === "trial"
-    ? subscription.selected_plan
-    : subscription.plan;
-
-switch (effectivePlan) {
-  case "solo":
-    maxUsers = 1;
-    break;
-
-  case "team":
-    maxUsers = 3;
-    break;
-
-  case "business":
-    maxUsers = 6;
-    break;
-
-  default:
-    maxUsers = 1;
-}
-
-if (currentUsers >= maxUsers) {
-  if (subscription.status === "trial") {
-    return {
-      success: false,
-      error: `Your ${effectivePlan.charAt(0).toUpperCase() + effectivePlan.slice(1)} Trial has reached its user limit.`,
-    };
-  }
-
-  if (effectivePlan === "solo") {
-    return {
-      success: false,
-      error:
-        "Solo plan supports one user only. Upgrade to Team or Business to add users.",
-    };
-  }
-
-  return {
-    success: false,
-    error: "User limit reached for your subscription plan.",
-  };
-}
 
     // Create Auth user
     const { data: authUser, error: authError } = await admin.auth.admin.createUser({

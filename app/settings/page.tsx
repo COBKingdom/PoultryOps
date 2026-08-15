@@ -69,7 +69,11 @@ export default function SettingsPage() {
         const response = await fetch("/api/team", { headers });
         if (!response.ok) return;
         const data = await response.json();
-        setTeamMembers(data.members?.length || 0);
+        // Exclude the owner from the count — the plan limit applies to non-owner users only.
+        const nonOwnerCount = (data.members || []).filter(
+          (m: { role?: string }) => m.role !== "owner"
+        ).length;
+        setTeamMembers(nonOwnerCount);
       } catch (error) {
         console.error("Error loading team members:", error);
       } finally {

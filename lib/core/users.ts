@@ -26,25 +26,37 @@ export async function inviteUser(
   role: string,
   invitedBy: string
 ) {
-  const { data, error } =
-    await supabase
-      .from("user_invitations")
-      .insert({
-        farm_id: farmId,
-        email: email.trim().toLowerCase(),
-        role,
-        invited_by: invitedBy,
-        status: "pending",
-      })
-      .select()
-      .single();
+  // Route through the existing /api/team endpoint so the centralized
+  // subscription user-limit check (checkUserLimit) is enforced.
+  // This prevents pending invitations from bypassing the plan limits.
+  const { data: { session } } = await supabase.auth.getSession();
 
-  if (error) {
-    console.error(error);
-    throw error;
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+  };
+
+  if (session?.access_token) {
+    headers.Authorization = `Bearer ${session.access_token}`;
   }
 
-  return data;
+  const response = await fetch("/api/team", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      full_name: email.trim().toLowerCase(),
+      email: email.trim().toLowerCase(),
+      role,
+      invitedBy,
+    }),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.error || "Failed to create invitation");
+  }
+
+  return result;
 }
 
 export async function getPendingInvitations(
