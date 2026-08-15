@@ -27,12 +27,11 @@ export interface UserLimitResult {
 /**
  * Centralized subscription user-limit check.
  *
- * Enforces the non-owner user limits:
- *   Solo     = 1 non-owner user
- *   Team     = 3 non-owner users
- *   Business = 6 non-owner users
+ * Enforces the TOTAL user limits (owner + staff + managers):
+ *   Solo     = 1 total user
+ *   Team     = 3 total users
+ *   Business = 6 total users
  *
- * The owner is excluded from the count.
  * Trial accounts use `selected_plan`; paid accounts use `plan`.
  *
  * This is the single source of truth for user-limit enforcement.
@@ -60,8 +59,7 @@ export async function checkUserLimit(farmId: string): Promise<UserLimitResult> {
   const { count, error: countError } = await admin
     .from("farm_users")
     .select("*", { count: "exact", head: true })
-    .eq("farm_id", farmId)
-    .neq("role", "owner");
+    .eq("farm_id", farmId);
 
   if (countError) {
     return {
