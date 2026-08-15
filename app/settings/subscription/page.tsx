@@ -18,7 +18,11 @@ import {
   AlertCircle,
   XCircle,
   RefreshCw,
+  Menu,
 } from "lucide-react";
+
+import Sidebar from "@/components/layout/sidebar";
+import MobileSidebar from "@/components/layout/mobile-sidebar";
 
 declare global {
   interface Window {
@@ -52,6 +56,7 @@ export default function SubscriptionPage() {
   const router = useRouter();
   const { user, profile, loading: authLoading } = useAuth();
 
+  const [navOpen, setNavOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [subLoading, setSubLoading] = useState(true);
@@ -398,8 +403,28 @@ customer: {
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 pb-24 font-sans">
-      <div className="max-w-[1200px] mx-auto pt-16 px-4 sm:px-6 lg:px-8 space-y-12">
+    <div className="flex min-h-screen bg-slate-100">
+      <div className="hidden lg:block">
+        <Sidebar />
+      </div>
+
+      <MobileSidebar
+        open={navOpen}
+        onClose={() => setNavOpen(false)}
+      />
+
+      <main className="flex-1 min-w-0">
+        <div className="lg:hidden bg-white border-b px-4 py-3">
+          <button
+            onClick={() => setNavOpen(true)}
+            className="text-slate-700"
+          >
+            <Menu />
+          </button>
+        </div>
+
+        <div className="min-h-screen bg-gray-50 text-gray-900 pb-24 font-sans">
+          <div className="max-w-[1200px] mx-auto pt-16 px-4 sm:px-6 lg:px-8 space-y-12">
 
         {/* ── Header ───────────────────────────────────────────────────────── */}
         <header className="space-y-3">
@@ -863,7 +888,9 @@ customer: {
           </div>
         )}
 
-      </div>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
