@@ -18,6 +18,7 @@ type FormData = {
   batch_number: string;
   breed: string;
   age_weeks: string;
+  age_days: string;
   supplier: string;
   arrival_date: string;
   house: string;
@@ -41,6 +42,7 @@ export default function FlockModal({
     batch_number: "",
     breed: "",
     age_weeks: "",
+    age_days: "",
     supplier: "",
     arrival_date: "",
     house: "",
@@ -51,13 +53,18 @@ export default function FlockModal({
   useEffect(() => {
     if (isOpen) {
       if (flock) {
+        // Convert stored decimal age_weeks back into weeks + days
+        const ageWeeks = Number(flock.age_weeks);
+        const weeks = Math.floor(ageWeeks);
+        const days = Math.round((ageWeeks - weeks) * 7);
         setFormData({
           flock_name: flock.flock_name || "",
           bird_type: flock.bird_type || "Layers",
           quantity: String(flock.quantity || ""),
           batch_number: flock.batch_number || "",
           breed: flock.breed || "",
-          age_weeks: flock.age_weeks ? String(flock.age_weeks) : "",
+          age_weeks: flock.age_weeks ? String(weeks) : "",
+          age_days: flock.age_weeks ? String(days) : "",
           supplier: flock.supplier || "",
           arrival_date: flock.arrival_date || "",
           house: flock.house || "",
@@ -79,6 +86,7 @@ export default function FlockModal({
       batch_number: "",
       breed: "",
       age_weeks: "",
+      age_days: "",
       supplier: "",
       arrival_date: "",
       house: "",
@@ -103,6 +111,25 @@ export default function FlockModal({
       newErrors.arrival_date = "Arrival date cannot be in the future";
     }
 
+    if (!formData.age_weeks) {
+      newErrors.age_weeks = "Weeks is required";
+    } else {
+      const weeks = Number(formData.age_weeks);
+      if (!Number.isInteger(weeks) || weeks < 0) {
+        newErrors.age_weeks =
+          "Weeks must be a whole number greater than or equal to 0";
+      }
+    }
+
+    if (!formData.age_days) {
+      newErrors.age_days = "Days is required";
+    } else {
+      const days = Number(formData.age_days);
+      if (!Number.isInteger(days) || days < 0 || days > 6) {
+        newErrors.age_days = "Days must be between 0 and 6.";
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }
@@ -115,13 +142,24 @@ export default function FlockModal({
     try {
       setLoading(true);
 
+      const weeks = formData.age_weeks
+        ? Number(formData.age_weeks)
+        : 0;
+      const days = formData.age_days
+        ? Number(formData.age_days)
+        : 0;
+      const hasAge =
+        formData.age_weeks || formData.age_days;
+
       await onSave({
         flock_name: formData.flock_name,
         bird_type: formData.bird_type,
         quantity: Number(formData.quantity),
         batch_number: formData.batch_number || null,
         breed: formData.breed || null,
-        age_weeks: formData.age_weeks ? Number(formData.age_weeks) : null,
+        age_weeks: hasAge
+          ? weeks + days / 7
+          : null,
         supplier: formData.supplier || null,
         arrival_date: formData.arrival_date || null,
         house: formData.house || null,
@@ -250,7 +288,7 @@ export default function FlockModal({
                 Bird Information
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
+                <div className="pt-6">
                   <label className="mb-2 block text-sm font-medium text-slate-700">
                     Number of Birds <span className="text-red-500">*</span>
                   </label>
@@ -269,21 +307,62 @@ export default function FlockModal({
                     <p className="mt-1 text-sm text-red-600">{errors.quantity}</p>
                   )}
                 </div>
+<div>
+  <label className="mb-2 block text-sm font-medium text-slate-700">
+    Age <span className="text-red-500">*</span>
+  </label>
 
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700">
-                    Age (Weeks)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.age_weeks}
-                    onChange={(e) =>
-                      setFormData({ ...formData, age_weeks: e.target.value })
-                    }
-                    placeholder="e.g. 24"
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                  />
-                </div>
+  <div className="grid grid-cols-2 gap-3">
+    <div>
+      <label className="mb-1 block text-xs font-medium text-slate-600">
+        Weeks
+      </label>
+      <input
+        type="number"
+        min="0"
+        step="1"
+        value={formData.age_weeks}
+        onChange={(e) =>
+          setFormData({ ...formData, age_weeks: e.target.value })
+        }
+        placeholder="e.g. 24"
+        className={`w-full h-[50px] rounded-xl border px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 ${
+          errors.age_weeks ? "border-red-300" : "border-slate-300"
+        }`}
+      />
+      {errors.age_weeks && (
+        <p className="mt-1 text-sm text-red-600">
+          {errors.age_weeks}
+        </p>
+      )}
+    </div>
+
+    <div>
+      <label className="mb-1 block text-xs font-medium text-slate-600">
+        Days (0–6)
+      </label>
+      <input
+        type="number"
+        min="0"
+        max="6"
+        step="1"
+        value={formData.age_days}
+        onChange={(e) =>
+          setFormData({ ...formData, age_days: e.target.value })
+        }
+        placeholder="0–6"
+        className={`w-full h-[50px] rounded-xl border px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 ${
+          errors.age_days ? "border-red-300" : "border-slate-300"
+        }`}
+      />
+      {errors.age_days && (
+        <p className="mt-1 text-sm text-red-600">
+          {errors.age_days}
+        </p>
+      )}
+    </div>
+  </div>
+</div>
               </div>
             </div>
 
