@@ -10,6 +10,8 @@ import { canEdit } from "@/lib/permissions/governance";
 
 import SaveButton from "@/components/ui/save-button";
 
+import { X } from "lucide-react";
+
 type Props = {
   record: any;
   flocks: any[];
@@ -47,7 +49,10 @@ export default function EditHealthForm({
     );
 
     if (!governanceResult.allowed) {
-      setGovernanceError(governanceResult.reason || "You cannot edit this record at this time.");
+      setGovernanceError(
+        governanceResult.reason ||
+          "You cannot edit this record at this time."
+      );
       return;
     }
   }, [user, profile, record]);
@@ -92,14 +97,27 @@ export default function EditHealthForm({
   if (governanceError) {
     return (
       <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
-        <h2 className="text-2xl font-bold mb-6">
-          Edit Health Record
-        </h2>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold">
+            Edit Health Record
+          </h2>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+            aria-label="Close"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
         <div className="rounded-xl bg-red-50 border border-red-200 p-4 mb-4">
           <p className="text-red-700 text-sm">
             {governanceError}
           </p>
         </div>
+
         <button
           onClick={onClose}
           className="w-full rounded-xl border border-slate-200 px-6 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all"
@@ -112,9 +130,20 @@ export default function EditHealthForm({
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
-      <h2 className="text-2xl font-bold mb-6">
-        Edit Health Record
-      </h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold">
+          Edit Health Record
+        </h2>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+          aria-label="Close"
+        >
+          <X size={20} />
+        </button>
+      </div>
 
       <form
         onSubmit={(e) => {
