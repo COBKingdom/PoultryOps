@@ -14,7 +14,13 @@ import {
   DateRangeSelection,
 } from "@/lib/date-ranges";
 
-import { ShoppingCart, TrendingUp, ClipboardList } from "lucide-react";
+import { getFarmFlocks } from "@/lib/flocks";
+
+import {
+  ShoppingCart,
+  TrendingUp,
+  ClipboardList,
+} from "lucide-react";
 
 import AppShell from "@/components/layout/app-shell";
 import OperationsKpiCard from "@/components/operations/operations-kpi-card";
@@ -36,62 +42,111 @@ export default function SalesPage() {
   } = useDashboard();
 
   const farm = data?.farm;
+  const farmId = farm?.id;
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Load all existing flocks for this farm.
+  //
+  // This is intentionally dynamic. When a new flock is created, it will
+  // automatically become available in the Sales form without any code change.
+  // ─────────────────────────────────────────────────────────────────────────
+  const [flocks, setFlocks] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadFlocks() {
+      if (!farmId) {
+        setFlocks([]);
+        return;
+      }
+
+      try {
+        const result = await getFarmFlocks(farmId);
+        setFlocks(result || []);
+      } catch (error) {
+        console.error("Failed to load farm flocks:", error);
+        setFlocks([]);
+      }
+    }
+
+    loadFlocks();
+  }, [farmId]);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Sales records
+  // ─────────────────────────────────────────────────────────────────────────
   const {
     records,
     refresh,
-  } = useSales(farm?.id);
+  } = useSales(farmId);
 
   const [searchQuery, setSearchQuery] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Date range filter
+  // ─────────────────────────────────────────────────────────────────────────
   const [dateRangeSelection, setDateRangeSelection] =
     useState<DateRangeSelection>(
       getDefaultDateRangeSelection()
     );
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Edit modal
+  // ─────────────────────────────────────────────────────────────────────────
   const [isEditModalOpen, setIsEditModalOpen] =
     useState(false);
 
   const [editingRecord, setEditingRecord] =
     useState<any | null>(null);
 
-  /*
-   * Filter records by selected date range.
-   *
-   * Sales use sale_date as their date column.
-   */
+  // ─────────────────────────────────────────────────────────────────────────
+  // Filter records by selected date range
+  // ─────────────────────────────────────────────────────────────────────────
   const dateFilteredRecords = useMemo(() => {
-    const { start, end } = dateRangeSelection.range;
+    const { start, end } =
+      dateRangeSelection.range;
 
     return records.filter((record) => {
       const saleDate = record.sale_date;
 
-      if (!saleDate) return false;
+      if (!saleDate) {
+        return false;
+      }
 
-      return saleDate >= start && saleDate <= end;
+      return (
+        saleDate >= start &&
+        saleDate <= end
+      );
     });
-  }, [records, dateRangeSelection]);
+  }, [
+    records,
+    dateRangeSelection,
+  ]);
 
-  /*
-   * Compute KPI values from the date-filtered records.
-   */
+  // ─────────────────────────────────────────────────────────────────────────
+  // KPI values use the selected date range
+  // ─────────────────────────────────────────────────────────────────────────
   const kpiValues = useMemo(() => {
-    const totalSales = dateFilteredRecords.reduce(
-      (sum, record) =>
-        sum + Number(record.quantity || 0),
-      0
-    );
+    const totalSales =
+      dateFilteredRecords.reduce(
+        (sum, record) =>
+          sum +
+          Number(record.quantity || 0),
+        0
+      );
 
-    const totalRevenue = dateFilteredRecords.reduce(
-      (sum, record) =>
-        sum + Number(record.total_amount || 0),
-      0
-    );
+    const totalRevenue =
+      dateFilteredRecords.reduce(
+        (sum, record) =>
+          sum +
+          Number(record.total_amount || 0),
+        0
+      );
 
-    const totalRecords = dateFilteredRecords.length;
+    const totalRecords =
+      dateFilteredRecords.length;
 
     return {
       totalSales,
@@ -100,15 +155,16 @@ export default function SalesPage() {
     };
   }, [dateFilteredRecords]);
 
-  /*
-   * Apply search after the date filter.
-   */
+  // ─────────────────────────────────────────────────────────────────────────
+  // Search within the selected date range
+  // ─────────────────────────────────────────────────────────────────────────
   const filteredRecords = useMemo(() => {
     if (!searchQuery.trim()) {
       return dateFilteredRecords;
     }
 
-    const query = searchQuery.toLowerCase();
+    const query =
+      searchQuery.toLowerCase();
 
     return dateFilteredRecords.filter(
       (record) =>
@@ -121,20 +177,31 @@ export default function SalesPage() {
         record.item_type
           ?.toLowerCase()
           .includes(query) ||
-        String(record.quantity).includes(query)
+        record.sale_category
+          ?.toLowerCase()
+          .includes(query) ||
+        String(record.quantity)
+          .includes(query)
     );
-  }, [dateFilteredRecords, searchQuery]);
+  }, [
+    dateFilteredRecords,
+    searchQuery,
+  ]);
 
-  /*
-   * Pagination.
-   */
-  const totalItems = filteredRecords.length;
+  // ─────────────────────────────────────────────────────────────────────────
+  // Pagination
+  // ─────────────────────────────────────────────────────────────────────────
+  const totalItems =
+    filteredRecords.length;
 
   const totalPages =
-    Math.ceil(totalItems / pageSize) || 1;
+    Math.ceil(
+      totalItems / pageSize
+    ) || 1;
 
   const startIndex =
-    (currentPage - 1) * pageSize;
+    (currentPage - 1) *
+    pageSize;
 
   const paginatedRecords =
     filteredRecords.slice(
@@ -142,22 +209,29 @@ export default function SalesPage() {
       startIndex + pageSize
     );
 
-  /*
-   * Reset pagination whenever the search or
-   * selected date range changes.
-   */
+  // Reset pagination whenever search
+  // or date range changes.
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, dateRangeSelection]);
+  }, [
+    searchQuery,
+    dateRangeSelection,
+  ]);
 
-  function handleEditRecord(record: any) {
-    const governanceResult = canEdit(
-      {
-        id: user?.id || "",
-        role: profile?.role || "",
-      },
-      record
-    );
+  // ─────────────────────────────────────────────────────────────────────────
+  // Edit governance
+  // ─────────────────────────────────────────────────────────────────────────
+  function handleEditRecord(
+    record: any
+  ) {
+    const governanceResult =
+      canEdit(
+        {
+          id: user?.id || "",
+          role: profile?.role || "",
+        },
+        record
+      );
 
     if (!governanceResult.allowed) {
       alert(
@@ -176,13 +250,18 @@ export default function SalesPage() {
     setEditingRecord(null);
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // KPI cards
+  // ─────────────────────────────────────────────────────────────────────────
   const kpiCards = (
     <>
       <OperationsKpiCard
         label="Total Sales"
         value={kpiValues.totalSales}
         sublabel="units"
-        icon={<ShoppingCart size={20} />}
+        icon={
+          <ShoppingCart size={20} />
+        }
         valueColor="blue"
         iconBg="blue"
       />
@@ -191,7 +270,9 @@ export default function SalesPage() {
         label="Revenue"
         value={kpiValues.totalRevenue}
         currency={farm?.currency}
-        icon={<TrendingUp size={20} />}
+        icon={
+          <TrendingUp size={20} />
+        }
         valueColor="green"
         iconBg="green"
       />
@@ -199,13 +280,18 @@ export default function SalesPage() {
       <OperationsKpiCard
         label="Records"
         value={kpiValues.totalRecords}
-        icon={<ClipboardList size={20} />}
+        icon={
+          <ClipboardList size={20} />
+        }
         valueColor="blue"
         iconBg="blue"
       />
     </>
   );
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Toolbar
+  // ─────────────────────────────────────────────────────────────────────────
   const toolbar = (
     <OperationsToolbar
       searchPlaceholder="Search sales records..."
@@ -214,6 +300,9 @@ export default function SalesPage() {
     />
   );
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Pagination
+  // ─────────────────────────────────────────────────────────────────────────
   const pagination = (
     <OperationsPagination
       current={currentPage}
@@ -224,6 +313,9 @@ export default function SalesPage() {
     />
   );
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Loading
+  // ─────────────────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <AppShell email={user?.email}>
@@ -234,6 +326,9 @@ export default function SalesPage() {
     );
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Page
+  // ─────────────────────────────────────────────────────────────────────────
   return (
     <AppShell email={user?.email}>
       <div className="space-y-6">
@@ -248,7 +343,7 @@ export default function SalesPage() {
           {kpiCards}
         </div>
 
-        {/* Filter / Search Toolbar */}
+        {/* Search + Date Filter */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
 
           <div className="flex-1">
@@ -272,14 +367,15 @@ export default function SalesPage() {
             <div className="lg:sticky lg:top-20 space-y-4">
 
               <AddSaleForm
-                farmId={farm?.id}
+                farmId={farmId}
+                flocks={flocks}
                 onSaved={refresh}
               />
 
             </div>
           </div>
 
-          {/* Records List */}
+          {/* Sales Records */}
           <div className="lg:col-span-8 lg:order-first">
 
             <SalesList
@@ -293,30 +389,29 @@ export default function SalesPage() {
         </div>
 
         {/* Pagination */}
-        {pagination && (
-          <div className="flex items-center justify-center pt-4">
-            {pagination}
-          </div>
-        )}
+        <div className="flex items-center justify-center pt-4">
+          {pagination}
+        </div>
 
         {/* Edit Modal */}
-        {isEditModalOpen && editingRecord && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        {isEditModalOpen &&
+          editingRecord && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
 
-            <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+              <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
 
-              <EditSaleForm
-                record={editingRecord}
-                onClose={handleCloseEditModal}
-                onSaved={refresh}
-                user={user}
-                profile={profile}
-              />
+                <EditSaleForm
+                  record={editingRecord}
+                  onClose={handleCloseEditModal}
+                  onSaved={refresh}
+                  user={user}
+                  profile={profile}
+                />
+
+              </div>
 
             </div>
-
-          </div>
-        )}
+          )}
 
       </div>
     </AppShell>

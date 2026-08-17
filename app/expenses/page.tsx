@@ -7,116 +7,201 @@ import { useExpenses } from "@/hooks/useExpenses";
 
 import { useEffect, useMemo, useState } from "react";
 
+import {
+  DateRangeSelection,
+  getDefaultDateRangeSelection,
+} from "@/lib/date-ranges";
+
 import { canEdit } from "@/lib/permissions/governance";
 
-import { ReceiptText, Wallet, ClipboardList } from "lucide-react";
+import {
+  ReceiptText,
+  Wallet,
+  ClipboardList,
+} from "lucide-react";
 
 import AppShell from "@/components/layout/app-shell";
 import OperationsKpiCard from "@/components/operations/operations-kpi-card";
 import OperationsToolbar from "@/components/operations/operations-toolbar";
 import OperationsPagination from "@/components/operations/operations-pagination";
 
+import ReportFilter from "@/components/reports/report-filter";
+
 import AddExpenseForm from "@/components/expenses/add-expense-form";
 import ExpenseList from "@/components/expenses/expense-list";
 import EditExpenseForm from "@/components/expenses/edit-expense-form";
 
 export default function ExpensesPage() {
-  const { user, profile } =
-    useAuth();
+  const { user, profile } = useAuth();
 
-  const { farm, loading: farmLoading } = useCurrentFarm();
+  const {
+    farm,
+    loading: farmLoading,
+  } = useCurrentFarm();
 
   const {
     records,
     refresh,
-  } = useExpenses(
-    farm?.id
-  );
+  } = useExpenses(farm?.id);
 
   const [searchQuery, setSearchQuery] =
     useState("");
 
+  const [dateRangeSelection, setDateRangeSelection] =
+    useState<DateRangeSelection>(
+      getDefaultDateRangeSelection()
+    );
+
   const [currentPage, setCurrentPage] =
     useState(1);
+
   const pageSize = 10;
 
   const [isEditModalOpen, setIsEditModalOpen] =
     useState(false);
+
   const [editingRecord, setEditingRecord] =
     useState<any | null>(null);
 
-  // ── Compute KPI values ────────────────────────────────────────────────────
-  const today =
-    new Date()
-      .toISOString()
-      .split("T")[0];
+  /*
+   * ---------------------------------------------------------
+   * DATE FILTER
+   * ---------------------------------------------------------
+   */
+
+  const dateRange =
+    dateRangeSelection.range;
+
+  const dateFilteredRecords = useMemo(() => {
+    return records.filter((record) => {
+      const recordDate =
+        record.expense_date;
+
+      if (!recordDate) return false;
+
+      return (
+        recordDate >= dateRange.start &&
+        recordDate <= dateRange.end
+      );
+    });
+  }, [
+    records,
+    dateRange,
+  ]);
+
+  /*
+   * ---------------------------------------------------------
+   * KPI VALUES
+   * ---------------------------------------------------------
+   */
 
   const kpiValues = useMemo(() => {
-    const todayExpenses =
-      records
-        .filter(
-          (record) =>
-            record.expense_date ===
-            today
-        )
-        .reduce(
-          (sum, record) =>
-            sum +
-            Number(record.amount),
-          0
-        );
-
     const totalExpenses =
-      records.reduce(
+      dateFilteredRecords.reduce(
         (sum, record) =>
           sum +
-          Number(record.amount),
+          Number(record.amount || 0),
         0
       );
 
     const transactionCount =
-      records.length;
+      dateFilteredRecords.length;
 
-    return { todayExpenses, totalExpenses, transactionCount };
-  }, [records, today]);
+    return {
+      totalExpenses,
+      transactionCount,
+    };
+  }, [
+    dateFilteredRecords,
+  ]);
 
-  // ── Filter records by search query ────────────────────────────────────────
+  /*
+   * ---------------------------------------------------------
+   * SEARCH FILTER
+   * ---------------------------------------------------------
+   */
+
   const filteredRecords = useMemo(() => {
-    if (!searchQuery.trim()) return records;
+    if (!searchQuery.trim()) {
+      return dateFilteredRecords;
+    }
 
-    const query = searchQuery.toLowerCase();
+    const query =
+      searchQuery.toLowerCase();
 
-    return records.filter(
+    return dateFilteredRecords.filter(
       (record) =>
-        record.description?.toLowerCase().includes(query) ||
-        record.category?.toLowerCase().includes(query) ||
-        String(record.amount).includes(query)
+        record.description
+          ?.toLowerCase()
+          .includes(query) ||
+        record.category
+          ?.toLowerCase()
+          .includes(query) ||
+        String(record.amount)
+          .includes(query)
     );
-  }, [records, searchQuery]);
+  }, [
+    dateFilteredRecords,
+    searchQuery,
+  ]);
 
-  // ── Paginate filtered records ─────────────────────────────────────────────
-  const totalItems = filteredRecords.length;
-  const totalPages = Math.ceil(totalItems / pageSize) || 1;
-  const startIndex = (currentPage - 1) * pageSize;
-  const paginatedRecords = filteredRecords.slice(
-    startIndex,
-    startIndex + pageSize
-  );
+  /*
+   * ---------------------------------------------------------
+   * PAGINATION
+   * ---------------------------------------------------------
+   */
 
-  // Reset to page 1 when search query changes
+  const totalItems =
+    filteredRecords.length;
+
+  const totalPages =
+    Math.ceil(
+      totalItems / pageSize
+    ) || 1;
+
+  const startIndex =
+    (currentPage - 1) *
+    pageSize;
+
+  const paginatedRecords =
+    filteredRecords.slice(
+      startIndex,
+      startIndex + pageSize
+    );
+
+  /*
+   * Reset pagination whenever
+   * search or date range changes.
+   */
+
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery]);
+  }, [
+    searchQuery,
+    dateRangeSelection,
+  ]);
+
+  /*
+   * ---------------------------------------------------------
+   * EDIT
+   * ---------------------------------------------------------
+   */
 
   function handleEditRecord(record: any) {
-    // Check Edit Governance
-    const governanceResult = canEdit(
-      { id: user?.id || "", role: profile?.role || "" },
-      record
-    );
+    const governanceResult =
+      canEdit(
+        {
+          id: user?.id || "",
+          role: profile?.role || "",
+        },
+        record
+      );
 
     if (!governanceResult.allowed) {
-      alert(governanceResult.reason || "You cannot edit this record at this time.");
+      alert(
+        governanceResult.reason ||
+          "You cannot edit this record at this time."
+      );
       return;
     }
 
@@ -129,25 +214,24 @@ export default function ExpensesPage() {
     setEditingRecord(null);
   }
 
+  /*
+   * ---------------------------------------------------------
+   * KPI CARDS
+   * ---------------------------------------------------------
+   */
+
   const kpiCards = (
     <>
       <OperationsKpiCard
-        label="Today"
-        value={kpiValues.todayExpenses}
+        label="Total Expenses"
+        value={kpiValues.totalExpenses}
         currency={farm?.currency}
         sublabel="expenses"
         icon={<ReceiptText size={20} />}
         valueColor="red"
         iconBg="red"
       />
-      <OperationsKpiCard
-        label="Total Expenses"
-        value={kpiValues.totalExpenses}
-        currency={farm?.currency}
-        icon={<Wallet size={20} />}
-        valueColor="red"
-        iconBg="red"
-      />
+
       <OperationsKpiCard
         label="Transactions"
         value={kpiValues.transactionCount}
@@ -158,13 +242,30 @@ export default function ExpensesPage() {
     </>
   );
 
+  /*
+   * ---------------------------------------------------------
+   * TOOLBAR
+   * ---------------------------------------------------------
+   */
+
   const toolbar = (
     <OperationsToolbar
       searchPlaceholder="Search expense records..."
       searchValue={searchQuery}
       onSearchChange={setSearchQuery}
-    />
+    >
+      <ReportFilter
+        value={dateRangeSelection}
+        onChange={setDateRangeSelection}
+      />
+    </OperationsToolbar>
   );
+
+  /*
+   * ---------------------------------------------------------
+   * PAGINATION
+   * ---------------------------------------------------------
+   */
 
   const pagination = (
     <OperationsPagination
@@ -176,6 +277,12 @@ export default function ExpensesPage() {
     />
   );
 
+  /*
+   * ---------------------------------------------------------
+   * LOADING
+   * ---------------------------------------------------------
+   */
+
   if (farmLoading) {
     return (
       <AppShell email={user?.email}>
@@ -186,72 +293,95 @@ export default function ExpensesPage() {
     );
   }
 
+  /*
+   * ---------------------------------------------------------
+   * PAGE
+   * ---------------------------------------------------------
+   */
+
   return (
     <AppShell
       email={user?.email}
     >
       <div className="space-y-6">
 
-        {/* ── Page Title ─────────────────────────────────────────────────── */}
-        <h1 className="text-2xl font-bold text-slate-900">Expenses Management</h1>
+        {/* Page Title */}
 
-        {/* ── KPI cards section ─────────────────────────────────────────── */}
-        {kpiCards && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {kpiCards}
-          </div>
-        )}
+        <h1 className="text-2xl font-bold text-slate-900">
+          Expenses Management
+        </h1>
 
-        {/* ── Filter / Search toolbar ───────────────────────────────────── */}
-        {toolbar && (
-          <div className="flex items-center justify-between">
-            {toolbar}
-          </div>
-        )}
+        {/* KPI Cards */}
 
-        {/* ── Main content: Quick Entry + Records list ─────────────────── */}
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          {kpiCards}
+        </div>
+
+        {/* Filter / Search Toolbar */}
+
+        <div className="flex items-center justify-between">
+          {toolbar}
+        </div>
+
+        {/* Main content */}
+
         <div className="grid lg:grid-cols-12 gap-6 items-start">
-          {/* Quick Entry — first on mobile, right column on desktop */}
+
+          {/* Quick Entry */}
+
           <div className="lg:col-span-4 lg:order-last">
             <div className="lg:sticky lg:top-20 space-y-4">
+
               <AddExpenseForm
                 farmId={farm?.id}
                 onSaved={refresh}
               />
+
             </div>
           </div>
 
-          {/* Records list — second on mobile, left column on desktop */}
+          {/* Records List */}
+
           <div className="lg:col-span-8 lg:order-first">
+
             <ExpenseList
               records={paginatedRecords}
               onEdit={handleEditRecord}
               currency={farm?.currency}
             />
+
           </div>
+
         </div>
 
-        {/* ── Pagination area ───────────────────────────────────────────── */}
-        {pagination && (
-          <div className="flex items-center justify-center pt-4">
-            {pagination}
-          </div>
-        )}
+        {/* Pagination */}
 
-        {/* ── Edit Modal ───────────────────────────────────────────────── */}
-        {isEditModalOpen && editingRecord && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-              <EditExpenseForm
-                record={editingRecord}
-                onClose={handleCloseEditModal}
-                onSaved={refresh}
-                user={user}
-                profile={profile}
-              />
+        <div className="flex items-center justify-center pt-4">
+          {pagination}
+        </div>
+
+        {/* Edit Modal */}
+
+        {isEditModalOpen &&
+          editingRecord && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+
+              <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+
+                <EditExpenseForm
+                  record={editingRecord}
+                  onClose={
+                    handleCloseEditModal
+                  }
+                  onSaved={refresh}
+                  user={user}
+                  profile={profile}
+                />
+
+              </div>
+
             </div>
-          </div>
-        )}
+          )}
 
       </div>
     </AppShell>
