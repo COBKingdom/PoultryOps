@@ -4,9 +4,6 @@ import {
   getTotalMortality,
   getFlockMortality,
 } from "@/lib/mortality";
-import {
-  getTotalActiveIsolatedBirds,
-} from "@/lib/isolation";
 
 export async function createFlock(
   flock: any
@@ -16,7 +13,8 @@ export async function createFlock(
       .from("flocks")
       .insert({
         ...flock,
-        updated_at: new Date().toISOString(),
+        updated_at:
+          new Date().toISOString(),
       })
       .select()
       .single();
@@ -35,7 +33,8 @@ export async function updateFlock(
       .from("flocks")
       .update({
         ...flock,
-        updated_at: new Date().toISOString(),
+        updated_at:
+          new Date().toISOString(),
       })
       .eq("id", id)
       .select()
@@ -53,8 +52,10 @@ export async function archiveFlock(
     await supabase
       .from("flocks")
       .update({
-        archived_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        archived_at:
+          new Date().toISOString(),
+        updated_at:
+          new Date().toISOString(),
       })
       .eq("id", id)
       .select()
@@ -75,13 +76,18 @@ export async function getFlocks(
     .eq("farm_id", farmId);
 
   if (!includeArchived) {
-    query = query.is("archived_at", null);
+    query = query.is(
+      "archived_at",
+      null
+    );
   }
 
   const { data, error } =
     await query.order(
       "created_at",
-      { ascending: false }
+      {
+        ascending: false,
+      }
     );
 
   if (error) throw error;
@@ -103,31 +109,41 @@ export async function getTotalBirds(
   return (
     data?.reduce(
       (sum, flock) =>
-        sum + Number(flock.quantity || 0),
+        sum +
+        Number(
+          flock.quantity || 0
+        ),
       0
     ) || 0
   );
 }
 
 /**
- * Shared source of truth for the operational bird figure.
+ * Shared source of truth for the operational
+ * farm bird figure.
  *
  * Available Birds =
  *
  *   Starting Birds
  *   − Total Mortality
  *   − Birds Sold
- *   − Active Isolated Birds
  *
- * Birds placed into active isolation are still part of
- * the flock's recorded quantity, but they are temporarily
- * unavailable for normal farm operations.
+ * IMPORTANT:
  *
- * Therefore isolation must NOT modify flock.quantity.
- * Instead, active isolated birds are deducted here.
+ * Birds in isolation are still alive and still
+ * belong to their original flock.
  *
- * Used by Dashboard, Reports, Analytics and Flocks so
- * every surface shows the same operational calculation.
+ * Therefore isolation does NOT reduce the farm's
+ * Available Birds figure.
+ *
+ * Isolation is tracked separately as an operational
+ * status/audit figure.
+ *
+ * When a bird dies in isolation, recordIsolationDeath()
+ * creates a normal mortality record. That mortality
+ * then permanently reduces Available Birds.
+ *
+ * Used by Dashboard, Reports, Analytics and Flocks.
  */
 export async function getAvailableBirds(
   farmId: string
@@ -136,20 +152,17 @@ export async function getAvailableBirds(
     startingBirds,
     mortality,
     birdsSold,
-    isolatedBirds,
   ] = await Promise.all([
     getTotalBirds(farmId),
     getTotalMortality(farmId),
     getTotalBirdsSold(farmId),
-    getTotalActiveIsolatedBirds(farmId),
   ]);
 
   return Math.max(
     0,
     startingBirds -
       mortality -
-      birdsSold -
-      isolatedBirds
+      birdsSold
   );
 }
 
@@ -203,23 +216,27 @@ export async function getFlockById(
 }
 
 /**
- * Available birds for a single flock:
+ * Available birds for a single flock.
+ *
+ * For an individual flock, "available" means
+ * birds currently available within that flock
+ * for normal operations.
+ *
+ * Therefore active isolated birds are excluded
+ * from this flock-level figure.
  *
  * Starting Birds
  * − Flock Mortality
  * − Birds Sold
  * − Active Isolated Birds
- *
- * Note:
- * Birds sold is currently calculated at farm level
- * because the sales table does not appear to expose
- * flock_id in the existing sales helper.
  */
 export async function getFlockAvailableBirds(
   flockId: string
 ) {
   const flock =
-    await getFlockById(flockId);
+    await getFlockById(
+      flockId
+    );
 
   if (!flock) return 0;
 
@@ -228,14 +245,22 @@ export async function getFlockAvailableBirds(
     birdsSold,
     isolatedBirds,
   ] = await Promise.all([
-    getFlockMortality(flockId),
-    getTotalBirdsSold(flock.farm_id),
-    getIsolatedBirdCountForFlock(flockId),
+    getFlockMortality(
+      flockId
+    ),
+    getTotalBirdsSold(
+      flock.farm_id
+    ),
+    getIsolatedBirdCountForFlock(
+      flockId
+    ),
   ]);
 
   return Math.max(
     0,
-    Number(flock.quantity || 0) -
+    Number(
+      flock.quantity || 0
+    ) -
       mortality -
       birdsSold -
       isolatedBirds
@@ -245,6 +270,9 @@ export async function getFlockAvailableBirds(
 /**
  * Returns the currently active isolated birds
  * for one specific flock.
+ *
+ * Deceased birds are excluded because their death
+ * has already been recorded in Mortality.
  */
 async function getIsolatedBirdCountForFlock(
   flockId: string
@@ -253,10 +281,20 @@ async function getIsolatedBirdCountForFlock(
     await supabase
       .from("isolation_records")
       .select(
-        "quantity, returned_quantity, deceased_quantity"
+        `
+          quantity,
+          returned_quantity,
+          deceased_quantity
+        `
       )
-      .eq("flock_id", flockId)
-      .eq("status", "active");
+      .eq(
+        "flock_id",
+        flockId
+      )
+      .eq(
+        "status",
+        "active"
+      );
 
   if (error) throw error;
 
@@ -266,12 +304,16 @@ async function getIsolatedBirdCountForFlock(
         sum +
         Math.max(
           0,
-          Number(record.quantity || 0) -
+          Number(
+            record.quantity || 0
+          ) -
             Number(
-              record.returned_quantity || 0
+              record.returned_quantity ||
+                0
             ) -
             Number(
-              record.deceased_quantity || 0
+              record.deceased_quantity ||
+                0
             )
         ),
       0
