@@ -16,6 +16,7 @@ import {
   Package,
   AlertTriangle,
   HeartPulse,
+  Activity,
   Receipt,
   ShoppingCart,
   BarChart3,
@@ -38,23 +39,26 @@ export default function MobileSidebar({
 }: Props) {
   const pathname =
     usePathname();
+
   const router =
     useRouter();
 
   const { profile } =
     useAuth();
-  const { can } = usePermissions();
+
+  const { can } =
+    usePermissions();
 
   const isOwner =
     profile?.role === "owner";
 
   async function handleSignOut() {
     onClose();
+
     await supabase.auth.signOut();
+
     router.push("/login");
   }
-
-  if (!open) return null;
 
   const operations = [
     {
@@ -86,6 +90,12 @@ export default function MobileSidebar({
       href: "/mortality",
       icon: AlertTriangle,
       permission: PERMISSIONS.MORTALITY_VIEW,
+    },
+    {
+      name: "Isolation",
+      href: "/isolation",
+      icon: Activity,
+      permission: PERMISSIONS.ISOLATION_VIEW,
     },
     {
       name: "Health",
@@ -143,6 +153,8 @@ export default function MobileSidebar({
     },
   ];
 
+  if (!open) return null;
+
   return (
     <>
       <div
@@ -164,6 +176,8 @@ export default function MobileSidebar({
           flex-col
         "
       >
+
+        {/* Header */}
         <div className="p-5 border-b border-slate-800">
 
           <div className="flex items-center justify-between">
@@ -186,6 +200,7 @@ export default function MobileSidebar({
               </div>
 
               <div>
+
                 <h2 className="font-bold text-lg">
                   PoultryOps
                 </h2>
@@ -193,6 +208,7 @@ export default function MobileSidebar({
                 <p className="text-xs text-slate-400">
                   Poultry Farm Management
                 </p>
+
               </div>
 
             </div>
@@ -212,61 +228,82 @@ export default function MobileSidebar({
 
         </div>
 
+        {/* Navigation */}
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
 
-          {isOwner && can(PERMISSIONS.DASHBOARD_VIEW) && (
-            <MenuItem
-              pathname={pathname}
-              href="/dashboard"
-              name="Dashboard"
-              icon={LayoutDashboard}
-              onClose={onClose}
-            />
-          )}
+          {isOwner &&
+            can(PERMISSIONS.DASHBOARD_VIEW) && (
+              <MenuItem
+                pathname={pathname}
+                href="/dashboard"
+                name="Dashboard"
+                icon={LayoutDashboard}
+                onClose={onClose}
+              />
+            )}
 
           <MenuSection
             title="OPERATIONS"
-            items={operations.filter(item => can(item.permission))}
+            items={operations.filter(
+              (item) =>
+                can(item.permission)
+            )}
             pathname={pathname}
             onClose={onClose}
           />
 
           <MenuSection
             title="FINANCE"
-            items={finance.filter(item => can(item.permission))}
+            items={finance.filter(
+              (item) =>
+                can(item.permission)
+            )}
             pathname={pathname}
             onClose={onClose}
           />
 
-          {isOwner && can(PERMISSIONS.REPORTS_VIEW) && (
-            <MenuSection
-              title="INSIGHTS"
-              items={insights.filter(item => can(item.permission))}
-              pathname={pathname}
-              onClose={onClose}
-            />
-          )}
+          {isOwner &&
+            can(PERMISSIONS.REPORTS_VIEW) && (
+              <MenuSection
+                title="INSIGHTS"
+                items={insights.filter(
+                  (item) =>
+                    can(item.permission)
+                )}
+                pathname={pathname}
+                onClose={onClose}
+              />
+            )}
 
-          {isOwner && can(PERMISSIONS.MIGRATION_VIEW) && (
-            <MenuSection
-              title="TOOLS"
-              items={tools.filter(item => can(item.permission))}
-              pathname={pathname}
-              onClose={onClose}
-            />
-          )}
+          {isOwner &&
+            can(PERMISSIONS.MIGRATION_VIEW) && (
+              <MenuSection
+                title="TOOLS"
+                items={tools.filter(
+                  (item) =>
+                    can(item.permission)
+                )}
+                pathname={pathname}
+                onClose={onClose}
+              />
+            )}
 
-          {isOwner && can(PERMISSIONS.TEAM_VIEW) && (
-            <MenuSection
-              title="TEAM"
-              items={team.filter(item => can(item.permission))}
-              pathname={pathname}
-              onClose={onClose}
-            />
-          )}
+          {isOwner &&
+            can(PERMISSIONS.TEAM_VIEW) && (
+              <MenuSection
+                title="TEAM"
+                items={team.filter(
+                  (item) =>
+                    can(item.permission)
+                )}
+                pathname={pathname}
+                onClose={onClose}
+              />
+            )}
 
         </div>
 
+        {/* Bottom navigation */}
         <div className="p-4 border-t border-slate-800 space-y-1">
 
           <MenuItem
@@ -277,15 +314,16 @@ export default function MobileSidebar({
             onClose={onClose}
           />
 
-          {isOwner && can(PERMISSIONS.SETTINGS_VIEW) && (
-            <MenuItem
-              pathname={pathname}
-              href="/settings"
-              name="Settings"
-              icon={Settings}
-              onClose={onClose}
-            />
-          )}
+          {isOwner &&
+            can(PERMISSIONS.SETTINGS_VIEW) && (
+              <MenuItem
+                pathname={pathname}
+                href="/settings"
+                name="Settings"
+                icon={Settings}
+                onClose={onClose}
+              />
+            )}
 
           <button
             onClick={handleSignOut}
@@ -302,8 +340,13 @@ export default function MobileSidebar({
               transition-all
             "
           >
+
             <LogOut size={18} />
-            <span>Sign Out</span>
+
+            <span>
+              Sign Out
+            </span>
+
           </button>
 
         </div>
@@ -361,7 +404,13 @@ function MenuItem({
   onClose,
 }: any) {
   const active =
-    pathname === href || (href !== "/" && pathname.startsWith(href + "/"));
+    pathname === href ||
+    (
+      href !== "/" &&
+      pathname.startsWith(
+        href + "/"
+      )
+    );
 
   return (
     <Link
@@ -382,8 +431,13 @@ function MenuItem({
         }
       `}
     >
+
       <Icon size={18} />
-      <span>{name}</span>
+
+      <span>
+        {name}
+      </span>
+
     </Link>
   );
 }

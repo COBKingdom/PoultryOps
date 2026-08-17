@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
+
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/lib/permissions";
 import { supabase } from "@/lib/supabase";
@@ -16,6 +17,7 @@ import {
   Package,
   AlertTriangle,
   HeartPulse,
+  Activity,
   Receipt,
   ShoppingCart,
   BarChart3,
@@ -28,13 +30,13 @@ import {
 } from "lucide-react";
 
 export default function Sidebar() {
-  const pathname =
-    usePathname();
+  const pathname = usePathname();
 
-  const router =
-    useRouter();
-    const { profile } = useAuth();
-    const { can, loading } = usePermissions();
+  const router = useRouter();
+
+  const { profile } = useAuth();
+
+  const { can, loading } = usePermissions();
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -74,6 +76,12 @@ export default function Sidebar() {
       permission: PERMISSIONS.MORTALITY_VIEW,
     },
     {
+      name: "Isolation",
+      href: "/isolation",
+      icon: Activity,
+      permission: PERMISSIONS.ISOLATION_VIEW,
+    },
+    {
       name: "Health",
       href: "/health",
       icon: HeartPulse,
@@ -96,42 +104,43 @@ export default function Sidebar() {
     },
   ];
 
-const insights = [
-  {
-    name: "Reports",
-    href: "/reports",
-    icon: BarChart3,
-    permission: PERMISSIONS.REPORTS_VIEW,
-  },
-  {
-    name: "Analytics",
-    href: "/analytics",
-    icon: ChartColumn,
-    permission: PERMISSIONS.ANALYTICS_VIEW,
-  },
-];
+  const insights = [
+    {
+      name: "Reports",
+      href: "/reports",
+      icon: BarChart3,
+      permission: PERMISSIONS.REPORTS_VIEW,
+    },
+    {
+      name: "Analytics",
+      href: "/analytics",
+      icon: ChartColumn,
+      permission: PERMISSIONS.ANALYTICS_VIEW,
+    },
+  ];
 
-const tools = [
-  {
-    name: "Migration",
-    href: "/migration",
-    icon: Upload,
-    permission: PERMISSIONS.MIGRATION_VIEW,
-  },
-];
+  const tools = [
+    {
+      name: "Migration",
+      href: "/migration",
+      icon: Upload,
+      permission: PERMISSIONS.MIGRATION_VIEW,
+    },
+  ];
 
-const team = [
-  {
-    name: "Team",
-    href: "/team",
-    icon: Users,
-    permission: PERMISSIONS.TEAM_VIEW,
-  },
-];
+  const team = [
+    {
+      name: "Team",
+      href: "/team",
+      icon: Users,
+      permission: PERMISSIONS.TEAM_VIEW,
+    },
+  ];
 
   return (
     <aside className="w-72 bg-slate-950 text-white min-h-screen flex flex-col border-r border-slate-800">
 
+      {/* Brand */}
       <div className="p-6 border-b border-slate-800">
 
         <div className="flex items-center gap-3">
@@ -156,55 +165,67 @@ const team = [
 
       </div>
 
+      {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-4 space-y-6">
 
-         {can(PERMISSIONS.DASHBOARD_VIEW) && (
-        <MenuItem
-          pathname={pathname}
-          name="Dashboard"
-          href="/dashboard"
-          icon={LayoutDashboard}
+        {can(PERMISSIONS.DASHBOARD_VIEW) && (
+          <MenuItem
+            pathname={pathname}
+            name="Dashboard"
+            href="/dashboard"
+            icon={LayoutDashboard}
           />
         )}
 
         <MenuSection
           title="OPERATIONS"
-          items={operations.filter(item => can(item.permission))}
+          items={operations.filter((item) =>
+            can(item.permission)
+          )}
           pathname={pathname}
         />
 
         <MenuSection
           title="FINANCE"
-          items={finance.filter(item => can(item.permission))}
+          items={finance.filter((item) =>
+            can(item.permission)
+          )}
           pathname={pathname}
         />
 
-      {can(PERMISSIONS.REPORTS_VIEW) && (
-      <MenuSection
-      title="INSIGHTS"
-      items={insights.filter(item => can(item.permission))}
-      pathname={pathname}
-     />
-     )}
+        {can(PERMISSIONS.REPORTS_VIEW) && (
+          <MenuSection
+            title="INSIGHTS"
+            items={insights.filter((item) =>
+              can(item.permission)
+            )}
+            pathname={pathname}
+          />
+        )}
 
-     {can(PERMISSIONS.MIGRATION_VIEW) && (
-      <MenuSection
-      title="TOOLS"
-      items={tools.filter(item => can(item.permission))}
-      pathname={pathname}
-     />
-     )}
+        {can(PERMISSIONS.MIGRATION_VIEW) && (
+          <MenuSection
+            title="TOOLS"
+            items={tools.filter((item) =>
+              can(item.permission)
+            )}
+            pathname={pathname}
+          />
+        )}
 
-     {can(PERMISSIONS.TEAM_VIEW) && (
-      <MenuSection
-      title="TEAM"
-      items={team.filter(item => can(item.permission))}
-      pathname={pathname}
-     />
-     )}
+        {can(PERMISSIONS.TEAM_VIEW) && (
+          <MenuSection
+            title="TEAM"
+            items={team.filter((item) =>
+              can(item.permission)
+            )}
+            pathname={pathname}
+          />
+        )}
 
       </nav>
 
+      {/* Bottom Navigation */}
       <div className="border-t border-slate-800 p-4 space-y-1">
 
         <MenuItem
@@ -238,6 +259,7 @@ const team = [
             transition-all
           "
         >
+
           <LogOut size={18} />
 
           <span>
@@ -273,7 +295,9 @@ function MenuSection({
   items: Array<{
     name: string;
     href: string;
-    icon: React.ComponentType<{ size: number }>;
+    icon: React.ComponentType<{
+      size: number;
+    }>;
     permission?: string;
   }>;
   pathname: string;
@@ -287,15 +311,13 @@ function MenuSection({
 
       <div className="space-y-1">
 
-        {items.map(
-          (item: any) => (
-            <MenuItem
-              key={item.href}
-              pathname={pathname}
-              {...item}
-            />
-          )
-        )}
+        {items.map((item) => (
+          <MenuItem
+            key={item.href}
+            pathname={pathname}
+            {...item}
+          />
+        ))}
 
       </div>
 
@@ -312,10 +334,16 @@ function MenuItem({
   pathname: string;
   href: string;
   name: string;
-  icon: React.ComponentType<{ size: number }>;
+  icon: React.ComponentType<{
+    size: number;
+  }>;
 }) {
   const active =
-    pathname === href || (href !== "/" && pathname.startsWith(href + "/"));
+    pathname === href ||
+    (
+      href !== "/" &&
+      pathname.startsWith(href + "/")
+    );
 
   return (
     <Link
@@ -332,6 +360,7 @@ function MenuItem({
         }
       `}
     >
+
       <Icon size={18} />
 
       <span>

@@ -13,11 +13,13 @@ export type DateRangePreset =
   | "this_week"
   | "this_month"
   | "last_month"
+  | "any_day"
   | "custom";
 
 export interface DateRange {
   /** Inclusive start date (YYYY-MM-DD) */
   start: string;
+
   /** Inclusive end date (YYYY-MM-DD) */
   end: string;
 }
@@ -34,6 +36,7 @@ function toDateString(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
+
   return `${year}-${month}-${day}`;
 }
 
@@ -42,9 +45,11 @@ function toDateString(date: Date): string {
  */
 function startOfWeek(date: Date): Date {
   const d = new Date(date);
-  const day = d.getDay(); // 0 = Sunday
+  const day = d.getDay();
+
   d.setDate(d.getDate() - day);
   d.setHours(0, 0, 0, 0);
+
   return d;
 }
 
@@ -54,8 +59,10 @@ function startOfWeek(date: Date): Date {
 function endOfWeek(date: Date): Date {
   const start = startOfWeek(date);
   const end = new Date(start);
+
   end.setDate(start.getDate() + 6);
   end.setHours(23, 59, 59, 999);
+
   return end;
 }
 
@@ -63,32 +70,59 @@ function endOfWeek(date: Date): Date {
  * Returns the start of the month for the given date.
  */
 function startOfMonth(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), 1);
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    1
+  );
 }
 
 /**
  * Returns the end of the month for the given date.
  */
 function endOfMonth(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
+  return new Date(
+    date.getFullYear(),
+    date.getMonth() + 1,
+    0,
+    23,
+    59,
+    59,
+    999
+  );
 }
 
 /**
  * Returns the start of last month.
  */
 function startOfLastMonth(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth() - 1, 1);
+  return new Date(
+    date.getFullYear(),
+    date.getMonth() - 1,
+    1
+  );
 }
 
 /**
  * Returns the end of last month.
  */
 function endOfLastMonth(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), 0, 23, 59, 59, 999);
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    0,
+    23,
+    59,
+    59,
+    999
+  );
 }
 
 /**
  * Computes a DateRange for the given preset.
+ *
+ * For "any_day", the caller should supply the selected date
+ * as customStart. The same date is then used as both start and end.
  *
  * For "custom", the caller must supply valid start/end strings.
  */
@@ -102,7 +136,11 @@ export function getDateRange(
   switch (preset) {
     case "today": {
       const today = toDateString(now);
-      return { start: today, end: today };
+
+      return {
+        start: today,
+        end: today,
+      };
     }
 
     case "this_week": {
@@ -126,18 +164,45 @@ export function getDateRange(
       };
     }
 
+    case "any_day": {
+      if (!customStart) {
+        const today = toDateString(now);
+
+        return {
+          start: today,
+          end: today,
+        };
+      }
+
+      return {
+        start: customStart,
+        end: customStart,
+      };
+    }
+
     case "custom": {
       if (!customStart || !customEnd) {
-        // Fallback to today if custom dates are missing
         const today = toDateString(now);
-        return { start: today, end: today };
+
+        return {
+          start: today,
+          end: today,
+        };
       }
-      return { start: customStart, end: customEnd };
+
+      return {
+        start: customStart,
+        end: customEnd,
+      };
     }
 
     default: {
       const today = toDateString(now);
-      return { start: today, end: today };
+
+      return {
+        start: today,
+        end: today,
+      };
     }
   }
 }
@@ -155,18 +220,28 @@ export function getDefaultDateRangeSelection(): DateRangeSelection {
 /**
  * Human-readable label for a preset.
  */
-export function getPresetLabel(preset: DateRangePreset): string {
+export function getPresetLabel(
+  preset: DateRangePreset
+): string {
   switch (preset) {
     case "today":
       return "Today";
+
     case "this_week":
       return "This Week";
+
     case "this_month":
       return "This Month";
+
     case "last_month":
       return "Last Month";
+
+    case "any_day":
+      return "Any Day";
+
     case "custom":
-      return "Custom";
+      return "Custom Range";
+
     default:
       return "Today";
   }
@@ -175,13 +250,24 @@ export function getPresetLabel(preset: DateRangePreset): string {
 /**
  * Formats a DateRange as a human-readable string.
  */
-export function formatDateRange(range: DateRange): string {
+export function formatDateRange(
+  range: DateRange
+): string {
   const opts: Intl.DateTimeFormatOptions = {
     year: "numeric",
     month: "short",
     day: "numeric",
   };
-  const start = new Date(range.start + "T00:00:00").toLocaleDateString("en-US", opts);
-  const end = new Date(range.end + "T00:00:00").toLocaleDateString("en-US", opts);
-  return range.start === range.end ? start : `${start} – ${end}`;
+
+  const start = new Date(
+    range.start + "T00:00:00"
+  ).toLocaleDateString("en-US", opts);
+
+  const end = new Date(
+    range.end + "T00:00:00"
+  ).toLocaleDateString("en-US", opts);
+
+  return range.start === range.end
+    ? start
+    : `${start} – ${end}`;
 }

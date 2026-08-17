@@ -59,6 +59,12 @@ export const PERMISSIONS = {
   MORTALITY_EDIT: "mortality.edit",
   MORTALITY_DELETE: "mortality.delete",
 
+  // Isolation
+  ISOLATION_VIEW: "isolation.view",
+  ISOLATION_CREATE: "isolation.create",
+  ISOLATION_EDIT: "isolation.edit",
+  ISOLATION_DELETE: "isolation.delete",
+
   // Sales
   SALES_VIEW: "sales.view",
   SALES_CREATE: "sales.create",
@@ -109,12 +115,14 @@ export const PERMISSIONS = {
 /**
  * Type definition for permission codes
  */
-export type PermissionCode = typeof PERMISSIONS[keyof typeof PERMISSIONS];
+export type PermissionCode =
+  typeof PERMISSIONS[keyof typeof PERMISSIONS];
 
 /**
  * Array of all permission codes
  */
-export const ALL_PERMISSIONS = Object.values(PERMISSIONS);
+export const ALL_PERMISSIONS =
+  Object.values(PERMISSIONS);
 
 /**
  * Permission categories
@@ -127,6 +135,7 @@ export const PERMISSION_CATEGORIES = [
   "Feed Inventory",
   "Health",
   "Mortality",
+  "Isolation",
   "Sales",
   "Expenses",
   "Reports",
@@ -138,7 +147,8 @@ export const PERMISSION_CATEGORIES = [
   "Billing",
 ] as const;
 
-export type PermissionCategory = typeof PERMISSION_CATEGORIES[number];
+export type PermissionCategory =
+  typeof PERMISSION_CATEGORIES[number];
 
 /**
  * System Roles
@@ -149,7 +159,8 @@ export const ROLES = {
   STAFF: "staff",
 } as const;
 
-export type Role = typeof ROLES[keyof typeof ROLES];
+export type Role =
+  typeof ROLES[keyof typeof ROLES];
 
 /**
  * Database Role Templates
@@ -159,4 +170,5 @@ export const SYSTEM_ROLES = {
   STAFF: "staff",
 } as const;
 
-export type SystemRole = typeof SYSTEM_ROLES[keyof typeof SYSTEM_ROLES];
+export type SystemRole =
+  typeof SYSTEM_ROLES[keyof typeof SYSTEM_ROLES];

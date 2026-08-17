@@ -10,7 +10,7 @@ import {
 } from "@/lib/flocks";
 
 import {
-  getTodayEggs,
+  getEggProduction,
 } from "@/lib/eggs";
 
 import {
@@ -18,15 +18,20 @@ import {
 } from "@/lib/mortality";
 
 import {
-  getTotalExpenses,
+  getExpenses,
 } from "@/lib/expenses";
 
 import {
-  getTotalRevenue,
+  getSales,
 } from "@/lib/sales";
 
+import {
+  DateRange,
+} from "@/lib/date-ranges";
+
 export function useDashboardStats(
-  farmId?: string
+  farmId?: string,
+  dateRange?: DateRange
 ) {
   const [
     currentBirds,
@@ -68,81 +73,208 @@ export function useDashboardStats(
       try {
         if (!farmId) return;
 
+        /*
+         * Current birds are operational data.
+         * They should NOT change when the financial/
+         * production date filter changes.
+         */
         const birds =
           await getAvailableBirds(
             farmId
           );
 
-        const mortality =
-          await getTotalMortality(
-            farmId
+        /*
+         * If no date range is supplied,
+         * default to today.
+         */
+        const start =
+          dateRange?.start ||
+          new Date()
+            .toISOString()
+            .split("T")[0];
+
+        const end =
+          dateRange?.end ||
+          start;
+
+        /*
+         * Load operational records.
+         */
+        const [
+          eggs,
+          expenses,
+          sales,
+          mortality,
+        ] = await Promise.all([
+          getEggProduction(farmId),
+          getExpenses(farmId),
+          getSales(farmId),
+          getTotalMortality(farmId),
+        ]);
+
+        /*
+         * Filter egg production by selected date.
+         */
+        const filteredEggs =
+          (eggs || []).filter(
+            (record: any) => {
+              const recordDate =
+                record.production_date;
+
+              return (
+                recordDate >= start &&
+                recordDate <= end
+              );
+            }
           );
 
-        const eggs =
-          await getTodayEggs(
-            farmId
+        /*
+         * Total eggs for selected period.
+         */
+        const periodEggs =
+          filteredEggs.reduce(
+            (
+              sum: number,
+              record: any
+            ) =>
+              sum +
+              Number(
+                record.egg_count || 0
+              ),
+            0
           );
 
-        const expenses =
-          await getTotalExpenses(
-            farmId
+        /*
+         * Filter expenses by selected date.
+         */
+        const filteredExpenses =
+          (expenses || []).filter(
+            (record: any) => {
+              const recordDate =
+                record.expense_date;
+
+              return (
+                recordDate >= start &&
+                recordDate <= end
+              );
+            }
           );
 
-        const revenue =
-          await getTotalRevenue(
-            farmId
+        /*
+         * Total expenses for selected period.
+         */
+        const periodExpenses =
+          filteredExpenses.reduce(
+            (
+              sum: number,
+              record: any
+            ) =>
+              sum +
+              Number(
+                record.amount || 0
+              ),
+            0
           );
 
-        const birdsAlive =
-          birds;
+        /*
+         * Filter sales by selected date.
+         */
+        const filteredSales =
+          (sales || []).filter(
+            (record: any) => {
+              const recordDate =
+                record.sale_date;
+
+              return (
+                recordDate >= start &&
+                recordDate <= end
+              );
+            }
+          );
+
+        /*
+         * Total revenue for selected period.
+         */
+        const periodRevenue =
+          filteredSales.reduce(
+            (
+              sum: number,
+              record: any
+            ) =>
+              sum +
+              Number(
+                record.total_amount || 0
+              ),
+            0
+          );
+
+        /*
+         * Production percentage.
+         *
+         * This represents eggs produced during
+         * the selected period against the current
+         * available bird population.
+         */
+        const production =
+          birds > 0
+            ? Number(
+                (
+                  (periodEggs /
+                    birds) *
+                  100
+                ).toFixed(2)
+              )
+            : 0;
 
         setCurrentBirds(
-          birdsAlive
+          Number(birds || 0)
         );
 
         setTodayEggs(
-          eggs
+          Number(periodEggs || 0)
         );
 
         setTotalMortality(
-          mortality
+          Number(mortality || 0)
         );
 
         setTotalExpenses(
-          expenses
-        );
-
-        setTotalRevenue(
-          revenue
-        );
-
-        setProfit(
-          revenue -
-            expenses
-        );
-
-        const production =
-          birdsAlive > 0
-            ? (
-                (eggs /
-                  birdsAlive) *
-                100
-              ).toFixed(2)
-            : 0;
-
-        setProductionPercentage(
           Number(
-            production
+            periodExpenses || 0
           )
         );
 
+        setTotalRevenue(
+          Number(
+            periodRevenue || 0
+          )
+        );
+
+        setProfit(
+          Number(
+            periodRevenue -
+              periodExpenses
+          )
+        );
+
+        setProductionPercentage(
+          production
+        );
+
       } catch (error) {
-        console.error(error);
+        console.error(
+          "Failed to load dashboard statistics:",
+          error
+        );
       }
     }
 
     load();
-  }, [farmId]);
+  }, [
+    farmId,
+    dateRange?.start,
+    dateRange?.end,
+  ]);
 
   return {
     currentBirds,
