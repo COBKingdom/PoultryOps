@@ -1,6 +1,12 @@
 import { supabase } from "@/lib/supabase";
 import { getTotalBirdsSold } from "@/lib/sales";
-import { getTotalMortality, getFlockMortality } from "@/lib/mortality";
+import {
+  getTotalMortality,
+  getFlockMortality,
+} from "@/lib/mortality";
+import {
+  getTotalActiveIsolatedBirds,
+} from "@/lib/isolation";
 
 export async function createFlock(
   flock: any
@@ -82,6 +88,7 @@ export async function getFlocks(
 
   return data;
 }
+
 export async function getTotalBirds(
   farmId: string
 ) {
@@ -96,7 +103,7 @@ export async function getTotalBirds(
   return (
     data?.reduce(
       (sum, flock) =>
-        sum + flock.quantity,
+        sum + Number(flock.quantity || 0),
       0
     ) || 0
   );
@@ -106,28 +113,46 @@ export async function getTotalBirds(
  * Shared source of truth for the operational bird figure.
  *
  * Available Birds =
- *   Starting Birds (sum of flock quantities)
- *   − Total Mortality (all mortality records)
- *   − Birds Sold (bird-related sale records)
  *
- * Used by Dashboard, Reports, Analytics and Flocks so every
- * surface shows the same calculation.
+ *   Starting Birds
+ *   − Total Mortality
+ *   − Birds Sold
+ *   − Active Isolated Birds
+ *
+ * Birds placed into active isolation are still part of
+ * the flock's recorded quantity, but they are temporarily
+ * unavailable for normal farm operations.
+ *
+ * Therefore isolation must NOT modify flock.quantity.
+ * Instead, active isolated birds are deducted here.
+ *
+ * Used by Dashboard, Reports, Analytics and Flocks so
+ * every surface shows the same operational calculation.
  */
 export async function getAvailableBirds(
   farmId: string
 ) {
-  const [startingBirds, mortality, birdsSold] =
-    await Promise.all([
-      getTotalBirds(farmId),
-      getTotalMortality(farmId),
-      getTotalBirdsSold(farmId),
-    ]);
+  const [
+    startingBirds,
+    mortality,
+    birdsSold,
+    isolatedBirds,
+  ] = await Promise.all([
+    getTotalBirds(farmId),
+    getTotalMortality(farmId),
+    getTotalBirdsSold(farmId),
+    getTotalActiveIsolatedBirds(farmId),
+  ]);
 
   return Math.max(
     0,
-    startingBirds - mortality - birdsSold
+    startingBirds -
+      mortality -
+      birdsSold -
+      isolatedBirds
   );
 }
+
 export async function getTotalFlocks(
   farmId: string
 ) {
@@ -144,6 +169,7 @@ export async function getTotalFlocks(
 
   return count || 0;
 }
+
 export async function getFarmFlocks(
   farmId: string
 ) {
@@ -178,21 +204,77 @@ export async function getFlockById(
 
 /**
  * Available birds for a single flock:
- * Starting Birds (flock.quantity) − Flock Mortality − Birds Sold.
+ *
+ * Starting Birds
+ * − Flock Mortality
+ * − Birds Sold
+ * − Active Isolated Birds
+ *
+ * Note:
+ * Birds sold is currently calculated at farm level
+ * because the sales table does not appear to expose
+ * flock_id in the existing sales helper.
  */
 export async function getFlockAvailableBirds(
   flockId: string
 ) {
-  const flock = await getFlockById(flockId);
+  const flock =
+    await getFlockById(flockId);
+
   if (!flock) return 0;
 
-  const [mortality, birdsSold] = await Promise.all([
+  const [
+    mortality,
+    birdsSold,
+    isolatedBirds,
+  ] = await Promise.all([
     getFlockMortality(flockId),
     getTotalBirdsSold(flock.farm_id),
+    getIsolatedBirdCountForFlock(flockId),
   ]);
 
   return Math.max(
     0,
-    Number(flock.quantity) - mortality - birdsSold
+    Number(flock.quantity || 0) -
+      mortality -
+      birdsSold -
+      isolatedBirds
+  );
+}
+
+/**
+ * Returns the currently active isolated birds
+ * for one specific flock.
+ */
+async function getIsolatedBirdCountForFlock(
+  flockId: string
+) {
+  const { data, error } =
+    await supabase
+      .from("isolation_records")
+      .select(
+        "quantity, returned_quantity, deceased_quantity"
+      )
+      .eq("flock_id", flockId)
+      .eq("status", "active");
+
+  if (error) throw error;
+
+  return (
+    data?.reduce(
+      (sum, record) =>
+        sum +
+        Math.max(
+          0,
+          Number(record.quantity || 0) -
+            Number(
+              record.returned_quantity || 0
+            ) -
+            Number(
+              record.deceased_quantity || 0
+            )
+        ),
+      0
+    ) || 0
   );
 }
