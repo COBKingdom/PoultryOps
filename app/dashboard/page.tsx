@@ -34,6 +34,11 @@ export default function DashboardPage() {
    * Dashboard date filter.
    *
    * Defaults to Today.
+   *
+   * The financial and production figures respond
+   * to this filter. Current farm bird availability,
+   * isolation and flock count remain operational
+   * figures.
    */
   const [
     dateRangeSelection,
@@ -44,7 +49,9 @@ export default function DashboardPage() {
 
   const {
     currentBirds,
-    todayEggs,
+    isolatedBirds,
+    availableEggs,
+    totalFlocks,
     totalRevenue,
     totalExpenses,
     profit,
@@ -91,7 +98,7 @@ export default function DashboardPage() {
         email={user?.email}
       >
 
-        <div className="space-y-6">
+        <div className="space-y-4">
 
           {/* ─────────────────────────────────────────────
               FARM HERO
@@ -99,114 +106,73 @@ export default function DashboardPage() {
 
           <FarmHero
             currentBirds={currentBirds}
-            productionPercentage={
-              productionPercentage
-            }
+            isolatedBirds={isolatedBirds}
+            availableEggs={availableEggs}
+            totalFlocks={totalFlocks}
           />
 
           {/* ─────────────────────────────────────────────
-              FARM STATUS
+              FARM STATUS + DATE FILTER
           ───────────────────────────────────────────── */}
 
-          <div className="flex flex-wrap gap-3">
+          <div
+            className="
+              flex
+              flex-col
+              sm:flex-row
+              sm:items-center
+              sm:justify-between
+              gap-3
+            "
+          >
 
-            <div
-              className="
-                px-4
-                py-2
-                rounded-full
-                bg-green-100
-                text-green-700
-                text-sm
-                font-medium
-              "
-            >
-              Trial Active
+            {/* Farm status */}
+
+            <div className="flex flex-wrap gap-2">
+
+              <div
+                className="
+                  px-4
+                  py-2
+                  rounded-full
+                  bg-green-100
+                  text-green-700
+                  text-sm
+                  font-medium
+                "
+              >
+                Trial Active
+              </div>
+
             </div>
 
-            <div
-              className="
-                px-4
-                py-2
-                rounded-full
-                bg-blue-100
-                text-blue-700
-                text-sm
-                font-medium
-              "
-            >
-              {Number(
-                currentBirds
-              ).toLocaleString(
-                undefined,
-                {
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 2,
-                }
-              )}{" "}
-              Birds
-            </div>
+            {/* Date filter */}
 
-            <div
-              className="
-                px-4
-                py-2
-                rounded-full
-                bg-purple-100
-                text-purple-700
-                text-sm
-                font-medium
-              "
-            >
-              Production{" "}
-              {Number(
-                productionPercentage
-              ).toLocaleString(
-                undefined,
-                {
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 2,
+            <div className="flex justify-start sm:justify-end">
+              <ReportFilter
+                value={
+                  dateRangeSelection
                 }
-              )}
-              %
+                onChange={
+                  setDateRangeSelection
+                }
+              />
             </div>
 
           </div>
 
           {/* ─────────────────────────────────────────────
-              DATE FILTER
-          ───────────────────────────────────────────── */}
-
-          <div className="flex justify-end w-full">
-
-            <ReportFilter
-              value={
-                dateRangeSelection
-              }
-              onChange={
-                setDateRangeSelection
-              }
-            />
-
-          </div>
-
-          {/* ─────────────────────────────────────────────
-              FINANCIAL / PRODUCTION KPIs
+              FINANCIAL KPIs
           ───────────────────────────────────────────── */}
 
           <div
             className="
               grid
-              grid-cols-2
-              lg:grid-cols-4
+              grid-cols-1
+              sm:grid-cols-3
               gap-4
             "
           >
-
-            <KpiCard
-              title="Today's Eggs"
-              value={todayEggs}
-            />
 
             <KpiCard
               title="Revenue"
@@ -225,7 +191,7 @@ export default function DashboardPage() {
             />
 
             <KpiCard
-              title="Profit"
+              title="Profit / Loss"
               value={profit}
               currency={
                 farm?.currency

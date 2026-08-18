@@ -7,7 +7,12 @@ import {
 
 import {
   getAvailableBirds,
+  getTotalFlocks,
 } from "@/lib/flocks";
+
+import {
+  getTotalActiveIsolatedBirds,
+} from "@/lib/isolation";
 
 import {
   getEggProduction,
@@ -36,6 +41,21 @@ export function useDashboardStats(
   const [
     currentBirds,
     setCurrentBirds,
+  ] = useState(0);
+
+  const [
+    isolatedBirds,
+    setIsolatedBirds,
+  ] = useState(0);
+
+  const [
+    availableEggs,
+    setAvailableEggs,
+  ] = useState(0);
+
+  const [
+    totalFlocks,
+    setTotalFlocks,
   ] = useState(0);
 
   const [
@@ -75,13 +95,35 @@ export function useDashboardStats(
 
         /*
          * Current birds are operational data.
-         * They should NOT change when the financial/
-         * production date filter changes.
+         *
+         * getAvailableBirds already accounts for:
+         *   Starting Birds
+         *   - Mortality
+         *   - Birds Sold
+         *   - Active Isolation
+         *
+         * The date filter must NOT change this figure.
          */
-        const birds =
-          await getAvailableBirds(
+        const birdsPromise =
+          getAvailableBirds(farmId);
+
+        /*
+         * Birds currently in active isolation.
+         *
+         * These birds remain part of the flock records,
+         * but are excluded from Available Birds until
+         * they are recovered or otherwise completed.
+         */
+        const isolatedBirdsPromise =
+          getTotalActiveIsolatedBirds(
             farmId
           );
+
+        /*
+         * Total number of farm flocks.
+         */
+        const flocksPromise =
+          getTotalFlocks(farmId);
 
         /*
          * If no date range is supplied,
@@ -101,11 +143,17 @@ export function useDashboardStats(
          * Load operational records.
          */
         const [
+          birds,
+          isolatedBirdsCount,
+          flockCount,
           eggs,
           expenses,
           sales,
           mortality,
         ] = await Promise.all([
+          birdsPromise,
+          isolatedBirdsPromise,
+          flocksPromise,
           getEggProduction(farmId),
           getExpenses(farmId),
           getSales(farmId),
@@ -113,7 +161,7 @@ export function useDashboardStats(
         ]);
 
         /*
-         * Filter egg production by selected date.
+         * Filter egg production by selected date range.
          */
         const filteredEggs =
           (eggs || []).filter(
@@ -129,7 +177,16 @@ export function useDashboardStats(
           );
 
         /*
-         * Total eggs for selected period.
+         * Available Eggs
+         *
+         * For now this represents the total eggs
+         * recorded during the selected dashboard period.
+         *
+         * This means:
+         *   Today       -> today's eggs
+         *   This Week   -> eggs produced this week
+         *   This Month  -> eggs produced this month
+         *   Any Day     -> eggs produced on that day
          */
         const periodEggs =
           filteredEggs.reduce(
@@ -160,9 +217,6 @@ export function useDashboardStats(
             }
           );
 
-        /*
-         * Total expenses for selected period.
-         */
         const periodExpenses =
           filteredExpenses.reduce(
             (
@@ -192,9 +246,6 @@ export function useDashboardStats(
             }
           );
 
-        /*
-         * Total revenue for selected period.
-         */
         const periodRevenue =
           filteredSales.reduce(
             (
@@ -209,11 +260,10 @@ export function useDashboardStats(
           );
 
         /*
-         * Production percentage.
+         * Production percentage is retained for
+         * compatibility with the existing dashboard.
          *
-         * This represents eggs produced during
-         * the selected period against the current
-         * available bird population.
+         * It is no longer displayed in the Hero.
          */
         const production =
           birds > 0
@@ -230,6 +280,29 @@ export function useDashboardStats(
           Number(birds || 0)
         );
 
+        setIsolatedBirds(
+          Number(
+            isolatedBirdsCount || 0
+          )
+        );
+
+        setAvailableEggs(
+          Number(
+            periodEggs || 0
+          )
+        );
+
+        setTotalFlocks(
+          Number(
+            flockCount || 0
+          )
+        );
+
+        /*
+         * Keep todayEggs for compatibility with
+         * any existing component that may still
+         * reference it.
+         */
         setTodayEggs(
           Number(periodEggs || 0)
         );
@@ -278,11 +351,23 @@ export function useDashboardStats(
 
   return {
     currentBirds,
+
+    isolatedBirds,
+
+    availableEggs,
+
+    totalFlocks,
+
     todayEggs,
+
     totalMortality,
+
     totalExpenses,
+
     totalRevenue,
+
     profit,
+
     productionPercentage,
   };
 }

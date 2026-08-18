@@ -26,7 +26,7 @@ export default function AddMortalityForm({
     useState("");
 
   const [reason, setReason] =
-    useState("Disease");
+    useState("");
 
   const [recordDate, setRecordDate] =
     useState(
@@ -47,6 +47,14 @@ export default function AddMortalityForm({
         return;
       }
 
+      if (!quantity || Number(quantity) <= 0) {
+        return;
+      }
+
+      if (!reason) {
+        return;
+      }
+
       setLoading(true);
 
       await createMortality({
@@ -58,6 +66,7 @@ export default function AddMortalityForm({
           Number(quantity),
         reason,
       });
+
       await onSaved?.();
 
       setQuantity("");
@@ -131,6 +140,7 @@ export default function AddMortalityForm({
 
         <input
           type="number"
+          min="1"
           placeholder="Number of Birds"
           value={quantity}
           onChange={(e) =>
@@ -150,17 +160,54 @@ export default function AddMortalityForm({
             )
           }
           className="w-full border rounded-xl p-4"
+          required
         >
-          <option>
-            Disease
+          <option value="">
+            Select reason
           </option>
 
           <option>
-            Heat Stress
+            Newcastle Disease
           </option>
 
           <option>
-            Predator Attack
+            Infectious Bursal Disease
+          </option>
+
+          <option>
+            Bird Flu (Avian Influenza)
+          </option>
+
+          <option>
+            Coccidiosis
+          </option>
+
+          <option>
+            Fowl Pox
+          </option>
+
+          <option>
+            Fowl Typhoid
+          </option>
+
+          <option>
+            Fowl Cholera
+          </option>
+
+          <option>
+            Marek's Disease
+          </option>
+
+          <option>
+            Infectious Coryza
+          </option>
+
+          <option>
+            Respiratory Symptoms
+          </option>
+
+          <option>
+            Digestive Symptoms
           </option>
 
           <option>
@@ -168,19 +215,15 @@ export default function AddMortalityForm({
           </option>
 
           <option>
-            Culled
+            Weak / Unthrifty
           </option>
 
           <option>
-            Feed Poisoning
+            Suspected Infection
           </option>
 
           <option>
-            Water Contamination
-          </option>
-
-          <option>
-            Unknown
+            Observation
           </option>
 
           <option>

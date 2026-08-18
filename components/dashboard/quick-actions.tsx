@@ -11,6 +11,7 @@ import {
   ShoppingCart,
   HeartPulse,
   Package,
+  BarChart3,
 } from "lucide-react";
 
 export default function QuickActions() {
@@ -63,6 +64,12 @@ export default function QuickActions() {
       href: "/sales",
       icon: ShoppingCart,
     },
+    {
+      title: "Reports",
+      subtitle: "View farm reports",
+      href: "/reports",
+      icon: BarChart3,
+    },
   ];
 
   return (
@@ -90,8 +97,7 @@ export default function QuickActions() {
       >
 
         {actions.map((action) => {
-          const Icon =
-            action.icon;
+          const Icon = action.icon;
 
           return (
             <Link

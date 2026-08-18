@@ -1,17 +1,29 @@
 import {
   Bird,
   Egg,
+  HeartPulse,
+  Layers3,
 } from "lucide-react";
 
 type Props = {
   currentBirds: number;
-  productionPercentage: number;
+  isolatedBirds: number;
+  availableEggs: number;
+  totalFlocks: number;
 };
 
 export default function FarmHero({
   currentBirds,
-  productionPercentage,
+  isolatedBirds,
+  availableEggs,
+  totalFlocks,
 }: Props) {
+  const formatNumber = (value: number) =>
+    Number(value || 0).toLocaleString(undefined, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    });
+
   return (
     <div
       className="
@@ -71,6 +83,7 @@ export default function FarmHero({
           "
         >
 
+          {/* Available Birds */}
           <div
             className="
               rounded-2xl
@@ -96,13 +109,41 @@ export default function FarmHero({
                 font-bold
               "
             >
-              {Number(currentBirds).toLocaleString(undefined, {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 2,
-              })}
+              {formatNumber(currentBirds)}
             </div>
           </div>
 
+          {/* Birds in Isolation */}
+          <div
+            className="
+              rounded-2xl
+              bg-white/10
+              backdrop-blur
+              p-4
+            "
+          >
+            <div className="flex items-center gap-2">
+
+              <HeartPulse size={18} />
+
+              <span className="text-sm">
+                Birds in Isolation
+              </span>
+
+            </div>
+
+            <div
+              className="
+                mt-3
+                text-3xl
+                font-bold
+              "
+            >
+              {formatNumber(isolatedBirds)}
+            </div>
+          </div>
+
+          {/* Available Eggs */}
           <div
             className="
               rounded-2xl
@@ -116,7 +157,7 @@ export default function FarmHero({
               <Egg size={18} />
 
               <span className="text-sm">
-                Production
+                Available Eggs
               </span>
 
             </div>
@@ -128,10 +169,37 @@ export default function FarmHero({
                 font-bold
               "
             >
-              {Number(productionPercentage).toLocaleString(undefined, {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 2,
-              })}%
+              {formatNumber(availableEggs)}
+            </div>
+          </div>
+
+          {/* Flocks */}
+          <div
+            className="
+              rounded-2xl
+              bg-white/10
+              backdrop-blur
+              p-4
+            "
+          >
+            <div className="flex items-center gap-2">
+
+              <Layers3 size={18} />
+
+              <span className="text-sm">
+                Flocks
+              </span>
+
+            </div>
+
+            <div
+              className="
+                mt-3
+                text-3xl
+                font-bold
+              "
+            >
+              {formatNumber(totalFlocks)}
             </div>
           </div>
 
