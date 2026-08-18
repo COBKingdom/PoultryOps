@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
 import { X, Calendar, Package, Truck, FileText } from "lucide-react";
 
 type Props = {
@@ -17,6 +16,7 @@ type FormData = {
   quantity: string;
   batch_number: string;
   breed: string;
+  custom_breed: string;
   age_weeks: string;
   age_days: string;
   supplier: string;
@@ -25,6 +25,56 @@ type FormData = {
   pen: string;
   notes: string;
 };
+
+const BREEDS_BY_TYPE: Record<string, string[]> = {
+  Layers: [
+    "ISA Brown",
+    "Lohmann Brown",
+    "Nera Black",
+    "Shaver Brown",
+    "Hy-Line Brown",
+    "Bovans Brown",
+    "Shika-Brown",
+    "Lohmann LSL",
+    "Hy-Line W-80",
+    "Bovans White",
+    "Other",
+  ],
+
+  Broilers: [
+    "Cobb 500",
+    "Ross 308",
+    "Arbor Acres",
+    "Arbor Acres Plus",
+    "Hubbard",
+    "Hubbard Classic",
+    "Marshall",
+    "Anak",
+    "Other",
+  ],
+
+  "Dual Purpose": [
+    "Noiler",
+    "FUNAAB Alpha",
+    "Kuroiler",
+    "Sasso",
+    "Shika-Brown",
+    "Fulani",
+    "Other",
+  ],
+
+  "Indigenous / Local": [
+    "Indigenous / Local Chicken",
+    "Fulani",
+    "Other",
+  ],
+
+  Other: ["Other"],
+};
+
+// These are retained only for compatibility with existing flock records.
+// They are not offered for new registrations.
+const LEGACY_BIRD_TYPES = ["Growers", "Cockerels"];
 
 export default function FlockModal({
   isOpen,
@@ -41,6 +91,7 @@ export default function FlockModal({
     quantity: "",
     batch_number: "",
     breed: "",
+    custom_breed: "",
     age_weeks: "",
     age_days: "",
     supplier: "",
@@ -53,16 +104,29 @@ export default function FlockModal({
   useEffect(() => {
     if (isOpen) {
       if (flock) {
-        // Convert stored decimal age_weeks back into weeks + days
+        // Convert stored decimal age_weeks back into weeks + days.
+        // Round to the nearest whole day first so values such as 24.43
+        // reliably display as 24 weeks + 3 days.
         const ageWeeks = Number(flock.age_weeks);
-        const weeks = Math.floor(ageWeeks);
-        const days = Math.round((ageWeeks - weeks) * 7);
+        const totalDays = Math.round(ageWeeks * 7);
+        const weeks = Math.floor(totalDays / 7);
+        const days = totalDays % 7;
+
+        const storedBirdType = flock.bird_type || "Layers";
+        const storedBreed = flock.breed || "";
+
+        const availableBreeds =
+          BREEDS_BY_TYPE[storedBirdType] || [];
+
+        const isKnownBreed = availableBreeds.includes(storedBreed);
+
         setFormData({
           flock_name: flock.flock_name || "",
-          bird_type: flock.bird_type || "Layers",
+          bird_type: storedBirdType,
           quantity: String(flock.quantity || ""),
           batch_number: flock.batch_number || "",
-          breed: flock.breed || "",
+          breed: isKnownBreed ? storedBreed : storedBreed ? "Other" : "",
+          custom_breed: isKnownBreed ? "" : storedBreed,
           age_weeks: flock.age_weeks ? String(weeks) : "",
           age_days: flock.age_weeks ? String(days) : "",
           supplier: flock.supplier || "",
@@ -74,6 +138,7 @@ export default function FlockModal({
       } else {
         resetForm();
       }
+
       setErrors({});
     }
   }, [isOpen, flock]);
@@ -85,6 +150,7 @@ export default function FlockModal({
       quantity: "",
       batch_number: "",
       breed: "",
+      custom_breed: "",
       age_weeks: "",
       age_days: "",
       supplier: "",
@@ -93,7 +159,42 @@ export default function FlockModal({
       pen: "",
       notes: "",
     });
+
     setErrors({});
+  }
+
+  function getBreedOptions() {
+    return BREEDS_BY_TYPE[formData.bird_type] || ["Other"];
+  }
+
+  function handleBirdTypeChange(value: string) {
+    setFormData({
+      ...formData,
+      bird_type: value,
+      breed: "",
+      custom_breed: "",
+    });
+
+    setErrors({
+      ...errors,
+      bird_type: "",
+      breed: "",
+      custom_breed: "",
+    });
+  }
+
+  function handleBreedChange(value: string) {
+    setFormData({
+      ...formData,
+      breed: value,
+      custom_breed: value === "Other" ? formData.custom_breed : "",
+    });
+
+    setErrors({
+      ...errors,
+      breed: "",
+      custom_breed: "",
+    });
   }
 
   function validate(): boolean {
@@ -107,7 +208,21 @@ export default function FlockModal({
       newErrors.quantity = "Number of birds must be greater than zero";
     }
 
-    if (formData.arrival_date && new Date(formData.arrival_date) > new Date()) {
+    if (!formData.breed) {
+      newErrors.breed = "Breed is required";
+    }
+
+    if (
+      formData.breed === "Other" &&
+      !formData.custom_breed.trim()
+    ) {
+      newErrors.custom_breed = "Please specify the breed";
+    }
+
+    if (
+      formData.arrival_date &&
+      new Date(formData.arrival_date) > new Date()
+    ) {
       newErrors.arrival_date = "Arrival date cannot be in the future";
     }
 
@@ -115,6 +230,7 @@ export default function FlockModal({
       newErrors.age_weeks = "Weeks is required";
     } else {
       const weeks = Number(formData.age_weeks);
+
       if (!Number.isInteger(weeks) || weeks < 0) {
         newErrors.age_weeks =
           "Weeks must be a whole number greater than or equal to 0";
@@ -125,12 +241,14 @@ export default function FlockModal({
       newErrors.age_days = "Days is required";
     } else {
       const days = Number(formData.age_days);
+
       if (!Number.isInteger(days) || days < 0 || days > 6) {
         newErrors.age_days = "Days must be between 0 and 6.";
       }
     }
 
     setErrors(newErrors);
+
     return Object.keys(newErrors).length === 0;
   }
 
@@ -145,20 +263,27 @@ export default function FlockModal({
       const weeks = formData.age_weeks
         ? Number(formData.age_weeks)
         : 0;
+
       const days = formData.age_days
         ? Number(formData.age_days)
         : 0;
+
       const hasAge =
         formData.age_weeks || formData.age_days;
+
+      const finalBreed =
+        formData.breed === "Other"
+          ? formData.custom_breed.trim()
+          : formData.breed;
 
       await onSave({
         flock_name: formData.flock_name,
         bird_type: formData.bird_type,
         quantity: Number(formData.quantity),
         batch_number: formData.batch_number || null,
-        breed: formData.breed || null,
+        breed: finalBreed || null,
         age_weeks: hasAge
-          ? weeks + days / 7
+          ? Math.round((weeks + days / 7) * 100) / 100
           : null,
         supplier: formData.supplier || null,
         arrival_date: formData.arrival_date || null,
@@ -182,6 +307,8 @@ export default function FlockModal({
 
   if (!isOpen) return null;
 
+  const breedOptions = getBreedOptions();
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -190,12 +317,14 @@ export default function FlockModal({
             <h2 className="text-2xl font-bold text-slate-900">
               {flock ? "Edit Flock" : "Register New Flock"}
             </h2>
+
             <p className="mt-1 text-sm text-slate-500">
               {flock
                 ? "Update your flock information below."
                 : "Fill in the details to register a new poultry flock."}
             </p>
           </div>
+
           <button
             onClick={handleClose}
             className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
@@ -204,232 +333,385 @@ export default function FlockModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-8">
+        <form
+          onSubmit={handleSubmit}
+          className="flex-1 overflow-y-auto p-8"
+        >
           <div className="space-y-10">
+            {/* GENERAL INFORMATION */}
             <div>
               <h3 className="text-xl font-bold text-slate-900 mb-5 flex items-center gap-2">
                 <Package className="text-blue-600" size={22} />
                 General Information
               </h3>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* FLOCK NAME */}
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-700">
-                    Flock Name <span className="text-red-500">*</span>
+                    Flock Name{" "}
+                    <span className="text-red-500">*</span>
                   </label>
+
                   <input
                     type="text"
                     value={formData.flock_name}
                     onChange={(e) =>
-                      setFormData({ ...formData, flock_name: e.target.value })
+                      setFormData({
+                        ...formData,
+                        flock_name: e.target.value,
+                      })
                     }
                     placeholder="e.g. Layer House A"
                     className={`w-full rounded-xl border px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 ${
-                      errors.flock_name ? "border-red-300" : "border-slate-300"
+                      errors.flock_name
+                        ? "border-red-300"
+                        : "border-slate-300"
                     }`}
                   />
+
                   {errors.flock_name && (
-                    <p className="mt-1 text-sm text-red-600">{errors.flock_name}</p>
+                    <p className="mt-1 text-sm text-red-600">
+                      {errors.flock_name}
+                    </p>
                   )}
                 </div>
 
+                {/* BIRD TYPE */}
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-700">
-                    Bird Type <span className="text-red-500">*</span>
+                    Bird Type{" "}
+                    <span className="text-red-500">*</span>
                   </label>
+
                   <select
                     value={formData.bird_type}
                     onChange={(e) =>
-                      setFormData({ ...formData, bird_type: e.target.value })
+                      handleBirdTypeChange(e.target.value)
                     }
                     className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                   >
                     <option value="Layers">Layers</option>
                     <option value="Broilers">Broilers</option>
-                    <option value="Growers">Growers</option>
-                    <option value="Cockerels">Cockerels</option>
+                    <option value="Dual Purpose">
+                      Dual Purpose
+                    </option>
+                    <option value="Indigenous / Local">
+                      Indigenous / Local
+                    </option>
+                    <option value="Other">Other</option>
+
+                    {/* Preserve old flock records */}
+                    {flock &&
+                      LEGACY_BIRD_TYPES.includes(
+                        formData.bird_type
+                      ) && (
+                        <option value={formData.bird_type}>
+                          {formData.bird_type}
+                        </option>
+                      )}
                   </select>
                 </div>
 
+                {/* BATCH NUMBER */}
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-700">
                     Batch Number
                   </label>
+
                   <input
                     type="text"
                     value={formData.batch_number}
                     onChange={(e) =>
-                      setFormData({ ...formData, batch_number: e.target.value })
+                      setFormData({
+                        ...formData,
+                        batch_number: e.target.value,
+                      })
                     }
                     placeholder="e.g. BTH-2024-001"
                     className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                   />
                 </div>
 
+                {/* BREED */}
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-700">
-                    Breed
+                    Breed{" "}
+                    <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
+
+                  <select
                     value={formData.breed}
                     onChange={(e) =>
-                      setFormData({ ...formData, breed: e.target.value })
+                      handleBreedChange(e.target.value)
                     }
-                    placeholder="e.g. Hy-Line Brown"
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
-                  />
+                    className={`w-full rounded-xl border px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 ${
+                      errors.breed
+                        ? "border-red-300"
+                        : "border-slate-300"
+                    }`}
+                  >
+                    <option value="">
+                      Select breed
+                    </option>
+
+                    {breedOptions.map((breed) => (
+                      <option key={breed} value={breed}>
+                        {breed}
+                      </option>
+                    ))}
+                  </select>
+
+                  {errors.breed && (
+                    <p className="mt-1 text-sm text-red-600">
+                      {errors.breed}
+                    </p>
+                  )}
                 </div>
+
+                {/* SPECIFY BREED WHEN OTHER */}
+                {formData.breed === "Other" && (
+                  <div className="md:col-span-2">
+                    <label className="mb-2 block text-sm font-medium text-slate-700">
+                      Specify Breed{" "}
+                      <span className="text-red-500">*</span>
+                    </label>
+
+                    <input
+                      type="text"
+                      value={formData.custom_breed}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          custom_breed: e.target.value,
+                        })
+                      }
+                      placeholder="Enter the breed or strain"
+                      className={`w-full rounded-xl border px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 ${
+                        errors.custom_breed
+                          ? "border-red-300"
+                          : "border-slate-300"
+                      }`}
+                    />
+
+                    {errors.custom_breed && (
+                      <p className="mt-1 text-sm text-red-600">
+                        {errors.custom_breed}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
+            {/* BIRD INFORMATION */}
             <div>
               <h3 className="text-xl font-bold text-slate-900 mb-5 flex items-center gap-2">
                 <Package className="text-green-600" size={22} />
                 Bird Information
               </h3>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* NUMBER OF BIRDS */}
                 <div className="pt-6">
                   <label className="mb-2 block text-sm font-medium text-slate-700">
-                    Number of Birds <span className="text-red-500">*</span>
+                    Number of Birds{" "}
+                    <span className="text-red-500">*</span>
                   </label>
+
                   <input
                     type="number"
                     value={formData.quantity}
                     onChange={(e) =>
-                      setFormData({ ...formData, quantity: e.target.value })
+                      setFormData({
+                        ...formData,
+                        quantity: e.target.value,
+                      })
                     }
                     placeholder="Enter bird quantity"
                     className={`w-full rounded-xl border px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 ${
-                      errors.quantity ? "border-red-300" : "border-slate-300"
+                      errors.quantity
+                        ? "border-red-300"
+                        : "border-slate-300"
                     }`}
                   />
+
                   {errors.quantity && (
-                    <p className="mt-1 text-sm text-red-600">{errors.quantity}</p>
+                    <p className="mt-1 text-sm text-red-600">
+                      {errors.quantity}
+                    </p>
                   )}
                 </div>
-<div>
-  <label className="mb-2 block text-sm font-medium text-slate-700">
-    Age <span className="text-red-500">*</span>
-  </label>
 
-  <div className="grid grid-cols-2 gap-3">
-    <div>
-      <label className="mb-1 block text-xs font-medium text-slate-600">
-        Weeks
-      </label>
-      <input
-        type="number"
-        min="0"
-        step="1"
-        value={formData.age_weeks}
-        onChange={(e) =>
-          setFormData({ ...formData, age_weeks: e.target.value })
-        }
-        placeholder="e.g. 24"
-        className={`w-full h-[50px] rounded-xl border px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 ${
-          errors.age_weeks ? "border-red-300" : "border-slate-300"
-        }`}
-      />
-      {errors.age_weeks && (
-        <p className="mt-1 text-sm text-red-600">
-          {errors.age_weeks}
-        </p>
-      )}
-    </div>
+                {/* AGE */}
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-700">
+                    Age{" "}
+                    <span className="text-red-500">*</span>
+                  </label>
 
-    <div>
-      <label className="mb-1 block text-xs font-medium text-slate-600">
-        Days (0–6)
-      </label>
-      <input
-        type="number"
-        min="0"
-        max="6"
-        step="1"
-        value={formData.age_days}
-        onChange={(e) =>
-          setFormData({ ...formData, age_days: e.target.value })
-        }
-        placeholder="0–6"
-        className={`w-full h-[50px] rounded-xl border px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 ${
-          errors.age_days ? "border-red-300" : "border-slate-300"
-        }`}
-      />
-      {errors.age_days && (
-        <p className="mt-1 text-sm text-red-600">
-          {errors.age_days}
-        </p>
-      )}
-    </div>
-  </div>
-</div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">
+                        Weeks
+                      </label>
+
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={formData.age_weeks}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            age_weeks: e.target.value,
+                          })
+                        }
+                        placeholder="e.g. 24"
+                        className={`w-full h-[50px] rounded-xl border px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 ${
+                          errors.age_weeks
+                            ? "border-red-300"
+                            : "border-slate-300"
+                        }`}
+                      />
+
+                      {errors.age_weeks && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {errors.age_weeks}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">
+                        Days (0–6)
+                      </label>
+
+                      <input
+                        type="number"
+                        min="0"
+                        max="6"
+                        step="1"
+                        value={formData.age_days}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            age_days: e.target.value,
+                          })
+                        }
+                        placeholder="0–6"
+                        className={`w-full h-[50px] rounded-xl border px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 ${
+                          errors.age_days
+                            ? "border-red-300"
+                            : "border-slate-300"
+                        }`}
+                      />
+
+                      {errors.age_days && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {errors.age_days}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
+            {/* SOURCE INFORMATION */}
             <div>
               <h3 className="text-xl font-bold text-slate-900 mb-5 flex items-center gap-2">
-                <Truck className="text-purple-600" size={22} />
+                <Truck
+                  className="text-purple-600"
+                  size={22}
+                />
                 Source Information
               </h3>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* SUPPLIER */}
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-700">
                     Supplier
                   </label>
+
                   <input
                     type="text"
                     value={formData.supplier}
                     onChange={(e) =>
-                      setFormData({ ...formData, supplier: e.target.value })
+                      setFormData({
+                        ...formData,
+                        supplier: e.target.value,
+                      })
                     }
                     placeholder="e.g. ABC Hatchery"
                     className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                   />
                 </div>
 
+                {/* ARRIVAL DATE */}
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-700">
                     Arrival Date
                   </label>
+
                   <input
                     type="date"
                     value={formData.arrival_date}
                     onChange={(e) =>
-                      setFormData({ ...formData, arrival_date: e.target.value })
+                      setFormData({
+                        ...formData,
+                        arrival_date: e.target.value,
+                      })
                     }
                     className={`w-full rounded-xl border px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 ${
-                      errors.arrival_date ? "border-red-300" : "border-slate-300"
+                      errors.arrival_date
+                        ? "border-red-300"
+                        : "border-slate-300"
                     }`}
                   />
+
                   {errors.arrival_date && (
-                    <p className="mt-1 text-sm text-red-600">{errors.arrival_date}</p>
+                    <p className="mt-1 text-sm text-red-600">
+                      {errors.arrival_date}
+                    </p>
                   )}
                 </div>
 
+                {/* HOUSE */}
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-700">
                     House
                   </label>
+
                   <input
                     type="text"
                     value={formData.house}
                     onChange={(e) =>
-                      setFormData({ ...formData, house: e.target.value })
+                      setFormData({
+                        ...formData,
+                        house: e.target.value,
+                      })
                     }
                     placeholder="e.g. House A"
                     className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                   />
                 </div>
 
+                {/* PEN */}
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-700">
                     Pen
                   </label>
+
                   <input
                     type="text"
                     value={formData.pen}
                     onChange={(e) =>
-                      setFormData({ ...formData, pen: e.target.value })
+                      setFormData({
+                        ...formData,
+                        pen: e.target.value,
+                      })
                     }
                     placeholder="e.g. Pen 1"
                     className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
@@ -438,15 +720,23 @@ export default function FlockModal({
               </div>
             </div>
 
+            {/* NOTES */}
             <div>
               <h3 className="text-xl font-bold text-slate-900 mb-5 flex items-center gap-2">
-                <FileText className="text-slate-600" size={22} />
+                <FileText
+                  className="text-slate-600"
+                  size={22}
+                />
                 Notes
               </h3>
+
               <textarea
                 value={formData.notes}
                 onChange={(e) =>
-                  setFormData({ ...formData, notes: e.target.value })
+                  setFormData({
+                    ...formData,
+                    notes: e.target.value,
+                  })
                 }
                 placeholder="Add any additional notes about this flock..."
                 rows={3}
@@ -456,6 +746,7 @@ export default function FlockModal({
           </div>
         </form>
 
+        {/* FOOTER */}
         <div className="flex items-center justify-end gap-3 px-8 py-5 border-t border-slate-200 bg-slate-50">
           <button
             type="button"
@@ -465,13 +756,18 @@ export default function FlockModal({
           >
             Cancel
           </button>
+
           <button
             type="submit"
             onClick={handleSubmit}
             disabled={loading}
             className="rounded-xl bg-blue-600 px-8 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
           >
-            {loading ? "Saving..." : flock ? "Update Flock" : "Create Flock"}
+            {loading
+              ? "Saving..."
+              : flock
+              ? "Update Flock"
+              : "Create Flock"}
           </button>
         </div>
       </div>
