@@ -1,7 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { Calendar, ChevronDown } from "lucide-react";
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
+import {
+  Calendar,
+  ChevronDown,
+} from "lucide-react";
 
 import {
   DateRangePreset,
@@ -13,7 +21,9 @@ import {
 
 type Props = {
   value: DateRangeSelection;
-  onChange: (selection: DateRangeSelection) => void;
+  onChange: (
+    selection: DateRangeSelection
+  ) => void;
 };
 
 const PRESETS: DateRangePreset[] = [
@@ -52,6 +62,109 @@ export default function ReportFilter({
         ? value.range.start
         : ""
     );
+
+  /*
+   * The dropdown is positioned relative to
+   * the viewport on small screens so it cannot
+   * be clipped by dashboard containers.
+   */
+  const triggerRef =
+    useRef<HTMLButtonElement | null>(null);
+
+  const [
+    dropdownPosition,
+    setDropdownPosition,
+  ] = useState({
+    top: 0,
+    right: 16,
+  });
+
+  function updateDropdownPosition() {
+    if (!triggerRef.current) return;
+
+    const rect =
+      triggerRef.current.getBoundingClientRect();
+
+    const dropdownWidth = 288;
+
+    const rightSpace =
+      window.innerWidth - rect.right;
+
+    const maxRight =
+      Math.max(
+        16,
+        rightSpace
+      );
+
+    const maxLeft =
+      window.innerWidth -
+      dropdownWidth -
+      16;
+
+    const calculatedLeft =
+      Math.min(
+        rect.left,
+        Math.max(16, maxLeft)
+      );
+
+    const calculatedRight =
+      Math.max(
+        16,
+        window.innerWidth -
+          (calculatedLeft +
+            dropdownWidth)
+      );
+
+    setDropdownPosition({
+      top: rect.bottom + 8,
+      right:
+        Math.max(
+          16,
+          Math.min(
+            maxRight,
+            calculatedRight
+          )
+        ),
+    });
+  }
+
+  useEffect(() => {
+    if (!dropdownOpen) return;
+
+    updateDropdownPosition();
+
+    function handleResize() {
+      updateDropdownPosition();
+    }
+
+    function handleScroll() {
+      updateDropdownPosition();
+    }
+
+    window.addEventListener(
+      "resize",
+      handleResize
+    );
+
+    window.addEventListener(
+      "scroll",
+      handleScroll,
+      true
+    );
+
+    return () => {
+      window.removeEventListener(
+        "resize",
+        handleResize
+      );
+
+      window.removeEventListener(
+        "scroll",
+        handleScroll,
+        true
+      );
+    };
+  }, [dropdownOpen]);
 
   function getTodayString() {
     const today = new Date();
@@ -174,7 +287,10 @@ export default function ReportFilter({
       return;
     }
 
-    if (customStart > customEnd) {
+    if (
+      customStart >
+      customEnd
+    ) {
       alert(
         "Start Date cannot be after End Date."
       );
@@ -194,18 +310,24 @@ export default function ReportFilter({
   }
 
   return (
-    <div className="relative">
-
+    <div className="relative w-auto">
       {/* Trigger button */}
       <button
+        ref={triggerRef}
         type="button"
-        onClick={() =>
+        onClick={() => {
+          if (!dropdownOpen) {
+            updateDropdownPosition();
+          }
+
           setDropdownOpen(
             !dropdownOpen
-          )
-        }
+          );
+        }}
         className="
           inline-flex
+          w-auto
+          max-w-full
           items-center
           gap-2
           rounded-xl
@@ -220,11 +342,12 @@ export default function ReportFilter({
           shadow-sm
           hover:bg-slate-50
           transition-colors
+          whitespace-nowrap
         "
       >
         <Calendar
           size={16}
-          className="text-slate-500"
+          className="text-slate-500 shrink-0"
         />
 
         <span>
@@ -259,6 +382,7 @@ export default function ReportFilter({
           size={16}
           className={`
             text-slate-400
+            shrink-0
             transition-transform
             ${
               dropdownOpen
@@ -284,26 +408,30 @@ export default function ReportFilter({
             }
           />
 
-          {/* Panel */}
+          {/* Viewport-aware panel */}
           <div
             className="
-              absolute
-              right-0
-              mt-2
-              w-72
+              fixed
+              z-50
+              w-[min(18rem,calc(100vw-2rem))]
+              max-h-[calc(100vh-2rem)]
+              overflow-y-auto
               bg-white
               rounded-xl
               border
               border-slate-200
               shadow-lg
-              z-50
-              overflow-hidden
+              overflow-x-hidden
             "
+            style={{
+              top:
+                dropdownPosition.top,
+              right:
+                dropdownPosition.right,
+            }}
           >
-
             {/* Preset list */}
             <div className="p-2">
-
               {PRESETS.map(
                 (preset) => (
                   <button
@@ -337,7 +465,6 @@ export default function ReportFilter({
                   </button>
                 )
               )}
-
             </div>
 
             {/* Any Day */}
@@ -352,7 +479,6 @@ export default function ReportFilter({
                 "
               >
                 <div>
-
                   <label
                     className="
                       block
@@ -378,6 +504,7 @@ export default function ReportFilter({
                     }
                     className="
                       w-full
+                      min-w-0
                       rounded-lg
                       border
                       border-slate-200
@@ -390,7 +517,6 @@ export default function ReportFilter({
                       focus:border-transparent
                     "
                   />
-
                 </div>
 
                 <button
@@ -418,7 +544,6 @@ export default function ReportFilter({
                 >
                   Apply Date
                 </button>
-
               </div>
             )}
 
@@ -433,9 +558,7 @@ export default function ReportFilter({
                   space-y-3
                 "
               >
-
                 <div>
-
                   <label
                     className="
                       block
@@ -461,6 +584,7 @@ export default function ReportFilter({
                     }
                     className="
                       w-full
+                      min-w-0
                       rounded-lg
                       border
                       border-slate-200
@@ -473,11 +597,9 @@ export default function ReportFilter({
                       focus:border-transparent
                     "
                   />
-
                 </div>
 
                 <div>
-
                   <label
                     className="
                       block
@@ -503,6 +625,7 @@ export default function ReportFilter({
                     }
                     className="
                       w-full
+                      min-w-0
                       rounded-lg
                       border
                       border-slate-200
@@ -515,7 +638,6 @@ export default function ReportFilter({
                       focus:border-transparent
                     "
                   />
-
                 </div>
 
                 <button
@@ -544,14 +666,11 @@ export default function ReportFilter({
                 >
                   Apply Range
                 </button>
-
               </div>
             )}
-
           </div>
         </>
       )}
-
     </div>
   );
 }

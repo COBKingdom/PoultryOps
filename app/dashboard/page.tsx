@@ -35,10 +35,12 @@ export default function DashboardPage() {
    *
    * Defaults to Today.
    *
-   * The financial and production figures respond
-   * to this filter. Current farm bird availability,
-   * isolation and flock count remain operational
-   * figures.
+   * The financial figures respond to the
+   * selected date range.
+   *
+   * Operational figures such as available
+   * birds, birds in isolation, available eggs
+   * and flock count remain current farm figures.
    */
   const [
     dateRangeSelection,
@@ -105,59 +107,46 @@ export default function DashboardPage() {
           ───────────────────────────────────────────── */}
 
           <FarmHero
-            currentBirds={currentBirds}
-            isolatedBirds={isolatedBirds}
-            availableEggs={availableEggs}
-            totalFlocks={totalFlocks}
+            currentBirds={
+              currentBirds
+            }
+            isolatedBirds={
+              isolatedBirds
+            }
+            availableEggs={
+              availableEggs
+            }
+            totalFlocks={
+              totalFlocks
+            }
           />
 
           {/* ─────────────────────────────────────────────
-              FARM STATUS + DATE FILTER
+              DATE FILTER
+              
+              Subscription / trial information does not
+              belong on the operational dashboard.
+              That information remains in Billing /
+              Subscription.
           ───────────────────────────────────────────── */}
 
           <div
             className="
               flex
-              flex-col
-              sm:flex-row
-              sm:items-center
-              sm:justify-between
-              gap-3
+              justify-start
+              sm:justify-end
+              w-full
             "
           >
 
-            {/* Farm status */}
-
-            <div className="flex flex-wrap gap-2">
-
-              <div
-                className="
-                  px-4
-                  py-2
-                  rounded-full
-                  bg-green-100
-                  text-green-700
-                  text-sm
-                  font-medium
-                "
-              >
-                Trial Active
-              </div>
-
-            </div>
-
-            {/* Date filter */}
-
-            <div className="flex justify-start sm:justify-end">
-              <ReportFilter
-                value={
-                  dateRangeSelection
-                }
-                onChange={
-                  setDateRangeSelection
-                }
-              />
-            </div>
+            <ReportFilter
+              value={
+                dateRangeSelection
+              }
+              onChange={
+                setDateRangeSelection
+              }
+            />
 
           </div>
 
@@ -176,7 +165,9 @@ export default function DashboardPage() {
 
             <KpiCard
               title="Revenue"
-              value={totalRevenue}
+              value={
+                totalRevenue
+              }
               currency={
                 farm?.currency
               }
@@ -184,7 +175,9 @@ export default function DashboardPage() {
 
             <KpiCard
               title="Expenses"
-              value={totalExpenses}
+              value={
+                totalExpenses
+              }
               currency={
                 farm?.currency
               }
