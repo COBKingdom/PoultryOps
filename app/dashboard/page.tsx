@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 
@@ -22,6 +22,41 @@ import OwnerOnly from "@/components/auth/owner-only";
 
 import ReportFilter from "@/components/reports/report-filter";
 
+/*
+ * Demo-only showcase for DEMO-001.
+ * Normal farms keep the original dashboard below.
+ */
+import DemoDashboard from "@/components/dashboard/demo-dashboard";
+
+/**
+ * Demo-only initial date range for DEMO-001
+ * ("PoultryOps Demo Farm").
+ *
+ * Returns a local "last 30 days" selection (today back 30 days)
+ * using only the existing custom-range infrastructure. No shared
+ * global date-range preset is added.
+ */
+function getDemoInitialDateRangeSelection(): DateRangeSelection {
+  const now = new Date();
+  const start = new Date(now);
+  start.setDate(start.getDate() - 30);
+
+  const toDateString = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  return {
+    preset: "custom",
+    range: {
+      start: toDateString(start),
+      end: toDateString(now),
+    },
+  };
+}
+
 export default function DashboardPage() {
   const { user } = useAuth();
 
@@ -29,6 +64,15 @@ export default function DashboardPage() {
     farm,
     loading: farmLoading,
   } = useCurrentFarm();
+
+  /*
+   * DEMO-001 is identified before state init so its
+   * default date range can be set without affecting
+   * any other farm.
+   */
+  const isDemo =
+    farm?.farm_code === "DEMO-001" ||
+    farm?.name === "PoultryOps Demo Farm";
 
   /*
    * Dashboard date filter.
@@ -49,18 +93,47 @@ export default function DashboardPage() {
     getDefaultDateRangeSelection()
   );
 
+  /*
+   * Tracks whether the user has manually adjusted the
+   * date filter. Used to stop applying the demo default
+   * once the user interacts with the filter.
+   */
+  const [userEditedFilter, setUserEditedFilter] =
+    useState(false);
+
+  /*
+   * For DEMO-001 only, default to the trailing 30 days so
+   * the seeded operational history is showcased on load.
+   * The demo default applies only until the user interacts
+   * with the filter, so a manual change is never overridden.
+   * Normal farms are completely unaffected.
+   */
+  const effectiveDateRange =
+    isDemo && !userEditedFilter
+      ? getDemoInitialDateRangeSelection()
+      : dateRangeSelection;
+
+  function handleDateRangeChange(
+    selection: DateRangeSelection
+  ) {
+    setUserEditedFilter(true);
+    setDateRangeSelection(selection);
+  }
+
   const {
     currentBirds,
     isolatedBirds,
     availableEggs,
     totalFlocks,
-    totalRevenue,
+    todayEggs,
+    totalMortality,
     totalExpenses,
+    totalRevenue,
     profit,
     productionPercentage,
   } = useDashboardStats(
     farm?.id,
-    dateRangeSelection.range
+    effectiveDateRange.range
   );
 
   if (farmLoading) {
@@ -90,6 +163,45 @@ export default function DashboardPage() {
           </div>
         </div>
       </AppShell>
+    );
+  }
+
+  /*
+   * DEMO-001 ("PoultryOps Demo Farm") receives a
+   * premium, sales-ready showcase.
+   *
+   * Every other farm renders the original
+   * dashboard below — completely unchanged.
+   */
+  if (isDemo) {
+    return (
+      <OwnerOnly>
+
+        <AppShell
+          email={user?.email}
+        >
+
+          <DemoDashboard
+            farm={farm}
+            stats={{
+              currentBirds,
+              isolatedBirds,
+              availableEggs,
+              totalFlocks,
+              todayEggs,
+              totalMortality,
+              totalExpenses,
+              totalRevenue,
+              profit,
+              productionPercentage,
+            }}
+            dateRangeSelection={effectiveDateRange}
+            setDateRangeSelection={handleDateRangeChange}
+          />
+
+        </AppShell>
+
+      </OwnerOnly>
     );
   }
 
@@ -123,7 +235,7 @@ export default function DashboardPage() {
 
           {/* ─────────────────────────────────────────────
               DATE FILTER
-              
+
               Subscription / trial information does not
               belong on the operational dashboard.
               That information remains in Billing /
@@ -141,10 +253,10 @@ export default function DashboardPage() {
 
             <ReportFilter
               value={
-                dateRangeSelection
+                effectiveDateRange
               }
               onChange={
-                setDateRangeSelection
+                handleDateRangeChange
               }
             />
 
