@@ -8,7 +8,7 @@ import { requirePermission } from "@/lib/permissions/api";
 export async function GET(request: Request) {
   try {
     const authResult = await getAuthenticatedUser(request);
-    
+
     if (!authResult.success || !authResult.user) {
       return NextResponse.json(
         { error: "Unauthorized" },
@@ -22,12 +22,14 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const targetUserId = url.searchParams.get("userId");
 
-    // ── No target userId: return the authenticated user's own permissions ──
+    // ─────────────────────────────────────────────────────────────
+    // No target userId:
+    // Return the authenticated user's own permissions
+    // ─────────────────────────────────────────────────────────────
     if (!targetUserId) {
-      // Get user profile to check role
       const { data: profile, error: profileError } = await supabaseAdmin
         .from("profiles")
-        .select("role")
+        .select("role, is_platform_admin")
         .eq("id", userId)
         .single();
 
@@ -45,22 +47,31 @@ export async function GET(request: Request) {
         return NextResponse.json({
           role,
           permissions: Object.values(PERMISSIONS),
+          isPlatformAdmin: Boolean(profile.is_platform_admin),
         });
       }
 
       // Load permissions from cache/database
       const cached = await permissionCache.loadPermissions(userId, role);
-      
+
       return NextResponse.json({
         role,
         permissions: Array.from(cached.permissions),
+        isPlatformAdmin: Boolean(profile.is_platform_admin),
       });
     }
 
-    // ── Target userId supplied: return the target user's permissions ──
+    // ─────────────────────────────────────────────────────────────
+    // Target userId supplied:
+    // Return the target user's permissions
+    // ─────────────────────────────────────────────────────────────
+
     // Verify the requester has SETTINGS_MANAGE_USERS permission
-    const permissionResult = await requirePermission(PERMISSIONS.SETTINGS_MANAGE_USERS, request);
-    
+    const permissionResult = await requirePermission(
+      PERMISSIONS.SETTINGS_MANAGE_USERS,
+      request
+    );
+
     if (!permissionResult.success) {
       return NextResponse.json(
         { error: permissionResult.error },
@@ -69,7 +80,10 @@ export async function GET(request: Request) {
     }
 
     // Get requester's profile and farm_id
-    const { data: requesterProfile, error: requesterProfileError } = await supabaseAdmin
+    const {
+      data: requesterProfile,
+      error: requesterProfileError,
+    } = await supabaseAdmin
       .from("profiles")
       .select("farm_id")
       .eq("id", userId)
@@ -83,7 +97,10 @@ export async function GET(request: Request) {
     }
 
     // Get target user's profile
-    const { data: targetProfile, error: targetProfileError } = await supabaseAdmin
+    const {
+      data: targetProfile,
+      error: targetProfileError,
+    } = await supabaseAdmin
       .from("profiles")
       .select("role, farm_id")
       .eq("id", targetUserId)
@@ -104,10 +121,15 @@ export async function GET(request: Request) {
       );
     }
 
-    const targetRole = targetProfile.role as typeof ROLES[keyof typeof ROLES];
+    const targetRole =
+      targetProfile.role as typeof ROLES[keyof typeof ROLES];
 
-    // Load the target user's actual saved permissions from cache/database
-    const cached = await permissionCache.loadPermissions(targetUserId, targetRole);
+    // Load the target user's actual saved permissions
+    // from cache/database
+    const cached = await permissionCache.loadPermissions(
+      targetUserId,
+      targetRole
+    );
 
     return NextResponse.json({
       role: targetRole,
@@ -115,6 +137,7 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error("Error fetching permissions:", error);
+
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
