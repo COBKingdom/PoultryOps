@@ -71,6 +71,29 @@ export default function DemoDashboard({
     productionPercentage,
   } = stats;
 
+      const demoProductionPercentage =
+    dateRangeSelection.range.start !==
+      dateRangeSelection.range.end &&
+    currentBirds > 0
+      ? Number(
+          (
+            (availableEggs /
+              currentBirds /
+              (
+                (new Date(
+                  dateRangeSelection.range.end
+                ).getTime() -
+                  new Date(
+                    dateRangeSelection.range.start
+                  ).getTime()) /
+                  (1000 * 60 * 60 * 24) +
+                1
+              )) *
+            100
+          ).toFixed(2)
+        )
+      : productionPercentage;
+
   /*
    * Feed consumption for the selected period,
    * computed from the existing useFeed hook.
@@ -124,7 +147,7 @@ export default function DemoDashboard({
         isolatedBirds={isolatedBirds}
         availableEggs={availableEggs}
         totalFlocks={totalFlocks}
-        productionPercentage={productionPercentage}
+        productionPercentage={demoProductionPercentage}
       />
 
       {/* Date filter (unchanged behaviour) */}
@@ -145,7 +168,7 @@ export default function DemoDashboard({
         totalExpenses={totalExpenses}
         totalRevenue={totalRevenue}
         profit={profit}
-        productionPercentage={productionPercentage}
+        productionPercentage={demoProductionPercentage}
         feedKg={periodFeed}
         fcr={fcr}
         currency={farm?.currency}
@@ -168,7 +191,7 @@ export default function DemoDashboard({
         totalRevenue={totalRevenue}
         totalExpenses={totalExpenses}
         profit={profit}
-        productionPercentage={productionPercentage}
+        productionPercentage={demoProductionPercentage}
         feedKg={periodFeed}
         fcr={fcr}
         currency={farm?.currency}
