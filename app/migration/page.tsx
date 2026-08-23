@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import AppShell from "@/components/layout/app-shell";
 import { MigrationStepper } from "@/components/migration/migration-stepper";
 import { MigrationPrepare } from "@/components/migration/migration-prepare";
 import { MigrationUpload } from "@/components/migration/migration-upload";
@@ -233,6 +234,7 @@ export default function MigrationPage() {
   }, []);
 
   return (
+  <AppShell>
     <div className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-6xl px-4 py-8">
         {/* Stepper */}
@@ -309,5 +311,6 @@ export default function MigrationPage() {
         )}
       </div>
     </div>
+  </AppShell>
   );
 }

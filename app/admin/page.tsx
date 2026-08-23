@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import AppShell from "@/components/layout/app-shell";
 
 type Customer = {
   farm_id: string;
@@ -223,8 +224,9 @@ export default function AdminOverviewPage() {
   const summary = data?.summary;
 
   if (loading) {
-    return (
-      <main className="min-h-screen bg-slate-50 p-6">
+return (
+  <AppShell>
+    <main className="min-h-screen bg-slate-50 p-6">
         <div className="mx-auto max-w-7xl">
           <div className="animate-pulse space-y-6">
             <div className="h-10 w-80 rounded-lg bg-slate-200" />
@@ -240,12 +242,14 @@ export default function AdminOverviewPage() {
           </div>
         </div>
       </main>
+      </AppShell>
     );
   }
 
   if (error) {
-    return (
-      <main className="min-h-screen bg-slate-50 p-6">
+return (
+  <AppShell>
+    <main className="min-h-screen bg-slate-50 p-6">
         <div className="mx-auto max-w-3xl">
           <div className="rounded-xl border border-red-200 bg-white p-8 shadow-sm">
             <div className="mb-3 text-sm font-semibold uppercase tracking-wide text-red-600">
@@ -266,12 +270,14 @@ export default function AdminOverviewPage() {
             </button>
           </div>
         </div>
-      </main>
-    );
+    </main>
+  </AppShell>
+);
   }
 
   return (
-    <main className="min-h-screen bg-slate-50">
+    <AppShell>
+      <main className="min-h-screen bg-slate-50">
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         {/* Header */}
         <header className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-center">
@@ -594,7 +600,8 @@ export default function AdminOverviewPage() {
           </div>
         </div>
       </div>
-    </main>
+      </main>
+    </AppShell>
   );
 }
 

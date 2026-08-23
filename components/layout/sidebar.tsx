@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/lib/permissions";
@@ -27,20 +26,17 @@ import {
   LogOut,
   Upload,
   Users,
+  ShieldCheck,
 } from "lucide-react";
 
 export default function Sidebar() {
   const pathname = usePathname();
-
   const router = useRouter();
 
-  const { profile } = useAuth();
-
-  const { can, loading } = usePermissions();
+  const { can, isPlatformAdmin } = usePermissions();
 
   async function handleSignOut() {
     await supabase.auth.signOut();
-
     router.push("/login");
   }
 
@@ -138,36 +134,26 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="w-72 bg-slate-950 text-white min-h-screen flex flex-col border-r border-slate-800">
-
+    <aside className="flex min-h-screen w-72 flex-col border-r border-slate-800 bg-slate-950 text-white">
       {/* Brand */}
-      <div className="p-6 border-b border-slate-800">
-
+      <div className="border-b border-slate-800 p-6">
         <div className="flex items-center gap-3">
-
-          <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-lg">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 text-lg font-bold">
             P
           </div>
 
           <div>
-
-            <h1 className="text-xl font-bold">
-              PoultryOps
-            </h1>
+            <h1 className="text-xl font-bold">PoultryOps</h1>
 
             <p className="text-xs text-slate-400">
               Poultry Farm Management
             </p>
-
           </div>
-
         </div>
-
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-4 space-y-6">
-
+      <nav className="flex-1 space-y-6 overflow-y-auto p-4">
         {can(PERMISSIONS.DASHBOARD_VIEW) && (
           <MenuItem
             pathname={pathname}
@@ -193,41 +179,53 @@ export default function Sidebar() {
           pathname={pathname}
         />
 
-        {can(PERMISSIONS.REPORTS_VIEW) && (
+        <MenuSection
+          title="INSIGHTS"
+          items={insights.filter((item) =>
+            can(item.permission)
+          )}
+          pathname={pathname}
+        />
+
+        <MenuSection
+          title="TOOLS"
+          items={tools.filter((item) =>
+            can(item.permission)
+          )}
+          pathname={pathname}
+        />
+
+        <MenuSection
+          title="TEAM"
+          items={team.filter((item) =>
+            can(item.permission)
+          )}
+          pathname={pathname}
+        />
+
+        {/* Platform Administration */}
+        {isPlatformAdmin && (
           <MenuSection
-            title="INSIGHTS"
-            items={insights.filter((item) =>
-              can(item.permission)
-            )}
+            title="ADMINISTRATION"
+            items={[
+              {
+                name: "Admin Control Centre",
+                href: "/admin",
+                icon: ShieldCheck,
+              },
+              {
+                name: "POGP",
+                href: "/admin/pogp",
+                icon: Users,
+              },
+            ]}
             pathname={pathname}
           />
         )}
-
-        {can(PERMISSIONS.MIGRATION_VIEW) && (
-          <MenuSection
-            title="TOOLS"
-            items={tools.filter((item) =>
-              can(item.permission)
-            )}
-            pathname={pathname}
-          />
-        )}
-
-        {can(PERMISSIONS.TEAM_VIEW) && (
-          <MenuSection
-            title="TEAM"
-            items={team.filter((item) =>
-              can(item.permission)
-            )}
-            pathname={pathname}
-          />
-        )}
-
       </nav>
 
       {/* Bottom Navigation */}
-      <div className="border-t border-slate-800 p-4 space-y-1">
-
+      <div className="space-y-1 border-t border-slate-800 p-4">
         <MenuItem
           pathname={pathname}
           name="Profile"
@@ -247,41 +245,23 @@ export default function Sidebar() {
         <button
           onClick={handleSignOut}
           className="
-            w-full
-            flex
-            items-center
-            gap-3
-            rounded-xl
-            px-4
-            py-3
-            text-red-400
-            hover:bg-red-950
-            transition-all
+            flex w-full items-center gap-3 rounded-xl px-4 py-3
+            text-red-400 transition-all hover:bg-red-950
           "
         >
-
           <LogOut size={18} />
 
-          <span>
-            Sign Out
-          </span>
-
+          <span>Sign Out</span>
         </button>
 
-        <div className="pt-4 border-t border-slate-800">
+        <div className="border-t border-slate-800 pt-4">
+          <p className="text-xs text-slate-500">PoultryOps</p>
 
-          <p className="text-xs text-slate-500">
-            PoultryOps
-          </p>
-
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="mt-1 text-xs text-slate-400">
             Version 1.0.1
           </p>
-
         </div>
-
       </div>
-
     </aside>
   );
 }
@@ -302,15 +282,17 @@ function MenuSection({
   }>;
   pathname: string;
 }) {
+  if (items.length === 0) {
+    return null;
+  }
+
   return (
     <div>
-
-      <p className="px-3 mb-2 text-xs font-semibold text-slate-500 tracking-wider">
+      <p className="mb-2 px-3 text-xs font-semibold tracking-wider text-slate-500">
         {title}
       </p>
 
       <div className="space-y-1">
-
         {items.map((item) => (
           <MenuItem
             key={item.href}
@@ -318,9 +300,7 @@ function MenuSection({
             {...item}
           />
         ))}
-
       </div>
-
     </div>
   );
 }
@@ -340,18 +320,14 @@ function MenuItem({
 }) {
   const active =
     pathname === href ||
-    (
-      href !== "/" &&
-      pathname.startsWith(href + "/")
-    );
+    (href !== "/" &&
+      pathname.startsWith(href + "/"));
 
   return (
     <Link
       href={href}
       className={`
-        flex items-center gap-3
-        rounded-xl
-        px-4 py-3
+        flex items-center gap-3 rounded-xl px-4 py-3
         transition-all
         ${
           active
@@ -360,13 +336,9 @@ function MenuItem({
         }
       `}
     >
-
       <Icon size={18} />
 
-      <span>
-        {name}
-      </span>
-
+      <span>{name}</span>
     </Link>
   );
 }

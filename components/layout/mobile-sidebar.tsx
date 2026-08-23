@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/lib/permissions";
 import { PERMISSIONS } from "@/lib/permissions";
@@ -26,6 +27,7 @@ import {
   User,
   Users,
   LogOut,
+  ShieldCheck,
 } from "lucide-react";
 
 type Props = {
@@ -37,28 +39,10 @@ export default function MobileSidebar({
   open,
   onClose,
 }: Props) {
-  const pathname =
-    usePathname();
+  const pathname = usePathname();
+  const router = useRouter();
 
-  const router =
-    useRouter();
-
-  const { profile } =
-    useAuth();
-
-  const { can } =
-    usePermissions();
-
-  const isOwner =
-    profile?.role === "owner";
-
-  async function handleSignOut() {
-    onClose();
-
-    await supabase.auth.signOut();
-
-    router.push("/login");
-  }
+  const { can, isPlatformAdmin } = usePermissions();
 
   const operations = [
     {
@@ -153,100 +137,82 @@ export default function MobileSidebar({
     },
   ];
 
-  if (!open) return null;
+  if (!open) {
+    return null;
+  }
+
+  async function handleSignOut() {
+    onClose();
+
+    await supabase.auth.signOut();
+
+    router.push("/login");
+  }
 
   return (
     <>
+      {/* Overlay */}
       <div
-        className="fixed inset-0 bg-black/60 z-40"
+        className="fixed inset-0 z-40 bg-black/60"
         onClick={onClose}
       />
 
       <aside
         className="
-          fixed
-          left-0
-          top-0
-          h-full
-          w-72
-          bg-slate-950
-          text-white
-          z-50
-          flex
-          flex-col
+          fixed left-0 top-0 z-50 flex h-full w-72
+          flex-col bg-slate-950 text-white
         "
       >
-
         {/* Header */}
-        <div className="p-5 border-b border-slate-800">
-
+        <div className="border-b border-slate-800 p-5">
           <div className="flex items-center justify-between">
-
             <div className="flex items-center gap-3">
-
               <div
                 className="
-                  w-10
-                  h-10
-                  rounded-xl
-                  bg-blue-600
-                  flex
-                  items-center
-                  justify-center
-                  font-bold
+                  flex h-10 w-10 items-center justify-center
+                  rounded-xl bg-blue-600 font-bold
                 "
               >
                 P
               </div>
 
               <div>
-
-                <h2 className="font-bold text-lg">
+                <h2 className="text-lg font-bold">
                   PoultryOps
                 </h2>
 
                 <p className="text-xs text-slate-400">
                   Poultry Farm Management
                 </p>
-
               </div>
-
             </div>
 
             <button
               onClick={onClose}
-              className="
-                p-2
-                rounded-lg
-                hover:bg-slate-800
-              "
+              className="rounded-lg p-2 hover:bg-slate-800"
+              aria-label="Close navigation"
             >
               <X size={20} />
             </button>
-
           </div>
-
         </div>
 
         {/* Navigation */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-6">
-
-          {isOwner &&
-            can(PERMISSIONS.DASHBOARD_VIEW) && (
-              <MenuItem
-                pathname={pathname}
-                href="/dashboard"
-                name="Dashboard"
-                icon={LayoutDashboard}
-                onClose={onClose}
-              />
-            )}
+        <div className="flex-1 space-y-6 overflow-y-auto p-4">
+          {can(PERMISSIONS.DASHBOARD_VIEW) && (
+            <MenuItem
+              pathname={pathname}
+              href="/dashboard"
+              name="Dashboard"
+              icon={LayoutDashboard}
+              onClose={onClose}
+            />
+          )}
 
           <MenuSection
             title="OPERATIONS"
-            items={operations.filter(
-              (item) =>
-                can(item.permission)
+            items={operations.filter((item) =>
+              can(item.permission)
             )}
             pathname={pathname}
             onClose={onClose}
@@ -254,58 +220,64 @@ export default function MobileSidebar({
 
           <MenuSection
             title="FINANCE"
-            items={finance.filter(
-              (item) =>
-                can(item.permission)
+            items={finance.filter((item) =>
+              can(item.permission)
             )}
             pathname={pathname}
             onClose={onClose}
           />
 
-          {isOwner &&
-            can(PERMISSIONS.REPORTS_VIEW) && (
-              <MenuSection
-                title="INSIGHTS"
-                items={insights.filter(
-                  (item) =>
-                    can(item.permission)
-                )}
-                pathname={pathname}
-                onClose={onClose}
-              />
+          <MenuSection
+            title="INSIGHTS"
+            items={insights.filter((item) =>
+              can(item.permission)
             )}
+            pathname={pathname}
+            onClose={onClose}
+          />
 
-          {isOwner &&
-            can(PERMISSIONS.MIGRATION_VIEW) && (
-              <MenuSection
-                title="TOOLS"
-                items={tools.filter(
-                  (item) =>
-                    can(item.permission)
-                )}
-                pathname={pathname}
-                onClose={onClose}
-              />
+          <MenuSection
+            title="TOOLS"
+            items={tools.filter((item) =>
+              can(item.permission)
             )}
+            pathname={pathname}
+            onClose={onClose}
+          />
 
-          {isOwner &&
-            can(PERMISSIONS.TEAM_VIEW) && (
-              <MenuSection
-                title="TEAM"
-                items={team.filter(
-                  (item) =>
-                    can(item.permission)
-                )}
-                pathname={pathname}
-                onClose={onClose}
-              />
+          <MenuSection
+            title="TEAM"
+            items={team.filter((item) =>
+              can(item.permission)
             )}
+            pathname={pathname}
+            onClose={onClose}
+          />
 
+          {/* Platform Administration */}
+          {isPlatformAdmin && (
+            <MenuSection
+              title="ADMINISTRATION"
+              items={[
+                {
+                  name: "Admin Control Centre",
+                  href: "/admin",
+                  icon: ShieldCheck,
+                },
+                {
+                  name: "POGP",
+                  href: "/admin/pogp",
+                  icon: Users,
+                },
+              ]}
+              pathname={pathname}
+              onClose={onClose}
+            />
+          )}
         </div>
 
-        {/* Bottom navigation */}
-        <div className="p-4 border-t border-slate-800 space-y-1">
-
+        {/* Bottom Navigation */}
+        <div className="space-y-1 border-t border-slate-800 p-4">
           <MenuItem
             pathname={pathname}
             href="/profile"
@@ -314,43 +286,29 @@ export default function MobileSidebar({
             onClose={onClose}
           />
 
-          {isOwner &&
-            can(PERMISSIONS.SETTINGS_VIEW) && (
-              <MenuItem
-                pathname={pathname}
-                href="/settings"
-                name="Settings"
-                icon={Settings}
-                onClose={onClose}
-              />
-            )}
+          {can(PERMISSIONS.SETTINGS_VIEW) && (
+            <MenuItem
+              pathname={pathname}
+              href="/settings"
+              name="Settings"
+              icon={Settings}
+              onClose={onClose}
+            />
+          )}
 
           <button
             onClick={handleSignOut}
             className="
-              w-full
-              flex
-              items-center
-              gap-3
-              rounded-xl
-              px-4
-              py-3
-              text-red-400
+              flex w-full items-center gap-3 rounded-xl
+              px-4 py-3 text-red-400 transition-all
               hover:bg-red-950
-              transition-all
             "
           >
-
             <LogOut size={18} />
 
-            <span>
-              Sign Out
-            </span>
-
+            <span>Sign Out</span>
           </button>
-
         </div>
-
       </aside>
     </>
   );
@@ -362,36 +320,31 @@ function MenuSection({
   pathname,
   onClose,
 }: any) {
+  if (!items || items.length === 0) {
+    return null;
+  }
+
   return (
     <div>
-
       <p
         className="
-          text-xs
+          mb-2 text-xs font-semibold tracking-wider
           text-slate-500
-          font-semibold
-          tracking-wider
-          mb-2
         "
       >
         {title}
       </p>
 
       <div className="space-y-1">
-
-        {items.map(
-          (item: any) => (
-            <MenuItem
-              key={item.href}
-              pathname={pathname}
-              onClose={onClose}
-              {...item}
-            />
-          )
-        )}
-
+        {items.map((item: any) => (
+          <MenuItem
+            key={item.href}
+            pathname={pathname}
+            onClose={onClose}
+            {...item}
+          />
+        ))}
       </div>
-
     </div>
   );
 }
@@ -405,24 +358,15 @@ function MenuItem({
 }: any) {
   const active =
     pathname === href ||
-    (
-      href !== "/" &&
-      pathname.startsWith(
-        href + "/"
-      )
-    );
+    (href !== "/" &&
+      pathname.startsWith(href + "/"));
 
   return (
     <Link
       href={href}
       onClick={onClose}
       className={`
-        flex
-        items-center
-        gap-3
-        px-4
-        py-3
-        rounded-xl
+        flex items-center gap-3 rounded-xl px-4 py-3
         transition-all
         ${
           active
@@ -431,13 +375,9 @@ function MenuItem({
         }
       `}
     >
-
       <Icon size={18} />
 
-      <span>
-        {name}
-      </span>
-
+      <span>{name}</span>
     </Link>
   );
 }
