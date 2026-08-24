@@ -1,22 +1,46 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { supabase } from "@/lib/supabase";
 
 export function RegisterForm() {
-  const [email, setEmail] =
-    useState("");
+  const searchParams = useSearchParams();
 
-  const [password, setPassword] =
-    useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-  const [loading, setLoading] =
-    useState(false);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
 
-  const [message, setMessage] =
-    useState("");
+  const [pogpCode, setPogpCode] = useState<string | null>(null);
+
+  // ----------------------------------------------------------
+  // Capture referral code from:
+  //
+  // https://poultry.trueops.app/register?ref=POGP-001
+  //
+  // We do not display the code as an input field.
+  // ----------------------------------------------------------
+
+  useEffect(() => {
+    const ref = searchParams.get("ref");
+
+    if (!ref) {
+      setPogpCode(null);
+      return;
+    }
+
+    const normalized = ref.trim().toUpperCase();
+
+    if (/^POGP-\d+$/.test(normalized)) {
+      setPogpCode(normalized);
+    } else {
+      setPogpCode(null);
+    }
+  }, [searchParams]);
 
   async function handleSubmit(
     e: React.FormEvent
@@ -27,10 +51,24 @@ export function RegisterForm() {
       setLoading(true);
       setMessage("");
 
+      // ------------------------------------------------------
+      // Create account
+      //
+      // The POGP code is stored in Supabase user metadata.
+      // The farmer does not need to type the code again.
+      // ------------------------------------------------------
+
       const { error } =
         await supabase.auth.signUp({
-          email,
+          email: email.trim(),
           password,
+          options: {
+            data: pogpCode
+              ? {
+                  pogp_code: pogpCode,
+                }
+              : undefined,
+          },
         });
 
       if (error) {
@@ -38,17 +76,17 @@ export function RegisterForm() {
       }
 
       setMessage(
-        "Check your email to verify your account, or sign in if you're already registered."
+        pogpCode
+          ? "Your account has been created. Check your email to verify your account. Your referral has been recorded."
+          : "Check your email to verify your account, or sign in if you're already registered."
       );
-
     } catch (error: any) {
       console.error(error);
 
       setMessage(
-        error.message ||
+        error?.message ||
           "Something went wrong."
       );
-
     } finally {
       setLoading(false);
     }
@@ -74,6 +112,21 @@ export function RegisterForm() {
         Create your PoultryOps account.
       </p>
 
+      {pogpCode && (
+        <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
+          <p className="text-sm font-medium text-blue-900">
+            Referred by a PoultryOps Growth Partner
+          </p>
+
+          <p className="mt-1 text-xs text-blue-700">
+            Referral code:{" "}
+            <span className="font-bold">
+              {pogpCode}
+            </span>
+          </p>
+        </div>
+      )}
+
       <form
         onSubmit={handleSubmit}
         className="mt-6 space-y-4"
@@ -83,9 +136,7 @@ export function RegisterForm() {
           placeholder="Email Address"
           value={email}
           onChange={(e) =>
-            setEmail(
-              e.target.value
-            )
+            setEmail(e.target.value)
           }
           className="
             w-full
@@ -101,9 +152,7 @@ export function RegisterForm() {
           placeholder="Password"
           value={password}
           onChange={(e) =>
-            setPassword(
-              e.target.value
-            )
+            setPassword(e.target.value)
           }
           className="
             w-full
@@ -124,6 +173,9 @@ export function RegisterForm() {
             p-3
             text-white
             font-semibold
+            hover:bg-blue-700
+            disabled:cursor-not-allowed
+            disabled:opacity-60
           "
         >
           {loading
@@ -157,7 +209,6 @@ export function RegisterForm() {
             </div>
           </>
         )}
-
       </form>
     </div>
   );

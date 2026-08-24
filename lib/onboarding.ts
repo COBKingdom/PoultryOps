@@ -12,11 +12,8 @@ type CreateFarmParams = {
 /**
  * Thrown when the authenticated user already owns a farm.
  *
- * Business rule (current PoultryOps architecture):
+ * Business rule:
  * ONE AUTH ACCOUNT / EMAIL = ONE FARM OWNER = ONE FARM.
- *
- * The onboarding form catches this error and redirects the user
- * to their existing farm/dashboard instead of creating another farm.
  */
 export class FarmAlreadyExistsError extends Error {
   constructor(message: string) {
@@ -26,15 +23,25 @@ export class FarmAlreadyExistsError extends Error {
 }
 
 /**
- * Returns true when a PostgREST error is a unique-constraint violation
- * (PostgreSQL SQLSTATE 23505). This is how we detect a lost race between
- * two simultaneous onboarding requests — the database unique index on
- * farms(owner_id) is the final protection.
+ * Returns true when a PostgREST error is a unique-constraint
+ * violation (PostgreSQL SQLSTATE 23505).
  */
-function isUniqueViolation(error: { code?: string; message?: string }): boolean {
-  return error?.code === "23505" || /unique constraint|duplicate key/i.test(error?.message ?? "");
+function isUniqueViolation(error: {
+  code?: string;
+  message?: string;
+}): boolean {
+  return (
+    error?.code === "23505" ||
+    /unique constraint|duplicate key/i.test(
+      error?.message ?? ""
+    )
+  );
 }
 
+/**
+ * Create the user's farm, farm user, trial subscription
+ * and — when applicable — attribute the farm to a POGP.
+ */
 export async function createFarmAndTrial({
   userId,
   farmName,
@@ -67,7 +74,9 @@ export async function createFarmAndTrial({
     );
   }
 
+  // =============================================================
   // Create Farm
+  // =============================================================
 
   const {
     data: farm,
@@ -86,8 +95,6 @@ export async function createFarmAndTrial({
 
   if (farmError) {
     // Race condition caught by the database unique index.
-    // Convert the raw PostgreSQL error into a useful message and
-    // send the user to their existing farm/dashboard.
     if (isUniqueViolation(farmError)) {
       throw new FarmAlreadyExistsError(
         "This account already has a farm. Redirecting you to your dashboard..."
@@ -97,7 +104,9 @@ export async function createFarmAndTrial({
     throw farmError;
   }
 
+  // =============================================================
   // Update Profile
+  // =============================================================
 
   const {
     error: profileError,
@@ -113,7 +122,9 @@ export async function createFarmAndTrial({
     throw profileError;
   }
 
+  // =============================================================
   // Create Farm User
+  // =============================================================
 
   const {
     error: farmUserError,
@@ -129,13 +140,13 @@ export async function createFarmAndTrial({
     throw farmUserError;
   }
 
+  // =============================================================
   // Create Subscription
+  // =============================================================
 
-  const trialStart =
-    new Date();
+  const trialStart = new Date();
 
-  const trialEnd =
-    new Date();
+  const trialEnd = new Date();
 
   trialEnd.setDate(
     trialEnd.getDate() + 14
@@ -161,34 +172,130 @@ export async function createFarmAndTrial({
     throw subscriptionError;
   }
 
-try {
-  const response = await fetch("/api/send-welcome", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      userId,
-      farmName,
-    }),
-  });
+  // =============================================================
+  // POGP ATTRIBUTION
+  //
+  // The registration form stores the referral code in the
+  // authenticated user's metadata.
+  //
+  // The server endpoint reads the authenticated user itself,
+  // validates the POGP code and creates the attribution.
+  //
+  // IMPORTANT:
+  // A missing POGP code is perfectly valid.
+  // An invalid code does not prevent farm creation.
+  // =============================================================
 
-  if (!response.ok) {
-    let errorDetail = `HTTP ${response.status}`;
-    try {
-      const body = await response.json();
-      if (body?.error) {
-        errorDetail = body.error;
+  try {
+    const {
+      data: {
+        session,
+      },
+    } = await supabase.auth.getSession();
+
+    if (session?.access_token) {
+      const response = await fetch(
+        "/api/pogp/attribute",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            farmId: farm.id,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        let errorDetail = `HTTP ${response.status}`;
+
+        try {
+          const body = await response.json();
+
+          if (body?.error) {
+            errorDetail = body.error;
+          }
+        } catch {
+          // Keep HTTP status detail.
+        }
+
+        console.warn(
+          "[onboarding] POGP attribution was not created:",
+          errorDetail
+        );
+      } else {
+        const result = await response.json();
+
+        if (result?.attributed) {
+          console.log(
+            "[onboarding] Farm attributed to POGP:",
+            result.pogpCode
+          );
+        } else {
+          console.log(
+            "[onboarding] No POGP attribution required."
+          );
+        }
       }
-    } catch {
-      // response body was not JSON — keep the HTTP status detail
     }
-    console.error("[onboarding] Welcome email failed:", errorDetail);
-  } else {
-    console.log("[onboarding] Welcome email sent successfully");
+  } catch (error) {
+    // POGP attribution must never prevent the farmer
+    // from completing their account setup.
+    console.warn(
+      "[onboarding] POGP attribution request failed:",
+      error
+    );
   }
-} catch (error) {
-  console.error("[onboarding] Welcome email failed (request error):", error);
-}
+
+  // =============================================================
+  // Welcome Email
+  // =============================================================
+
+  try {
+    const response = await fetch(
+      "/api/send-welcome",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId,
+          farmName,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      let errorDetail = `HTTP ${response.status}`;
+
+      try {
+        const body = await response.json();
+
+        if (body?.error) {
+          errorDetail = body.error;
+        }
+      } catch {
+        // Keep HTTP status detail.
+      }
+
+      console.error(
+        "[onboarding] Welcome email failed:",
+        errorDetail
+      );
+    } else {
+      console.log(
+        "[onboarding] Welcome email sent successfully"
+      );
+    }
+  } catch (error) {
+    console.error(
+      "[onboarding] Welcome email failed (request error):",
+      error
+    );
+  }
+
   return farm;
 }
