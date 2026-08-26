@@ -54,6 +54,12 @@ export async function POST(request: Request) {
 
   const trials = (rawTrials ?? []) as SubscriptionRow[]
 
+  console.log("[EMAIL AUTOMATION] Subscription query result:", {
+  rowCount: rawTrials?.length ?? 0,
+  queryError: queryError ? String(queryError) : null,
+  trialRows: rawTrials,
+})
+
   // Collect all owner_ids for a single bulk profile lookup
 const ownerIds = [
   ...new Set(
