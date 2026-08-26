@@ -83,6 +83,16 @@ const ownerIds = [
 
   // Bucket users by trial_end relative to now
   type Bucket = { row: SubscriptionRow; type: TrialEmailType }
+  console.log("[EMAIL AUTOMATION] Date calculation:", {
+  now: now.toISOString(),
+  plus2Days: plus2Days.toISOString(),
+  plus4Days: plus4Days.toISOString(),
+  trialEnds: trials.map((row) => ({
+    farmId: row.farm_id,
+    trialEnd: row.trial_end,
+    parsedTrialEnd: new Date(row.trial_end).toISOString(),
+  })),
+})
   const buckets: Bucket[] = []
 
   for (const row of trials) {
