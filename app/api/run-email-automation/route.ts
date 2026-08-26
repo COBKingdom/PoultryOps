@@ -96,8 +96,16 @@ const ownerIds = [
   const buckets: Bucket[] = []
 
   for (const row of trials) {
-    const farm = row.farms[0]
-    if (!farm?.owner_id) continue
+const farm = row.farms[0]
+
+console.log("[EMAIL AUTOMATION] Bucket evaluation:", {
+  farmId: row.farm_id,
+  farm,
+  ownerId: farm?.owner_id ?? null,
+  trialEnd: row.trial_end,
+})
+
+if (!farm?.owner_id) continue
     const expiry = new Date(row.trial_end)
     if (expiry < now) {
       buckets.push({ row, type: "trial_expired" })
