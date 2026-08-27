@@ -20,7 +20,10 @@ import {
   DateRangeSelection,
 } from "@/lib/date-ranges";
 
-import { Activity } from "lucide-react";
+import {
+  Activity,
+  ChevronDown,
+} from "lucide-react";
 
 import AppShell from "@/components/layout/app-shell";
 import OperationsKpiCard from "@/components/operations/operations-kpi-card";
@@ -52,6 +55,9 @@ export default function MortalityPage() {
   } = useMortality(farmId);
 
   const [searchQuery, setSearchQuery] =
+    useState("");
+
+  const [selectedFlockId, setSelectedFlockId] =
     useState("");
 
   const [currentPage, setCurrentPage] =
@@ -87,39 +93,51 @@ export default function MortalityPage() {
   }, [farmId]);
 
   /*
-   * Filter mortality records by selected date range.
-   *
-   * Mortality uses mortality_date.
+   * Filter mortality by date range
+   * and selected flock.
    */
-  const dateFilteredRecords = useMemo(() => {
-    const {
-      start,
-      end,
-    } = dateRangeSelection.range;
+  const dateAndFlockFilteredRecords =
+    useMemo(() => {
+      const {
+        start,
+        end,
+      } = dateRangeSelection.range;
 
-    return records.filter((record) => {
-      const mortalityDate =
-        record.mortality_date;
+      return records.filter((record) => {
+        const mortalityDate =
+          record.mortality_date;
 
-      if (!mortalityDate) return false;
+        if (!mortalityDate) {
+          return false;
+        }
 
-      return (
-        mortalityDate >= start &&
-        mortalityDate <= end
-      );
-    });
-  }, [
-    records,
-    dateRangeSelection,
-  ]);
+        const matchesDate =
+          mortalityDate >= start &&
+          mortalityDate <= end;
+
+        const matchesFlock =
+          !selectedFlockId ||
+          record.flock_id ===
+            selectedFlockId;
+
+        return (
+          matchesDate &&
+          matchesFlock
+        );
+      });
+    }, [
+      records,
+      dateRangeSelection,
+      selectedFlockId,
+    ]);
 
   /*
-   * Compute KPI values from the selected
-   * date range.
+   * Compute KPI values after both
+   * date and flock filters.
    */
   const kpiValues = useMemo(() => {
     const selectedPeriodMortality =
-      dateFilteredRecords.reduce(
+      dateAndFlockFilteredRecords.reduce(
         (sum, record) =>
           sum +
           Number(record.quantity || 0),
@@ -127,26 +145,28 @@ export default function MortalityPage() {
       );
 
     const recordCount =
-      dateFilteredRecords.length;
+      dateAndFlockFilteredRecords.length;
 
     return {
       selectedPeriodMortality,
       recordCount,
     };
-  }, [dateFilteredRecords]);
+  }, [
+    dateAndFlockFilteredRecords,
+  ]);
 
   /*
-   * Apply search after the date filter.
+   * Apply search after date and flock filters.
    */
   const filteredRecords = useMemo(() => {
     if (!searchQuery.trim()) {
-      return dateFilteredRecords;
+      return dateAndFlockFilteredRecords;
     }
 
     const query =
       searchQuery.toLowerCase();
 
-    return dateFilteredRecords.filter(
+    return dateAndFlockFilteredRecords.filter(
       (record) =>
         record.flocks?.flock_name
           ?.toLowerCase()
@@ -161,7 +181,7 @@ export default function MortalityPage() {
           .includes(query)
     );
   }, [
-    dateFilteredRecords,
+    dateAndFlockFilteredRecords,
     searchQuery,
   ]);
 
@@ -187,13 +207,14 @@ export default function MortalityPage() {
     );
 
   /*
-   * Reset pagination whenever search
-   * or date range changes.
+   * Reset pagination whenever
+   * search, flock, or date range changes.
    */
   useEffect(() => {
     setCurrentPage(1);
   }, [
     searchQuery,
+    selectedFlockId,
     dateRangeSelection,
   ]);
 
@@ -301,11 +322,69 @@ export default function MortalityPage() {
           {kpiCards}
         </div>
 
-        {/* Search + Date Filter */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+        {/* Search + Flock Filter + Date Filter */}
+        <div className="flex flex-col lg:flex-row lg:items-center gap-3">
 
           <div className="flex-1">
             {toolbar}
+          </div>
+
+          {/* Flock Filter */}
+          <div className="relative flex-shrink-0">
+            <select
+              value={selectedFlockId}
+              onChange={(event) =>
+                setSelectedFlockId(
+                  event.target.value
+                )
+              }
+              className="
+                appearance-none
+                w-full
+                lg:w-64
+                h-[50px]
+                rounded-2xl
+                border
+                border-slate-200
+                bg-white
+                pl-4
+                pr-10
+                text-sm
+                font-medium
+                text-slate-700
+                shadow-sm
+                outline-none
+                transition
+                focus:border-blue-400
+                focus:ring-2
+                focus:ring-blue-100
+              "
+            >
+              <option value="">
+                All Flocks
+              </option>
+
+              {flocks.map((flock) => (
+                <option
+                  key={flock.id}
+                  value={flock.id}
+                >
+                  {flock.flock_name}
+                </option>
+              ))}
+            </select>
+
+            <ChevronDown
+              size={18}
+              className="
+                pointer-events-none
+                absolute
+                right-4
+                top-1/2
+                -translate-y-1/2
+                text-slate-400
+              "
+            />
           </div>
 
           <div className="flex-shrink-0">
@@ -316,6 +395,53 @@ export default function MortalityPage() {
           </div>
 
         </div>
+
+        {/* Active Flock Indicator */}
+        {selectedFlockId && (
+          <div className="
+            flex
+            items-center
+            justify-between
+            rounded-2xl
+            border
+            border-blue-100
+            bg-blue-50
+            px-4
+            py-3
+          ">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-blue-500">
+                Viewing Flock
+              </p>
+
+              <p className="mt-0.5 font-bold text-blue-900">
+                {
+                  flocks.find(
+                    (flock) =>
+                      flock.id ===
+                      selectedFlockId
+                  )?.flock_name ||
+                  "Selected Flock"
+                }
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() =>
+                setSelectedFlockId("")
+              }
+              className="
+                text-sm
+                font-semibold
+                text-blue-700
+                hover:text-blue-900
+              "
+            >
+              Clear
+            </button>
+          </div>
+        )}
 
         {/* Main Content */}
         <div className="grid lg:grid-cols-12 gap-6 items-start">
