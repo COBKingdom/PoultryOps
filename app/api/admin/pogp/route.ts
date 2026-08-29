@@ -269,7 +269,7 @@ export async function GET(request: Request) {
           pogpEmail:
             partner?.email || "",
           pogpCode:
-            partner?.pogp_code || "—",
+            partner?.pogp_code || "â€”",
           source:
             attribution.source ||
             "manual",
@@ -280,10 +280,10 @@ export async function GET(request: Request) {
                 plan:
                   subscription.selected_plan ||
                   subscription.plan ||
-                  "—",
+                  "â€”",
                 status:
                   subscription.status ||
-                  "—",
+                  "â€”",
                 trialStart:
                   subscription.trial_start,
                 trialEnd:
@@ -494,13 +494,16 @@ export async function POST(request: Request) {
     // already registered as a PoultryOps authentication user.
     // ==========================================================
 
+    const normalizedEmail = email.trim().toLowerCase();
+
     const {
-      data: existingAuthUser,
+      data: authUsersData,
       error: authLookupError,
     } =
-      await supabaseAdmin.auth.admin.getUserByEmail(
-        email
-      );
+      await supabaseAdmin.auth.admin.listUsers({
+        page: 1,
+        perPage: 1000,
+      });
 
     if (authLookupError) {
       console.error(
@@ -518,7 +521,14 @@ export async function POST(request: Request) {
       );
     }
 
-    if (existingAuthUser?.user) {
+    const existingAuthUser =
+      authUsersData.users.find(
+        (user) =>
+          user.email?.trim().toLowerCase() ===
+          normalizedEmail
+      );
+
+    if (existingAuthUser) {
       return NextResponse.json(
         {
           success: false,
