@@ -7,7 +7,6 @@ import {
 } from "react";
 
 import { useAuth } from "@/contexts/AuthContext";
-
 import { useDashboard } from "@/hooks/useDashboard";
 import { useFeed } from "@/hooks/useFeed";
 
@@ -32,16 +31,14 @@ import FeedSummary from "@/components/feed/feed-summary";
 import EditFeedForm from "@/components/feed/edit-feed-form";
 
 export default function FeedPage() {
-  const { user, profile } =
-    useAuth();
+  const { user, profile } = useAuth();
 
   const {
     data,
     loading,
   } = useDashboard();
 
-  const farmId =
-    data?.farm?.id;
+  const farmId = data?.farm?.id;
 
   const [flocks, setFlocks] =
     useState<any[]>([]);
@@ -49,11 +46,12 @@ export default function FeedPage() {
   const {
     records,
     refresh,
-  } = useFeed(
-    farmId
-  );
+  } = useFeed(farmId);
 
   const [searchQuery, setSearchQuery] =
+    useState("");
+
+  const [selectedFlockId, setSelectedFlockId] =
     useState("");
 
   const [currentPage, setCurrentPage] =
@@ -61,16 +59,22 @@ export default function FeedPage() {
 
   const pageSize = 10;
 
-  const [dateRangeSelection, setDateRangeSelection] =
-    useState<DateRangeSelection>(
-      getDefaultDateRangeSelection()
-    );
+  const [
+    dateRangeSelection,
+    setDateRangeSelection,
+  ] = useState<DateRangeSelection>(
+    getDefaultDateRangeSelection()
+  );
 
-  const [isEditModalOpen, setIsEditModalOpen] =
-    useState(false);
+  const [
+    isEditModalOpen,
+    setIsEditModalOpen,
+  ] = useState(false);
 
-  const [editingRecord, setEditingRecord] =
-    useState<any | null>(null);
+  const [
+    editingRecord,
+    setEditingRecord,
+  ] = useState<any | null>(null);
 
   /*
    * Load farm flocks.
@@ -80,9 +84,7 @@ export default function FeedPage() {
       if (!farmId) return;
 
       const result =
-        await getFarmFlocks(
-          farmId
-        );
+        await getFarmFlocks(farmId);
 
       setFlocks(result);
     }
@@ -91,9 +93,7 @@ export default function FeedPage() {
   }, [farmId]);
 
   /*
-   * Filter feed records by selected date range.
-   *
-   * Feed records use feed_date.
+   * Filter by selected date range.
    */
   const dateFilteredRecords = useMemo(() => {
     const {
@@ -118,17 +118,37 @@ export default function FeedPage() {
   ]);
 
   /*
-   * Apply search after the date filter.
+   * Filter by flock.
    */
-  const filteredRecords = useMemo(() => {
-    if (!searchQuery.trim()) {
+  const flockFilteredRecords = useMemo(() => {
+    if (!selectedFlockId) {
       return dateFilteredRecords;
     }
 
-    const query =
-      searchQuery.toLowerCase();
-
     return dateFilteredRecords.filter(
+      (record) =>
+        record.flock_id ===
+        selectedFlockId
+    );
+  }, [
+    dateFilteredRecords,
+    selectedFlockId,
+  ]);
+
+  /*
+   * Apply search after date and flock filters.
+   */
+  const filteredRecords = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return flockFilteredRecords;
+    }
+
+    const query =
+      searchQuery
+        .toLowerCase()
+        .trim();
+
+    return flockFilteredRecords.filter(
       (record) =>
         record.flocks?.flock_name
           ?.toLowerCase()
@@ -139,11 +159,12 @@ export default function FeedPage() {
         record.feed_date
           ?.toLowerCase()
           .includes(query) ||
-        String(record.quantity_kg)
-          .includes(query)
+        String(
+          record.quantity_kg
+        ).includes(query)
     );
   }, [
-    dateFilteredRecords,
+    flockFilteredRecords,
     searchQuery,
   ]);
 
@@ -169,13 +190,14 @@ export default function FeedPage() {
     );
 
   /*
-   * Reset pagination whenever search
-   * or date range changes.
+   * Reset pagination whenever
+   * search, flock or date range changes.
    */
   useEffect(() => {
     setCurrentPage(1);
   }, [
     searchQuery,
+    selectedFlockId,
     dateRangeSelection,
   ]);
 
@@ -255,37 +277,117 @@ export default function FeedPage() {
       <div className="space-y-6">
 
         {/* Page Title */}
-        <h1 className="text-2xl font-bold text-slate-900">
-          Feed Management
-        </h1>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">
+            Feed Management
+          </h1>
+
+          <p className="text-slate-500 mt-1">
+            Monitor feed consumption by flock.
+          </p>
+        </div>
 
         {/* KPI Summary */}
         <FeedSummary
-          records={dateFilteredRecords}
+          records={flockFilteredRecords}
         />
 
-        {/* Search + Date Filter */}
+        {/* Search + Flock + Date Filter */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
 
           <div className="flex-1">
             {toolbar}
           </div>
 
-          <div className="flex-shrink-0">
+          <div className="flex flex-col sm:flex-row gap-3">
+
+            {/* Flock Filter */}
+            <select
+              value={selectedFlockId}
+              onChange={(e) =>
+                setSelectedFlockId(
+                  e.target.value
+                )
+              }
+              className="
+                w-full
+                sm:w-56
+                border
+                border-slate-200
+                bg-white
+                rounded-xl
+                px-4
+                py-3
+                text-sm
+                text-slate-700
+                shadow-sm
+                focus:outline-none
+                focus:ring-2
+                focus:ring-blue-500
+              "
+            >
+              <option value="">
+                All Flocks
+              </option>
+
+              {flocks.map(
+                (flock) => (
+                  <option
+                    key={flock.id}
+                    value={flock.id}
+                  >
+                    {flock.flock_name}
+                  </option>
+                )
+              )}
+            </select>
+
+            {/* Date Filter */}
             <ReportFilter
               value={dateRangeSelection}
-              onChange={setDateRangeSelection}
+              onChange={
+                setDateRangeSelection
+              }
             />
-          </div>
 
+          </div>
         </div>
+
+        {/* Selected Flock Indicator */}
+        {selectedFlockId && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-500">
+              Showing feed records for:
+            </span>
+
+            <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">
+              {
+                flocks.find(
+                  (flock) =>
+                    flock.id ===
+                    selectedFlockId
+                )?.flock_name ||
+                  "Selected Flock"
+              }
+            </span>
+
+            <button
+              type="button"
+              onClick={() =>
+                setSelectedFlockId("")
+              }
+              className="text-sm font-medium text-slate-500 hover:text-slate-900"
+            >
+              Clear
+            </button>
+          </div>
+        )}
 
         {/* Main Content */}
         <div className="grid lg:grid-cols-12 gap-6 items-start">
 
           {/* Quick Entry */}
           <div className="lg:col-span-4 lg:order-last">
-
             <div className="lg:sticky lg:top-20 space-y-4">
 
               <AddFeedForm
@@ -295,7 +397,6 @@ export default function FeedPage() {
               />
 
             </div>
-
           </div>
 
           {/* Records List */}

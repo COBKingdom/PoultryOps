@@ -16,41 +16,63 @@ export default function FeedList({
         <h2 className="text-2xl font-bold text-slate-900">
           Feed Records
         </h2>
+
         <p className="text-slate-500 mt-1">
           Recent feeding activity
         </p>
       </div>
 
-      <div className="space-y-4">
+      {records.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
 
-        {records.map(
-          (record) => (
-            <div
-              key={record.id}
-              className="
-                rounded-2xl
-                border
-                border-slate-200
-                p-5
-                hover:shadow-md
-                transition-all
-              "
-            >
-              <div className="flex items-start justify-between">
+          <p className="text-lg font-semibold text-slate-700">
+            No feed records found
+          </p>
 
-                <div>
-                  <h3 className="font-bold text-lg text-slate-900">
-                    {record.flocks?.flock_name}
-                  </h3>
-                  <p className="text-sm text-slate-500 mt-1">
-                    {record.feed_date}
-                  </p>
-                </div>
+          <p className="text-sm text-slate-500 mt-2">
+            Try changing the flock, date range, or search.
+          </p>
 
-                <div className="flex items-center gap-3">
+        </div>
+      ) : (
+        <div className="space-y-4">
+
+          {records.map(
+            (record) => (
+              <div
+                key={record.id}
+                className="
+                  rounded-2xl
+                  border
+                  border-slate-200
+                  p-5
+                  hover:shadow-md
+                  transition-all
+                "
+              >
+
+                {/* Header */}
+                <div className="flex items-start justify-between gap-4">
+
+                  <div className="min-w-0">
+
+                    <h3 className="font-bold text-lg text-slate-900 truncate">
+                      {record.flocks?.flock_name ||
+                        "Unknown Flock"}
+                    </h3>
+
+                    <p className="text-sm text-slate-500 mt-1">
+                      {record.feed_date}
+                    </p>
+
+                  </div>
+
                   <button
-                    onClick={() => onEdit(record)}
+                    onClick={() =>
+                      onEdit(record)
+                    }
                     className="
+                      shrink-0
                       rounded-xl
                       border
                       border-blue-200
@@ -70,38 +92,49 @@ export default function FeedList({
                     <Pencil size={16} />
                     Edit
                   </button>
+
+                </div>
+
+                {/* Feed Details */}
+                <div className="mt-4 grid grid-cols-2 gap-4">
+
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-slate-500">
+                      Feed Type
+                    </p>
+
+                    <p className="text-lg font-semibold text-slate-900 mt-1">
+                      {record.feed_type}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-slate-500">
+                      Quantity
+                    </p>
+
+                    <p className="text-2xl font-bold text-slate-900 mt-1">
+                      {Number(
+                        record.quantity_kg
+                      ).toLocaleString(
+                        undefined,
+                        {
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 2,
+                        }
+                      )}{" "}
+                      kg
+                    </p>
+                  </div>
+
                 </div>
 
               </div>
+            )
+          )}
 
-              <div className="mt-4 grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs uppercase text-slate-500">
-                    Feed Type
-                  </p>
-                  <p className="text-lg font-semibold text-slate-900">
-                    {record.feed_type}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-xs uppercase text-slate-500">
-                    Quantity
-                  </p>
-                  <p className="text-2xl font-bold text-slate-900">
-                    {Number(record.quantity_kg).toLocaleString(undefined, {
-                      minimumFractionDigits: 0,
-                      maximumFractionDigits: 2,
-                    })} kg
-                  </p>
-                </div>
-              </div>
-
-            </div>
-          )
-        )}
-
-      </div>
+        </div>
+      )}
 
     </div>
   );
