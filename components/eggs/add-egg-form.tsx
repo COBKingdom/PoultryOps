@@ -12,13 +12,14 @@ type Props = {
   farmId?: string;
   flocks: any[];
   onSaved?: () => Promise<void> | void;
-  
+  user?: any;
 };
 
 export default function AddEggForm({
   farmId,
   flocks,
   onSaved,
+  user,
 }: Props) {
   const [flockId, setFlockId] =
     useState("");
@@ -44,7 +45,7 @@ export default function AddEggForm({
 
   async function handleSave() {
     try {
-      if (!flockId) {
+      if (!farmId || !flockId) {
         return;
       }
 
@@ -53,12 +54,12 @@ export default function AddEggForm({
       await createEggProduction({
         farm_id: farmId,
         flock_id: flockId,
-        production_date:
-          recordDate,
-        egg_count:
-          Number(eggCount),
-        cracked_eggs:
-          Number(crackedEggs || 0),
+        production_date: recordDate,
+        egg_count: Number(eggCount),
+        cracked_eggs: Number(
+          crackedEggs || 0
+        ),
+        created_by: user?.id ?? null,
       });
 
       await onSaved?.();
@@ -71,10 +72,8 @@ export default function AddEggForm({
       setTimeout(() => {
         setSuccess(false);
       }, 2000);
-
     } catch (error) {
       console.error(error);
-
     } finally {
       setLoading(false);
     }
@@ -99,9 +98,7 @@ export default function AddEggForm({
           type="date"
           value={recordDate}
           onChange={(e) =>
-            setRecordDate(
-              e.target.value
-            )
+            setRecordDate(e.target.value)
           }
           className="w-full border rounded-xl p-4"
           required
@@ -110,9 +107,7 @@ export default function AddEggForm({
         <select
           value={flockId}
           onChange={(e) =>
-            setFlockId(
-              e.target.value
-            )
+            setFlockId(e.target.value)
           }
           className="w-full border rounded-xl p-4"
           required
@@ -135,12 +130,11 @@ export default function AddEggForm({
 
         <input
           type="number"
+          min="0"
           placeholder="Egg Count"
           value={eggCount}
           onChange={(e) =>
-            setEggCount(
-              e.target.value
-            )
+            setEggCount(e.target.value)
           }
           className="w-full border rounded-xl p-4"
           required
@@ -148,12 +142,11 @@ export default function AddEggForm({
 
         <input
           type="number"
+          min="0"
           placeholder="Cracked Eggs"
           value={crackedEggs}
           onChange={(e) =>
-            setCrackedEggs(
-              e.target.value
-            )
+            setCrackedEggs(e.target.value)
           }
           className="w-full border rounded-xl p-4"
         />

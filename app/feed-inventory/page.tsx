@@ -1,24 +1,35 @@
 "use client";
 
-import { useAuth } from "@/contexts/AuthContext";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
-import { useDashboard } from "@/hooks/useDashboard";
+import { useAuth } from "@/contexts/AuthContext";
+import { useCurrentFarm } from "@/hooks/useCurrentFarm";
 import { useFeedInventory } from "@/hooks/useFeedInventory";
 import { useFeed } from "@/hooks/useFeed";
 
-import { useEffect, useMemo, useState } from "react";
+import {
+  getFarmFlocks,
+} from "@/lib/flocks";
 
 import {
-  DateRangeSelection,
-  getDateRange,
   getDefaultDateRangeSelection,
+  DateRangeSelection,
 } from "@/lib/date-ranges";
 
 import { canEdit } from "@/lib/permissions/governance";
 
-import { Package } from "lucide-react";
+import {
+  Package,
+  TrendingDown,
+  Boxes,
+} from "lucide-react";
 
 import AppShell from "@/components/layout/app-shell";
+
 import OperationsKpiCard from "@/components/operations/operations-kpi-card";
 import OperationsToolbar from "@/components/operations/operations-toolbar";
 import OperationsPagination from "@/components/operations/operations-pagination";
@@ -26,169 +37,360 @@ import OperationsPagination from "@/components/operations/operations-pagination"
 import ReportFilter from "@/components/reports/report-filter";
 
 import AddFeedStockForm from "@/components/feed-inventory/add-feed-stock-form";
+import EditFeedStockForm from "@/components/feed-inventory/edit-feed-stock-form";
 import FeedStockList from "@/components/feed-inventory/feed-stock-list";
 import FeedStockSummary from "@/components/feed-inventory/feed-stock-summary";
-import EditFeedStockForm from "@/components/feed-inventory/edit-feed-stock-form";
 
 export default function FeedInventoryPage() {
-  const { user, profile } = useAuth();
+  const {
+    user,
+    profile,
+  } = useAuth();
 
   const {
-    data,
-    loading,
-  } = useDashboard();
+    farm,
+    loading: farmLoading,
+  } = useCurrentFarm();
 
-  const farmId = data?.farm?.id;
+  const farmId =
+    farm?.id;
 
   const {
-    records: inventoryRecords,
+    records,
+    loading: inventoryLoading,
     refresh,
-  } = useFeedInventory(farmId);
+  } =
+    useFeedInventory(
+      farmId
+    );
 
   const {
     records: feedRecords,
-  } = useFeed(farmId);
-
-  const [searchQuery, setSearchQuery] =
-    useState("");
-
-  const [dateRangeSelection, setDateRangeSelection] =
-    useState<DateRangeSelection>(
-      getDefaultDateRangeSelection()
+  } =
+    useFeed(
+      farmId
     );
 
-  const [currentPage, setCurrentPage] =
+  const [
+    flocks,
+    setFlocks,
+  ] =
+    useState<any[]>([]);
+
+  const [
+    searchQuery,
+    setSearchQuery,
+  ] =
+    useState("");
+
+  const [
+    currentPage,
+    setCurrentPage,
+  ] =
     useState(1);
 
   const pageSize = 10;
 
-  const [isEditModalOpen, setIsEditModalOpen] =
+  const [
+    dateRangeSelection,
+    setDateRangeSelection,
+  ] =
+    useState<DateRangeSelection>(
+      getDefaultDateRangeSelection()
+    );
+
+  const [
+    isEditModalOpen,
+    setIsEditModalOpen,
+  ] =
     useState(false);
 
-  const [editingRecord, setEditingRecord] =
-    useState<any | null>(null);
+  const [
+    editingRecord,
+    setEditingRecord,
+  ] =
+    useState<any | null>(
+      null
+    );
 
   /*
-   * ---------------------------------------------------------
-   * DATE FILTER
-   * ---------------------------------------------------------
+   * Load farm flocks.
+   *
+   * Kept here so the page remains compatible
+   * with the rest of the PoultryOps architecture
+   * and future feed intelligence features.
    */
+  useEffect(() => {
+    async function loadFlocks() {
+      if (!farmId) return;
 
-  const dateRange = dateRangeSelection.range;
+      try {
+        const result =
+          await getFarmFlocks(
+            farmId
+          );
 
-  const dateFilteredInventoryRecords = useMemo(() => {
-    return inventoryRecords.filter((record) => {
-      const recordDate =
-        record.purchase_date;
-
-      if (!recordDate) return false;
-
-      return (
-        recordDate >= dateRange.start &&
-        recordDate <= dateRange.end
-      );
-    });
-  }, [
-    inventoryRecords,
-    dateRange,
-  ]);
-
-  const dateFilteredFeedRecords = useMemo(() => {
-    return feedRecords.filter((record) => {
-      const recordDate =
-        record.feed_date;
-
-      if (!recordDate) return false;
-
-      return (
-        recordDate >= dateRange.start &&
-        recordDate <= dateRange.end
-      );
-    });
-  }, [
-    feedRecords,
-    dateRange,
-  ]);
-
-  /*
-   * ---------------------------------------------------------
-   * KPI VALUES
-   * ---------------------------------------------------------
-   */
-
-  const kpiValues = useMemo(() => {
-    const totalPurchased =
-      dateFilteredInventoryRecords.reduce(
-        (sum, record) =>
-          sum +
-          Number(record.quantity_kg || 0),
-        0
-      );
-
-    const totalConsumed =
-      dateFilteredFeedRecords.reduce(
-        (sum, record) =>
-          sum +
-          Number(record.quantity_kg || 0),
-        0
-      );
-
-    const totalRemaining =
-      totalPurchased -
-      totalConsumed;
-
-    return {
-      totalPurchased,
-      totalConsumed,
-      totalRemaining,
-    };
-  }, [
-    dateFilteredInventoryRecords,
-    dateFilteredFeedRecords,
-  ]);
-
-  /*
-   * ---------------------------------------------------------
-   * SEARCH FILTER
-   * ---------------------------------------------------------
-   */
-
-  const filteredRecords = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return dateFilteredInventoryRecords;
+        setFlocks(
+          result || []
+        );
+      } catch (error) {
+        console.error(
+          "Failed to load farm flocks:",
+          error
+        );
+      }
     }
 
-    const query =
-      searchQuery.toLowerCase();
-
-    return dateFilteredInventoryRecords.filter(
-      (record) =>
-        record.flocks?.flock_name
-          ?.toLowerCase()
-          .includes(query) ||
-        record.feed_type
-          ?.toLowerCase()
-          .includes(query) ||
-        String(record.quantity_kg)
-          .includes(query)
-    );
-  }, [
-    dateFilteredInventoryRecords,
-    searchQuery,
-  ]);
+    loadFlocks();
+  }, [farmId]);
 
   /*
-   * ---------------------------------------------------------
-   * PAGINATION
-   * ---------------------------------------------------------
+   * PURCHASES DURING SELECTED PERIOD
+   *
+   * This controls:
+   * - Purchased KPI
+   * - Purchase records shown in the list
    */
+  const dateFilteredRecords =
+    useMemo(() => {
+      const {
+        start,
+        end,
+      } =
+        dateRangeSelection.range;
 
+      return records.filter(
+        (record) => {
+          const date =
+            record.purchase_date;
+
+          if (!date) {
+            return false;
+          }
+
+          return (
+            date >= start &&
+            date <= end
+          );
+        }
+      );
+    }, [
+      records,
+      dateRangeSelection,
+    ]);
+
+  /*
+   * FEED CONSUMPTION DURING SELECTED PERIOD
+   *
+   * Consumption comes from the Feed page.
+   *
+   * This is deliberately kept separate from
+   * Current Stock.
+   */
+  const dateFilteredFeed =
+    useMemo(() => {
+      const {
+        start,
+        end,
+      } =
+        dateRangeSelection.range;
+
+      return feedRecords.filter(
+        (record) => {
+          const date =
+            record.feed_date;
+
+          if (!date) {
+            return false;
+          }
+
+          return (
+            date >= start &&
+            date <= end
+          );
+        }
+      );
+    }, [
+      feedRecords,
+      dateRangeSelection,
+    ]);
+
+  /*
+   * KPI VALUES
+   *
+   * Purchased:
+   *   Feed purchased during the selected period.
+   *
+   * Consumed:
+   *   Feed consumed during the selected period.
+   *
+   * Current Stock:
+   *   Actual cumulative farm stock.
+   *
+   * IMPORTANT:
+   *
+   * Current Stock intentionally ignores the selected
+   * date filter. It represents the farm's actual
+   * operational feed position:
+   *
+   *   All purchases
+   *   - All recorded consumption
+   *   = Current Stock
+   *
+   * Therefore Current Stock can legitimately be higher
+   * than the amount purchased during the currently
+   * selected period.
+   */
+  const kpiValues =
+    useMemo(() => {
+      const purchased =
+        dateFilteredRecords.reduce(
+          (
+            sum,
+            record
+          ) =>
+            sum +
+            Number(
+              record.quantity_kg ||
+                0
+            ),
+          0
+        );
+
+      const consumed =
+        dateFilteredFeed.reduce(
+          (
+            sum,
+            record
+          ) =>
+            sum +
+            Number(
+              record.quantity_kg ||
+                0
+            ),
+          0
+        );
+
+      /*
+       * All-time purchased feed.
+       */
+      const totalPurchased =
+        records.reduce(
+          (
+            sum,
+            record
+          ) =>
+            sum +
+            Number(
+              record.quantity_kg ||
+                0
+            ),
+          0
+        );
+
+      /*
+       * All-time consumed feed.
+       */
+      const totalConsumed =
+        feedRecords.reduce(
+          (
+            sum,
+            record
+          ) =>
+            sum +
+            Number(
+              record.quantity_kg ||
+                0
+            ),
+          0
+        );
+
+      /*
+       * Actual current farm stock.
+       */
+      const currentStock =
+        Math.max(
+          0,
+          totalPurchased -
+            totalConsumed
+        );
+
+      return {
+        purchased,
+        consumed,
+        currentStock,
+      };
+    }, [
+      records,
+      feedRecords,
+      dateFilteredRecords,
+      dateFilteredFeed,
+    ]);
+
+  /*
+   * Search purchase records.
+   */
+  const filteredRecords =
+    useMemo(() => {
+      if (
+        !searchQuery.trim()
+      ) {
+        return dateFilteredRecords;
+      }
+
+      const query =
+        searchQuery
+          .toLowerCase()
+          .trim();
+
+      return dateFilteredRecords.filter(
+        (record) => {
+          const feedType =
+            String(
+              record.feed_type ||
+                ""
+            ).toLowerCase();
+
+          const supplier =
+            String(
+              record.supplier ||
+                ""
+            ).toLowerCase();
+
+          const date =
+            String(
+              record.purchase_date ||
+                ""
+            ).toLowerCase();
+
+          return (
+            feedType.includes(
+              query
+            ) ||
+            supplier.includes(
+              query
+            ) ||
+            date.includes(
+              query
+            )
+          );
+        }
+      );
+    }, [
+      dateFilteredRecords,
+      searchQuery,
+    ]);
+
+  /*
+   * Pagination.
+   */
   const totalItems =
     filteredRecords.length;
 
   const totalPages =
     Math.ceil(
-      totalItems / pageSize
+      totalItems /
+        pageSize
     ) || 1;
 
   const startIndex =
@@ -198,14 +400,14 @@ export default function FeedInventoryPage() {
   const paginatedRecords =
     filteredRecords.slice(
       startIndex,
-      startIndex + pageSize
+      startIndex +
+        pageSize
     );
 
   /*
-   * Reset pagination whenever
-   * search or date range changes.
+   * Reset pagination whenever search
+   * or date range changes.
    */
-
   useEffect(() => {
     setCurrentPage(1);
   }, [
@@ -214,69 +416,118 @@ export default function FeedInventoryPage() {
   ]);
 
   /*
-   * ---------------------------------------------------------
-   * EDIT
-   * ---------------------------------------------------------
+   * Edit governance.
    */
-
-  function handleEditRecord(record: any) {
+  function handleEditRecord(
+    record: any
+  ) {
     const governanceResult =
       canEdit(
         {
-          id: user?.id || "",
-          role: profile?.role || "",
+          id:
+            user?.id ||
+            "",
+          role:
+            profile?.role ||
+            "",
         },
         record
       );
 
-    if (!governanceResult.allowed) {
+    if (
+      !governanceResult.allowed
+    ) {
       alert(
         governanceResult.reason ||
           "You cannot edit this record at this time."
       );
+
       return;
     }
 
-    setEditingRecord(record);
-    setIsEditModalOpen(true);
+    setEditingRecord(
+      record
+    );
+
+    setIsEditModalOpen(
+      true
+    );
   }
 
   function handleCloseEditModal() {
-    setIsEditModalOpen(false);
-    setEditingRecord(null);
+    setIsEditModalOpen(
+      false
+    );
+
+    setEditingRecord(
+      null
+    );
   }
 
   /*
-   * ---------------------------------------------------------
    * KPI CARDS
-   * ---------------------------------------------------------
+   *
+   * The labels deliberately distinguish:
+   *
+   * Purchased = selected period
+   * Consumed = selected period
+   * Current Stock = actual farm balance
    */
-
   const kpiCards = (
     <>
       <OperationsKpiCard
         label="Purchased"
-        value={kpiValues.totalPurchased}
-        sublabel="kg"
-        icon={<Package size={20} />}
+        value={
+          Number(
+            kpiValues.purchased.toFixed(
+              2
+            )
+          )
+        }
+        sublabel="kg • Selected period"
+        icon={
+          <Package
+            size={20}
+          />
+        }
         valueColor="blue"
         iconBg="blue"
       />
 
       <OperationsKpiCard
         label="Consumed"
-        value={kpiValues.totalConsumed}
-        sublabel="kg"
-        icon={<Package size={20} />}
+        value={
+          Number(
+            kpiValues.consumed.toFixed(
+              2
+            )
+          )
+        }
+        sublabel="kg • Selected period"
+        icon={
+          <TrendingDown
+            size={20}
+          />
+        }
         valueColor="green"
         iconBg="green"
       />
 
       <OperationsKpiCard
-        label="Remaining"
-        value={kpiValues.totalRemaining}
-        sublabel="kg"
-        icon={<Package size={20} />}
+        label="Current Stock"
+        value={
+          Number(
+            kpiValues.currentStock.toFixed(
+              2
+            )
+          )
+        }
+        sublabel="kg • Current farm balance"
+        icon={
+          <Boxes
+            size={20}
+          />
+        }
         valueColor="blue"
         iconBg="blue"
       />
@@ -284,49 +535,54 @@ export default function FeedInventoryPage() {
   );
 
   /*
-   * ---------------------------------------------------------
-   * TOOLBAR
-   * ---------------------------------------------------------
+   * Search toolbar.
    */
-
   const toolbar = (
     <OperationsToolbar
       searchPlaceholder="Search inventory records..."
-      searchValue={searchQuery}
-      onSearchChange={setSearchQuery}
-    >
-      <ReportFilter
-        value={dateRangeSelection}
-        onChange={setDateRangeSelection}
-      />
-    </OperationsToolbar>
-  );
-
-  /*
-   * ---------------------------------------------------------
-   * PAGINATION
-   * ---------------------------------------------------------
-   */
-
-  const pagination = (
-    <OperationsPagination
-      current={currentPage}
-      total={totalPages}
-      pageSize={pageSize}
-      totalItems={totalItems}
-      onPageChange={setCurrentPage}
+      searchValue={
+        searchQuery
+      }
+      onSearchChange={
+        setSearchQuery
+      }
     />
   );
 
   /*
-   * ---------------------------------------------------------
-   * LOADING
-   * ---------------------------------------------------------
+   * Pagination.
    */
+  const pagination = (
+    <OperationsPagination
+      current={
+        currentPage
+      }
+      total={
+        totalPages
+      }
+      pageSize={
+        pageSize
+      }
+      totalItems={
+        totalItems
+      }
+      onPageChange={
+        setCurrentPage
+      }
+    />
+  );
 
-  if (loading) {
+  /*
+   * Loading state.
+   */
+  if (farmLoading) {
     return (
-      <AppShell email={user?.email}>
+      <AppShell
+        email={
+          user?.email ||
+          ""
+        }
+      >
         <div className="space-y-6">
           <div />
         </div>
@@ -334,83 +590,118 @@ export default function FeedInventoryPage() {
     );
   }
 
-  /*
-   * ---------------------------------------------------------
-   * PAGE
-   * ---------------------------------------------------------
-   */
-
   return (
-    <AppShell email={user?.email}>
+    <AppShell
+      email={
+        user?.email ||
+        ""
+      }
+    >
       <div className="space-y-6">
 
         {/* Page Title */}
-
         <h1 className="text-2xl font-bold text-slate-900">
           Feed Inventory
         </h1>
 
         {/* KPI Cards */}
-
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {kpiCards}
         </div>
 
-        {/* Filter / Search Toolbar */}
+        {/* Search + Date Filter */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
 
-        <div className="flex items-center justify-between">
-          {toolbar}
+          <div className="flex-1">
+            {toolbar}
+          </div>
+
+          <div className="flex-shrink-0">
+            <ReportFilter
+              value={
+                dateRangeSelection
+              }
+              onChange={
+                setDateRangeSelection
+              }
+            />
+          </div>
+
         </div>
 
-        {/* Detailed Feed Stock Summary */}
-
+        {/* Feed Stock Summary */}
         <FeedStockSummary
-          inventoryRecords={
-            dateFilteredInventoryRecords
+          records={
+            records
           }
           feedRecords={
-            dateFilteredFeedRecords
+            feedRecords
           }
         />
 
-        {/* Main content */}
-
+        {/* Main Content */}
         <div className="grid lg:grid-cols-12 gap-6 items-start">
 
-          {/* Quick Entry */}
+          {/* Purchase Records */}
+          <div className="lg:col-span-8 lg:order-first">
 
+            {inventoryLoading ? (
+              <div className="space-y-3">
+
+                {[1, 2, 3].map(
+                  (i) => (
+                    <div
+                      key={i}
+                      className="h-40 bg-slate-200 rounded-2xl animate-pulse"
+                    />
+                  )
+                )}
+
+              </div>
+            ) : (
+              <FeedStockList
+                records={
+                  paginatedRecords
+                }
+                onEdit={
+                  handleEditRecord
+                }
+              />
+            )}
+
+          </div>
+
+          {/* Quick Entry */}
           <div className="lg:col-span-4 lg:order-last">
-            <div className="lg:sticky lg:top-20 space-y-4">
+
+            <div className="lg:sticky lg:top-20">
 
               <AddFeedStockForm
-                farmId={farmId}
+                farmId={
+                  farmId
+                }
+                user={
+                  user
+                }
+                onSaved={
+                  refresh
+                }
               />
 
             </div>
-          </div>
-
-          {/* Records List */}
-
-          <div className="lg:col-span-8 lg:order-first">
-
-            <FeedStockList
-              records={paginatedRecords}
-              onEdit={handleEditRecord}
-              currency={data?.farm?.currency}
-            />
 
           </div>
 
         </div>
 
         {/* Pagination */}
-
-        <div className="flex items-center justify-center pt-4">
-          {pagination}
-        </div>
+        {pagination && (
+          <div className="flex items-center justify-center pt-4">
+            {pagination}
+          </div>
+        )}
 
         {/* Edit Modal */}
-
         {isEditModalOpen &&
           editingRecord && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -418,13 +709,21 @@ export default function FeedInventoryPage() {
               <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
 
                 <EditFeedStockForm
-                  record={editingRecord}
+                  record={
+                    editingRecord
+                  }
                   onClose={
                     handleCloseEditModal
                   }
-                  onSaved={refresh}
-                  user={user}
-                  profile={profile}
+                  onSaved={
+                    refresh
+                  }
+                  user={
+                    user
+                  }
+                  profile={
+                    profile
+                  }
                 />
 
               </div>

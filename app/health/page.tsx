@@ -15,7 +15,10 @@ import {
 
 import { canEdit } from "@/lib/permissions/governance";
 
-import { Activity } from "lucide-react";
+import {
+  Activity,
+  ChevronDown,
+} from "lucide-react";
 
 import AppShell from "@/components/layout/app-shell";
 import OperationsKpiCard from "@/components/operations/operations-kpi-card";
@@ -51,6 +54,9 @@ export default function HealthPage() {
   const [searchQuery, setSearchQuery] =
     useState("");
 
+  const [selectedFlockId, setSelectedFlockId] =
+    useState("all");
+
   const [dateRangeSelection, setDateRangeSelection] =
     useState<DateRangeSelection>(
       getDefaultDateRangeSelection()
@@ -81,7 +87,9 @@ export default function HealthPage() {
       const recordDate =
         record.health_date;
 
-      if (!recordDate) return false;
+      if (!recordDate) {
+        return false;
+      }
 
       return (
         recordDate >= dateRange.start &&
@@ -95,26 +103,54 @@ export default function HealthPage() {
 
   /*
    * ---------------------------------------------------------
+   * FLOCK FILTER
+   * ---------------------------------------------------------
+   */
+
+  const flockFilteredRecords = useMemo(() => {
+    if (
+      selectedFlockId === "all"
+    ) {
+      return dateFilteredRecords;
+    }
+
+    return dateFilteredRecords.filter(
+      (record) =>
+        record.flock_id ===
+        selectedFlockId
+    );
+  }, [
+    dateFilteredRecords,
+    selectedFlockId,
+  ]);
+
+  /*
+   * ---------------------------------------------------------
    * KPI VALUES
+   *
+   * KPIs are calculated AFTER the flock filter so that
+   * selecting a flock gives a true flock-level view.
    * ---------------------------------------------------------
    */
 
   const kpiValues = useMemo(() => {
     const totalRecords =
-      dateFilteredRecords.length;
+      flockFilteredRecords.length;
 
     const activeCases =
-      dateFilteredRecords.filter(
+      flockFilteredRecords.filter(
         (record) =>
           record.status === "active" ||
           record.status === "treatment"
       ).length;
 
     const totalCost =
-      dateFilteredRecords.reduce(
+      flockFilteredRecords.reduce(
         (sum, record) =>
           sum +
-          Number(record.cost || 0),
+          Number(
+            record.cost || 0
+          ),
         0
       );
 
@@ -124,7 +160,7 @@ export default function HealthPage() {
       totalCost,
     };
   }, [
-    dateFilteredRecords,
+    flockFilteredRecords,
   ]);
 
   /*
@@ -135,13 +171,13 @@ export default function HealthPage() {
 
   const filteredRecords = useMemo(() => {
     if (!searchQuery.trim()) {
-      return dateFilteredRecords;
+      return flockFilteredRecords;
     }
 
     const query =
       searchQuery.toLowerCase();
 
-    return dateFilteredRecords.filter(
+    return flockFilteredRecords.filter(
       (record) =>
         record.flocks?.flock_name
           ?.toLowerCase()
@@ -151,10 +187,19 @@ export default function HealthPage() {
           .includes(query) ||
         record.treatment
           ?.toLowerCase()
+          .includes(query) ||
+        record.treatment_name
+          ?.toLowerCase()
+          .includes(query) ||
+        record.category
+          ?.toLowerCase()
+          .includes(query) ||
+        record.notes
+          ?.toLowerCase()
           .includes(query)
     );
   }, [
-    dateFilteredRecords,
+    flockFilteredRecords,
     searchQuery,
   ]);
 
@@ -183,14 +228,19 @@ export default function HealthPage() {
     );
 
   /*
-   * Reset pagination whenever
-   * search or date range changes.
+   * ---------------------------------------------------------
+   * RESET PAGINATION
+   *
+   * Whenever search, flock or date range changes,
+   * return to page 1.
+   * ---------------------------------------------------------
    */
 
   useEffect(() => {
     setCurrentPage(1);
   }, [
     searchQuery,
+    selectedFlockId,
     dateRangeSelection,
   ]);
 
@@ -215,6 +265,7 @@ export default function HealthPage() {
         governanceResult.reason ||
           "You cannot edit this record at this time."
       );
+
       return;
     }
 
@@ -274,10 +325,78 @@ export default function HealthPage() {
       searchValue={searchQuery}
       onSearchChange={setSearchQuery}
     >
-      <ReportFilter
-        value={dateRangeSelection}
-        onChange={setDateRangeSelection}
-      />
+      <div className="flex items-center gap-3">
+        {/* Flock Filter */}
+
+        <div className="relative">
+          <select
+            value={selectedFlockId}
+            onChange={(e) =>
+              setSelectedFlockId(
+                e.target.value
+              )
+            }
+            className="
+              appearance-none
+              min-w-[190px]
+              rounded-xl
+              border
+              border-slate-200
+              bg-white
+              px-4
+              py-3
+              pr-10
+              text-sm
+              font-medium
+              text-slate-700
+              shadow-sm
+              outline-none
+              transition-all
+              hover:border-slate-300
+              focus:border-blue-500
+              focus:ring-2
+              focus:ring-blue-100
+            "
+            aria-label="Filter health records by flock"
+          >
+            <option value="all">
+              All Flocks
+            </option>
+
+            {flocks?.map(
+              (flock: any) => (
+                <option
+                  key={flock.id}
+                  value={flock.id}
+                >
+                  {flock.flock_name}
+                </option>
+              )
+            )}
+          </select>
+
+          <ChevronDown
+            size={16}
+            className="
+              pointer-events-none
+              absolute
+              right-3
+              top-1/2
+              -translate-y-1/2
+              text-slate-400
+            "
+          />
+        </div>
+
+        {/* Date Filter */}
+
+        <ReportFilter
+          value={dateRangeSelection}
+          onChange={
+            setDateRangeSelection
+          }
+        />
+      </div>
     </OperationsToolbar>
   );
 
@@ -368,7 +487,9 @@ export default function HealthPage() {
             <HealthList
               records={paginatedRecords}
               onEdit={handleEditRecord}
-              currency={data?.farm?.currency}
+              currency={
+                data?.farm?.currency
+              }
             />
 
           </div>

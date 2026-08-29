@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "@/contexts/AuthContext";
-
 import { useCurrentFarm } from "@/hooks/useCurrentFarm";
 import { useEggProduction } from "@/hooks/useEggProduction";
 
@@ -16,11 +15,18 @@ import {
   DateRangeSelection,
 } from "@/lib/date-ranges";
 
-import { Egg, TrendingUp } from "lucide-react";
+import {
+  Egg,
+  TrendingUp,
+  CheckCircle2,
+  AlertCircle,
+  Search,
+  ChevronDown,
+} from "lucide-react";
 
 import AppShell from "@/components/layout/app-shell";
+
 import OperationsKpiCard from "@/components/operations/operations-kpi-card";
-import OperationsToolbar from "@/components/operations/operations-toolbar";
 import OperationsPagination from "@/components/operations/operations-pagination";
 
 import ReportFilter from "@/components/reports/report-filter";
@@ -51,6 +57,9 @@ export default function EggsPage() {
   const [searchQuery, setSearchQuery] =
     useState("");
 
+  const [selectedFlockId, setSelectedFlockId] =
+    useState("all");
+
   const [currentPage, setCurrentPage] =
     useState(1);
 
@@ -74,86 +83,78 @@ export default function EggsPage() {
     async function load() {
       if (!farmId) return;
 
-      const result =
-        await getFarmFlocks(farmId);
+      try {
+        const result =
+          await getFarmFlocks(farmId);
 
-      setFlocks(result);
+        setFlocks(result || []);
+      } catch (error) {
+        console.error(
+          "Failed to load flocks:",
+          error
+        );
+      }
     }
 
     load();
   }, [farmId]);
 
   /*
-   * Filter egg production records by
-   * selected date range.
+   * Apply date range + flock filter.
    *
-   * Egg production uses production_date.
+   * These filters are applied before search
+   * and pagination so that KPI figures remain
+   * consistent with the records being viewed.
    */
-  const dateFilteredRecords = useMemo(() => {
-    const {
-      start,
-      end,
-    } = dateRangeSelection.range;
+  const dateAndFlockFilteredRecords =
+    useMemo(() => {
+      const {
+        start,
+        end,
+      } = dateRangeSelection.range;
 
-    return records.filter((record) => {
-      const productionDate =
-        record.production_date;
+      return records.filter((record) => {
+        const productionDate =
+          record.production_date;
 
-      if (!productionDate) return false;
+        if (!productionDate) {
+          return false;
+        }
 
-      return (
-        productionDate >= start &&
-        productionDate <= end
-      );
-    });
-  }, [
-    records,
-    dateRangeSelection,
-  ]);
+        const matchesDate =
+          productionDate >= start &&
+          productionDate <= end;
+
+        const matchesFlock =
+          selectedFlockId === "all" ||
+          record.flock_id ===
+            selectedFlockId;
+
+        return (
+          matchesDate &&
+          matchesFlock
+        );
+      });
+    }, [
+      records,
+      dateRangeSelection,
+      selectedFlockId,
+    ]);
 
   /*
-   * Compute KPI values from the selected
-   * date range.
-   */
-  const kpiValues = useMemo(() => {
-    const totalEggs =
-      dateFilteredRecords.reduce(
-        (sum, record) =>
-          sum +
-          Number(record.egg_count || 0),
-        0
-      );
-
-    const crackedEggs =
-      dateFilteredRecords.reduce(
-        (sum, record) =>
-          sum +
-          Number(record.cracked_eggs || 0),
-        0
-      );
-
-    const recordCount =
-      dateFilteredRecords.length;
-
-    return {
-      totalEggs,
-      crackedEggs,
-      recordCount,
-    };
-  }, [dateFilteredRecords]);
-
-  /*
-   * Apply search after the date filter.
+   * Apply search after date + flock filters.
    */
   const filteredRecords = useMemo(() => {
     if (!searchQuery.trim()) {
-      return dateFilteredRecords;
+      return dateAndFlockFilteredRecords;
     }
 
     const query =
-      searchQuery.toLowerCase();
+      searchQuery
+        .trim()
+        .toLowerCase();
 
-    return dateFilteredRecords.filter(
+    return dateAndFlockFilteredRecords.filter(
       (record) =>
         record.flocks?.flock_name
           ?.toLowerCase()
@@ -161,14 +162,65 @@ export default function EggsPage() {
         record.production_date
           ?.toLowerCase()
           .includes(query) ||
-        String(record.egg_count)
-          .includes(query) ||
-        String(record.cracked_eggs)
-          .includes(query)
+        String(
+          record.egg_count
+        ).includes(query) ||
+        String(
+          record.cracked_eggs
+        ).includes(query)
     );
   }, [
-    dateFilteredRecords,
+    dateAndFlockFilteredRecords,
     searchQuery,
+  ]);
+
+  /*
+   * KPI values.
+   *
+   * Eggs Collected = all eggs recorded
+   * in the selected period and flock.
+   *
+   * Good Eggs = Eggs Collected - Cracked Eggs.
+   */
+  const kpiValues = useMemo(() => {
+    const eggsCollected =
+      dateAndFlockFilteredRecords.reduce(
+        (sum, record) =>
+          sum +
+          Number(
+            record.egg_count || 0
+          ),
+        0
+      );
+
+    const crackedEggs =
+      dateAndFlockFilteredRecords.reduce(
+        (sum, record) =>
+          sum +
+          Number(
+            record.cracked_eggs || 0
+          ),
+        0
+      );
+
+    const goodEggs =
+      Math.max(
+        0,
+        eggsCollected -
+          crackedEggs
+      );
+
+    const recordCount =
+      dateAndFlockFilteredRecords.length;
+
+    return {
+      eggsCollected,
+      goodEggs,
+      crackedEggs,
+      recordCount,
+    };
+  }, [
+    dateAndFlockFilteredRecords,
   ]);
 
   /*
@@ -193,14 +245,15 @@ export default function EggsPage() {
     );
 
   /*
-   * Reset pagination whenever search
-   * or date range changes.
+   * Reset pagination whenever
+   * search or filters change.
    */
   useEffect(() => {
     setCurrentPage(1);
   }, [
     searchQuery,
     dateRangeSelection,
+    selectedFlockId,
   ]);
 
   /*
@@ -237,70 +290,6 @@ export default function EggsPage() {
   }
 
   /*
-   * KPI cards.
-   */
-  const kpiCards = (
-    <>
-      <OperationsKpiCard
-        label="Eggs"
-        value={kpiValues.totalEggs}
-        sublabel="Eggs"
-        icon={<Egg size={20} />}
-        valueColor="amber"
-        iconBg="amber"
-      />
-
-      <OperationsKpiCard
-        label="Records"
-        value={kpiValues.recordCount}
-        icon={<TrendingUp size={20} />}
-        valueColor="blue"
-        iconBg="blue"
-      />
-
-      <OperationsKpiCard
-        label="Total Eggs"
-        value={kpiValues.totalEggs}
-        icon={<Egg size={20} />}
-        valueColor="blue"
-        iconBg="blue"
-      />
-
-      <OperationsKpiCard
-        label="Cracked Eggs"
-        value={kpiValues.crackedEggs}
-        icon={<Egg size={20} />}
-        valueColor="amber"
-        iconBg="amber"
-      />
-    </>
-  );
-
-  /*
-   * Search toolbar.
-   */
-  const toolbar = (
-    <OperationsToolbar
-      searchPlaceholder="Search production records..."
-      searchValue={searchQuery}
-      onSearchChange={setSearchQuery}
-    />
-  );
-
-  /*
-   * Pagination.
-   */
-  const pagination = (
-    <OperationsPagination
-      current={currentPage}
-      total={totalPages}
-      pageSize={pageSize}
-      totalItems={totalItems}
-      onPageChange={setCurrentPage}
-    />
-  );
-
-  /*
    * Loading state.
    */
   if (farmLoading) {
@@ -328,32 +317,208 @@ export default function EggsPage() {
 
         {/* KPI Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {kpiCards}
+
+          <OperationsKpiCard
+            label="Eggs Collected"
+            value={kpiValues.eggsCollected}
+            sublabel="Selected period"
+            icon={<Egg size={20} />}
+            valueColor="amber"
+            iconBg="amber"
+          />
+
+          <OperationsKpiCard
+            label="Records"
+            value={kpiValues.recordCount}
+            sublabel="Production records"
+            icon={<TrendingUp size={20} />}
+            valueColor="blue"
+            iconBg="blue"
+          />
+
+          <OperationsKpiCard
+            label="Good Eggs"
+            value={kpiValues.goodEggs}
+            sublabel="After cracked eggs"
+            icon={
+              <CheckCircle2
+                size={20}
+              />
+            }
+            valueColor="blue"
+            iconBg="blue"
+          />
+
+          <OperationsKpiCard
+            label="Cracked Eggs"
+            value={kpiValues.crackedEggs}
+            sublabel="Selected period"
+            icon={
+              <AlertCircle
+                size={20}
+              />
+            }
+            valueColor="amber"
+            iconBg="amber"
+          />
+
         </div>
 
-        {/* Search + Date Filter */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+        {/* Search + Flock + Date Filters */}
+        <div
+          className="
+            flex
+            flex-col
+            lg:flex-row
+            lg:items-center
+            gap-3
+          "
+        >
 
-          <div className="flex-1">
-            {toolbar}
+          {/* Search */}
+          <div className="relative flex-1">
+
+            <Search
+              size={18}
+              className="
+                absolute
+                left-4
+                top-1/2
+                -translate-y-1/2
+                text-slate-400
+                pointer-events-none
+              "
+            />
+
+            <input
+              type="text"
+              placeholder="Search production records..."
+              value={searchQuery}
+              onChange={(e) =>
+                setSearchQuery(
+                  e.target.value
+                )
+              }
+              className="
+                w-full
+                rounded-xl
+                border
+                border-slate-200
+                bg-white
+                py-3
+                pl-11
+                pr-4
+                text-sm
+                text-slate-900
+                outline-none
+                transition
+                focus:border-blue-400
+                focus:ring-2
+                focus:ring-blue-100
+              "
+            />
+
           </div>
 
+          {/* Flock Filter */}
+          <div className="relative">
+
+            <select
+              value={selectedFlockId}
+              onChange={(e) =>
+                setSelectedFlockId(
+                  e.target.value
+                )
+              }
+              className="
+                appearance-none
+                min-w-[190px]
+                w-full
+                rounded-xl
+                border
+                border-slate-200
+                bg-white
+                py-3
+                pl-4
+                pr-10
+                text-sm
+                font-medium
+                text-slate-700
+                outline-none
+                transition
+                focus:border-blue-400
+                focus:ring-2
+                focus:ring-blue-100
+              "
+            >
+              <option value="all">
+                All Flocks
+              </option>
+
+              {flocks.map(
+                (flock: any) => (
+                  <option
+                    key={flock.id}
+                    value={flock.id}
+                  >
+                    {flock.flock_name}
+                  </option>
+                )
+              )}
+
+            </select>
+
+            <ChevronDown
+              size={16}
+              className="
+                absolute
+                right-3
+                top-1/2
+                -translate-y-1/2
+                text-slate-400
+                pointer-events-none
+              "
+            />
+
+          </div>
+
+          {/* Existing Date Range Filter */}
           <div className="flex-shrink-0">
             <ReportFilter
               value={dateRangeSelection}
-              onChange={setDateRangeSelection}
+              onChange={
+                setDateRangeSelection
+              }
             />
           </div>
 
         </div>
 
         {/* Main Content */}
-        <div className="grid lg:grid-cols-12 gap-6 items-start">
+        <div
+          className="
+            grid
+            lg:grid-cols-12
+            gap-6
+            items-start
+          "
+        >
 
           {/* Quick Entry */}
-          <div className="lg:col-span-4 lg:order-last">
+          <div
+            className="
+              lg:col-span-4
+              lg:order-last
+            "
+          >
 
-            <div className="lg:sticky lg:top-20 space-y-4">
+            <div
+              className="
+                lg:sticky
+                lg:top-20
+                space-y-4
+              "
+            >
 
               <AddEggForm
                 farmId={farmId}
@@ -366,21 +531,39 @@ export default function EggsPage() {
           </div>
 
           {/* Production List */}
-          <div className="lg:col-span-8 lg:order-first">
+          <div
+            className="
+              lg:col-span-8
+              lg:order-first
+            "
+          >
 
             {recordsLoading ? (
               <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    className="h-16 bg-slate-200 rounded-xl animate-pulse"
-                  />
-                ))}
+
+                {[1, 2, 3].map(
+                  (i) => (
+                    <div
+                      key={i}
+                      className="
+                        h-16
+                        bg-slate-200
+                        rounded-xl
+                        animate-pulse
+                      "
+                    />
+                  )
+                )}
+
               </div>
             ) : (
               <EggProductionList
-                records={paginatedRecords}
-                onEdit={handleEditRecord}
+                records={
+                  paginatedRecords
+                }
+                onEdit={
+                  handleEditRecord
+                }
               />
             )}
 
@@ -389,21 +572,58 @@ export default function EggsPage() {
         </div>
 
         {/* Pagination */}
-        {pagination && (
-          <div className="flex items-center justify-center pt-4">
-            {pagination}
+        {totalItems > 0 && (
+          <div
+            className="
+              flex
+              items-center
+              justify-center
+              pt-4
+            "
+          >
+            <OperationsPagination
+              current={currentPage}
+              total={totalPages}
+              pageSize={pageSize}
+              totalItems={totalItems}
+              onPageChange={
+                setCurrentPage
+              }
+            />
           </div>
         )}
 
         {/* Edit Modal */}
         {isEditModalOpen &&
           editingRecord && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div
+              className="
+                fixed
+                inset-0
+                bg-black/50
+                flex
+                items-center
+                justify-center
+                z-50
+                p-4
+              "
+            >
 
-              <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+              <div
+                className="
+                  bg-white
+                  rounded-3xl
+                  max-w-lg
+                  w-full
+                  max-h-[90vh]
+                  overflow-y-auto
+                "
+              >
 
                 <EditEggForm
-                  record={editingRecord}
+                  record={
+                    editingRecord
+                  }
                   flocks={flocks}
                   onClose={
                     handleCloseEditModal
