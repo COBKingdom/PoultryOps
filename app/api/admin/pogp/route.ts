@@ -185,13 +185,15 @@ export async function GET(request: Request) {
         }
       }
 
-      const { data: subscriptionRows, error: subscriptionsError } =
-        await supabaseAdmin
-          .from("subscriptions")
-          .select(
-            "id, farm_id, plan, status, trial_start, trial_end, selected_plan, billing_cycle, next_billing_date"
-          )
-          .in("farm_id", farmIds);
+      const {
+        data: subscriptionRows,
+        error: subscriptionsError,
+      } = await supabaseAdmin
+        .from("subscriptions")
+        .select(
+          "id, farm_id, plan, status, trial_start, trial_end, selected_plan, billing_cycle, next_billing_date"
+        )
+        .in("farm_id", farmIds);
 
       if (subscriptionsError) {
         console.error(
@@ -254,18 +256,23 @@ export async function GET(request: Request) {
           farmActive: farm.active,
           ownerId: farm.owner_id,
           ownerName:
-            owner?.full_name || "Unnamed farmer",
+            owner?.full_name ||
+            "Unnamed farmer",
           ownerEmail:
-            owner?.email || "No email",
-          pogpId: partner?.id || null,
+            owner?.email ||
+            "No email",
+          pogpId:
+            partner?.id || null,
           pogpName:
-            partner?.full_name || "Unknown POGP",
+            partner?.full_name ||
+            "Unknown POGP",
           pogpEmail:
             partner?.email || "",
           pogpCode:
             partner?.pogp_code || "—",
           source:
-            attribution.source || "manual",
+            attribution.source ||
+            "manual",
           attributedAt:
             attribution.attributed_at,
           subscription: subscription
@@ -275,7 +282,8 @@ export async function GET(request: Request) {
                   subscription.plan ||
                   "—",
                 status:
-                  subscription.status || "—",
+                  subscription.status ||
+                  "—",
                 trialStart:
                   subscription.trial_start,
                 trialEnd:
@@ -416,7 +424,9 @@ export async function POST(request: Request) {
       String(body.fullName || "").trim();
 
     const email =
-      String(body.email || "").trim();
+      String(body.email || "")
+        .trim()
+        .toLowerCase();
 
     const phone =
       String(body.phone || "").trim();
@@ -472,6 +482,93 @@ export async function POST(request: Request) {
           error: "Phone number is required",
         },
         { status: 400 }
+      );
+    }
+
+    // ==========================================================
+    // GLOBAL EMAIL PROTECTION
+    //
+    // ONE EMAIL ADDRESS = ONE ACCOUNT/PERSON
+    //
+    // A POGP must not be created using an email that is
+    // already registered as a PoultryOps authentication user.
+    // ==========================================================
+
+    const {
+      data: existingAuthUser,
+      error: authLookupError,
+    } =
+      await supabaseAdmin.auth.admin.getUserByEmail(
+        email
+      );
+
+    if (authLookupError) {
+      console.error(
+        "POGP Auth email lookup failed:",
+        authLookupError
+      );
+
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Unable to verify whether this email address is already registered",
+        },
+        { status: 500 }
+      );
+    }
+
+    if (existingAuthUser?.user) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "This email address is already registered with PoultryOps. A registered PoultryOps email cannot also be used to create a POGP.",
+        },
+        { status: 409 }
+      );
+    }
+
+    // ==========================================================
+    // Check existing POGP email
+    //
+    // This protects against duplicate POGP records even when
+    // the email does not belong to an Auth account.
+    // ==========================================================
+
+    const {
+      data: existingPartner,
+      error: partnerEmailLookupError,
+    } = await supabaseAdmin
+      .from("pogp_partners")
+      .select("id, full_name, email, pogp_code")
+      .ilike("email", email)
+      .maybeSingle();
+
+    if (partnerEmailLookupError) {
+      console.error(
+        "POGP email lookup failed:",
+        partnerEmailLookupError
+      );
+
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Unable to verify whether this email address is already assigned to a POGP",
+        },
+        { status: 500 }
+      );
+    }
+
+    if (existingPartner) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "This email address is already assigned to a POGP partner. Each email address can only be used once.",
+        },
+        { status: 409 }
       );
     }
 

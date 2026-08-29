@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 
 type CreateFarmParams = {
   userId: string;
+  fullName: string;
   farmName: string;
   farmType: string;
   currency: string;
@@ -41,9 +42,12 @@ function isUniqueViolation(error: {
 /**
  * Create the user's farm, farm user, trial subscription
  * and — when applicable — attribute the farm to a POGP.
+ *
+ * The owner's full name is stored in profiles.full_name.
  */
 export async function createFarmAndTrial({
   userId,
+  fullName,
   farmName,
   farmType,
   currency,
@@ -72,6 +76,16 @@ export async function createFarmAndTrial({
     throw new FarmAlreadyExistsError(
       "This account already has a farm. Redirecting you to your dashboard..."
     );
+  }
+
+  // =============================================================
+  // Validate owner name
+  // =============================================================
+
+  const normalizedFullName = fullName.trim();
+
+  if (!normalizedFullName) {
+    throw new Error("Please enter your full name");
   }
 
   // =============================================================
@@ -106,6 +120,9 @@ export async function createFarmAndTrial({
 
   // =============================================================
   // Update Profile
+  //
+  // Store the farm owner's required full name.
+  // Existing profile fields remain unchanged.
   // =============================================================
 
   const {
@@ -113,6 +130,7 @@ export async function createFarmAndTrial({
   } = await supabase
     .from("profiles")
     .update({
+      full_name: normalizedFullName,
       farm_id: farm.id,
       role: "owner",
     })

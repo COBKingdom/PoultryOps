@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+
 import {
   Pencil,
   MoreVertical,
@@ -16,22 +17,32 @@ type Props = {
   onEdit: (record: any) => void;
 };
 
-function formatRecordedAt(value: string | null | undefined) {
+function formatRecordedAt(
+  value: string | null | undefined
+) {
   if (!value) return "Not recorded";
 
-  return new Date(value).toLocaleString("en-NG", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
+  return new Date(value).toLocaleString(
+    "en-NG",
+    {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }
+  );
 }
 
-function getRecorderName(record: any) {
-  /*
-   * We support several possible profile shapes so the
-   * component remains compatible with the existing
-   * mortality query while the detailed attribution
-   * data is introduced.
-   */
+/**
+ * Resolve the person who created the mortality
+ * record.
+ *
+ * Preferred:
+ * 1. Full name from the related profile
+ * 2. Email from the related profile
+ * 3. Generic fallback
+ */
+function getRecorderName(
+  record: any
+) {
   const profile =
     record.created_by_profile ||
     record.profiles ||
@@ -41,18 +52,68 @@ function getRecorderName(record: any) {
     const name =
       profile.full_name ||
       profile.name ||
-      [profile.first_name, profile.last_name]
+      [
+        profile.first_name,
+        profile.last_name,
+      ]
         .filter(Boolean)
         .join(" ");
 
-    if (name) return name;
+    if (name.trim()) {
+      return name.trim();
+    }
 
-    if (profile.email) return profile.email;
+    if (profile.email) {
+      return profile.email;
+    }
   }
 
   return record.created_by
     ? "Farm team member"
     : "Not recorded";
+}
+
+/**
+ * Resolve the person who last updated the
+ * mortality record.
+ *
+ * Preferred:
+ * 1. Full name from the related profile
+ * 2. Email from the related profile
+ * 3. Generic fallback
+ */
+function getUpdaterName(
+  record: any
+) {
+  const profile =
+    record.updated_by_profile ||
+    record.updatedByProfile;
+
+  if (profile) {
+    const name =
+      profile.full_name ||
+      profile.name ||
+      [
+        profile.first_name,
+        profile.last_name,
+      ]
+        .filter(Boolean)
+        .join(" ");
+
+    if (name.trim()) {
+      return name.trim();
+    }
+
+    if (profile.email) {
+      return profile.email;
+    }
+  }
+
+  if (record.updated_by) {
+    return "Farm team member";
+  }
+
+  return "Not edited";
 }
 
 export default function MortalityList({
@@ -298,6 +359,36 @@ export default function MortalityList({
                       )}
                     </p>
                   </div>
+
+                  {record.updated_at && (
+                    <div className="rounded-2xl bg-blue-50 p-4 sm:col-span-2">
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <p className="text-xs uppercase tracking-wide text-blue-500">
+                            Last Updated
+                          </p>
+
+                          <p className="mt-1 font-semibold text-blue-900">
+                            {formatRecordedAt(
+                              record.updated_at
+                            )}
+                          </p>
+                        </div>
+
+                        <div className="text-right">
+                          <p className="text-xs uppercase tracking-wide text-blue-500">
+                            Updated By
+                          </p>
+
+                          <p className="mt-1 font-semibold text-blue-900">
+                            {getUpdaterName(
+                              record
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -435,6 +526,16 @@ export default function MortalityList({
                     <p className="mt-1 font-semibold text-blue-900">
                       {formatRecordedAt(
                         selectedRecord.updated_at
+                      )}
+                    </p>
+
+                    <p className="mt-4 text-xs uppercase tracking-wide text-blue-500">
+                      Updated By
+                    </p>
+
+                    <p className="mt-1 font-semibold text-blue-900">
+                      {getUpdaterName(
+                        selectedRecord
                       )}
                     </p>
                   </div>
