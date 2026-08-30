@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
-import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/lib/permissions";
 import { PERMISSIONS } from "@/lib/permissions";
 import { supabase } from "@/lib/supabase";
@@ -22,6 +21,7 @@ import {
   ShoppingCart,
   BarChart3,
   ChartColumn,
+  Brain,
   Settings,
   Upload,
   User,
@@ -42,50 +42,60 @@ export default function MobileSidebar({
   const pathname = usePathname();
   const router = useRouter();
 
-  const { can, isPlatformAdmin } = usePermissions();
+  const {
+    can,
+    isPlatformAdmin,
+  } = usePermissions();
 
   const operations = [
     {
       name: "Flocks",
       href: "/flocks",
       icon: Bird,
-      permission: PERMISSIONS.FLOCKS_VIEW,
+      permission:
+        PERMISSIONS.FLOCKS_VIEW,
     },
     {
       name: "Egg Production",
       href: "/eggs",
       icon: Egg,
-      permission: PERMISSIONS.EGGS_VIEW,
+      permission:
+        PERMISSIONS.EGGS_VIEW,
     },
     {
       name: "Feed",
       href: "/feed",
       icon: Wheat,
-      permission: PERMISSIONS.FEED_VIEW,
+      permission:
+        PERMISSIONS.FEED_VIEW,
     },
     {
       name: "Feed Inventory",
       href: "/feed-inventory",
       icon: Package,
-      permission: PERMISSIONS.FEED_INVENTORY_VIEW,
+      permission:
+        PERMISSIONS.FEED_INVENTORY_VIEW,
     },
     {
       name: "Mortality",
       href: "/mortality",
       icon: AlertTriangle,
-      permission: PERMISSIONS.MORTALITY_VIEW,
+      permission:
+        PERMISSIONS.MORTALITY_VIEW,
     },
     {
       name: "Isolation",
       href: "/isolation",
       icon: Activity,
-      permission: PERMISSIONS.ISOLATION_VIEW,
+      permission:
+        PERMISSIONS.ISOLATION_VIEW,
     },
     {
       name: "Health",
       href: "/health",
       icon: HeartPulse,
-      permission: PERMISSIONS.HEALTH_VIEW,
+      permission:
+        PERMISSIONS.HEALTH_VIEW,
     },
   ];
 
@@ -94,13 +104,15 @@ export default function MobileSidebar({
       name: "Expenses",
       href: "/expenses",
       icon: Receipt,
-      permission: PERMISSIONS.EXPENSES_VIEW,
+      permission:
+        PERMISSIONS.EXPENSES_VIEW,
     },
     {
       name: "Sales",
       href: "/sales",
       icon: ShoppingCart,
-      permission: PERMISSIONS.SALES_VIEW,
+      permission:
+        PERMISSIONS.SALES_VIEW,
     },
   ];
 
@@ -109,13 +121,22 @@ export default function MobileSidebar({
       name: "Reports",
       href: "/reports",
       icon: BarChart3,
-      permission: PERMISSIONS.REPORTS_VIEW,
+      permission:
+        PERMISSIONS.REPORTS_VIEW,
     },
     {
       name: "Analytics",
       href: "/analytics",
       icon: ChartColumn,
-      permission: PERMISSIONS.ANALYTICS_VIEW,
+      permission:
+        PERMISSIONS.ANALYTICS_VIEW,
+    },
+    {
+      name: "Feed Intelligence",
+      href: "/feed-intelligence",
+      icon: Brain,
+      permission:
+        PERMISSIONS.ANALYTICS_VIEW,
     },
   ];
 
@@ -124,7 +145,8 @@ export default function MobileSidebar({
       name: "Migration",
       href: "/migration",
       icon: Upload,
-      permission: PERMISSIONS.MIGRATION_VIEW,
+      permission:
+        PERMISSIONS.MIGRATION_VIEW,
     },
   ];
 
@@ -133,7 +155,8 @@ export default function MobileSidebar({
       name: "Team",
       href: "/team",
       icon: Users,
-      permission: PERMISSIONS.TEAM_VIEW,
+      permission:
+        PERMISSIONS.TEAM_VIEW,
     },
   ];
 
@@ -163,10 +186,14 @@ export default function MobileSidebar({
           flex-col bg-slate-950 text-white
         "
       >
+
         {/* Header */}
         <div className="border-b border-slate-800 p-5">
+
           <div className="flex items-center justify-between">
+
             <div className="flex items-center gap-3">
+
               <div
                 className="
                   flex h-10 w-10 items-center justify-center
@@ -177,6 +204,7 @@ export default function MobileSidebar({
               </div>
 
               <div>
+
                 <h2 className="text-lg font-bold">
                   PoultryOps
                 </h2>
@@ -184,7 +212,9 @@ export default function MobileSidebar({
                 <p className="text-xs text-slate-400">
                   Poultry Farm Management
                 </p>
+
               </div>
+
             </div>
 
             <button
@@ -194,12 +224,17 @@ export default function MobileSidebar({
             >
               <X size={20} />
             </button>
+
           </div>
+
         </div>
 
         {/* Navigation */}
         <div className="flex-1 space-y-6 overflow-y-auto p-4">
-          {can(PERMISSIONS.DASHBOARD_VIEW) && (
+
+          {can(
+            PERMISSIONS.DASHBOARD_VIEW
+          ) && (
             <MenuItem
               pathname={pathname}
               href="/dashboard"
@@ -211,8 +246,9 @@ export default function MobileSidebar({
 
           <MenuSection
             title="OPERATIONS"
-            items={operations.filter((item) =>
-              can(item.permission)
+            items={operations.filter(
+              (item) =>
+                can(item.permission)
             )}
             pathname={pathname}
             onClose={onClose}
@@ -220,8 +256,9 @@ export default function MobileSidebar({
 
           <MenuSection
             title="FINANCE"
-            items={finance.filter((item) =>
-              can(item.permission)
+            items={finance.filter(
+              (item) =>
+                can(item.permission)
             )}
             pathname={pathname}
             onClose={onClose}
@@ -229,8 +266,9 @@ export default function MobileSidebar({
 
           <MenuSection
             title="INSIGHTS"
-            items={insights.filter((item) =>
-              can(item.permission)
+            items={insights.filter(
+              (item) =>
+                can(item.permission)
             )}
             pathname={pathname}
             onClose={onClose}
@@ -238,8 +276,9 @@ export default function MobileSidebar({
 
           <MenuSection
             title="TOOLS"
-            items={tools.filter((item) =>
-              can(item.permission)
+            items={tools.filter(
+              (item) =>
+                can(item.permission)
             )}
             pathname={pathname}
             onClose={onClose}
@@ -247,8 +286,9 @@ export default function MobileSidebar({
 
           <MenuSection
             title="TEAM"
-            items={team.filter((item) =>
-              can(item.permission)
+            items={team.filter(
+              (item) =>
+                can(item.permission)
             )}
             pathname={pathname}
             onClose={onClose}
@@ -274,10 +314,12 @@ export default function MobileSidebar({
               onClose={onClose}
             />
           )}
+
         </div>
 
         {/* Bottom Navigation */}
         <div className="space-y-1 border-t border-slate-800 p-4">
+
           <MenuItem
             pathname={pathname}
             href="/profile"
@@ -286,7 +328,9 @@ export default function MobileSidebar({
             onClose={onClose}
           />
 
-          {can(PERMISSIONS.SETTINGS_VIEW) && (
+          {can(
+            PERMISSIONS.SETTINGS_VIEW
+          ) && (
             <MenuItem
               pathname={pathname}
               href="/settings"
@@ -306,9 +350,13 @@ export default function MobileSidebar({
           >
             <LogOut size={18} />
 
-            <span>Sign Out</span>
+            <span>
+              Sign Out
+            </span>
           </button>
+
         </div>
+
       </aside>
     </>
   );
@@ -320,12 +368,16 @@ function MenuSection({
   pathname,
   onClose,
 }: any) {
-  if (!items || items.length === 0) {
+  if (
+    !items ||
+    items.length === 0
+  ) {
     return null;
   }
 
   return (
     <div>
+
       <p
         className="
           mb-2 text-xs font-semibold tracking-wider
@@ -336,15 +388,20 @@ function MenuSection({
       </p>
 
       <div className="space-y-1">
-        {items.map((item: any) => (
-          <MenuItem
-            key={item.href}
-            pathname={pathname}
-            onClose={onClose}
-            {...item}
-          />
-        ))}
+
+        {items.map(
+          (item: any) => (
+            <MenuItem
+              key={item.href}
+              pathname={pathname}
+              onClose={onClose}
+              {...item}
+            />
+          )
+        )}
+
       </div>
+
     </div>
   );
 }
@@ -359,7 +416,9 @@ function MenuItem({
   const active =
     pathname === href ||
     (href !== "/" &&
-      pathname.startsWith(href + "/"));
+      pathname.startsWith(
+        href + "/"
+      ));
 
   return (
     <Link
@@ -377,7 +436,9 @@ function MenuItem({
     >
       <Icon size={18} />
 
-      <span>{name}</span>
+      <span>
+        {name}
+      </span>
     </Link>
   );
 }
