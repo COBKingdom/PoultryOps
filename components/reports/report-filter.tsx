@@ -30,7 +30,7 @@ const PRESETS: DateRangePreset[] = [
   "today",
   "this_week",
   "this_month",
-  "last_month",
+  "all_time",
   "any_day",
   "custom",
 ];

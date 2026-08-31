@@ -1,10 +1,14 @@
+
 import { NextResponse } from "next/server";
+
 import { requirePlatformAdmin } from "@/lib/admin/auth";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { createPogpUser } from "@/lib/users/create-pogp-user";
 
 export async function GET(request: Request) {
   try {
-    const auth = await requirePlatformAdmin(request);
+    const auth =
+      await requirePlatformAdmin(request);
 
     if (!auth.success) {
       return NextResponse.json(
@@ -13,7 +17,8 @@ export async function GET(request: Request) {
           error: auth.error,
         },
         {
-          status: auth.statusCode || 403,
+          status:
+            auth.statusCode || 403,
         }
       );
     }
@@ -22,23 +27,27 @@ export async function GET(request: Request) {
     // 1. Load POGP partners
     // ==========================================================
 
-    const { data: partners, error: partnersError } =
-      await supabaseAdmin
-        .from("pogp_partners")
-        .select(`
-          id,
-          profile_id,
-          full_name,
-          phone,
-          email,
-          pogp_code,
-          status,
-          territory,
-          joined_at,
-          notes,
-          created_at
-        `)
-        .order("created_at", { ascending: false });
+    const {
+      data: partners,
+      error: partnersError,
+    } = await supabaseAdmin
+      .from("pogp_partners")
+      .select(`
+        id,
+        profile_id,
+        full_name,
+        phone,
+        email,
+        pogp_code,
+        status,
+        territory,
+        joined_at,
+        notes,
+        created_at
+      `)
+      .order("created_at", {
+        ascending: false,
+      });
 
     if (partnersError) {
       console.error(
@@ -49,16 +58,19 @@ export async function GET(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          error: "Unable to load POGP partners",
+          error:
+            "Unable to load POGP partners",
         },
         { status: 500 }
       );
     }
 
     const partnerRows = partners || [];
-    const partnerIds = partnerRows.map(
-      (partner) => partner.id
-    );
+
+    const partnerIds =
+      partnerRows.map(
+        (partner) => partner.id
+      );
 
     let prospects: any[] = [];
     let attributions: any[] = [];
@@ -76,22 +88,33 @@ export async function GET(request: Request) {
       ] = await Promise.all([
         supabaseAdmin
           .from("pogp_prospects")
-          .select("id, pogp_id, status")
-          .in("pogp_id", partnerIds),
+          .select(
+            "id, pogp_id, status"
+          )
+          .in(
+            "pogp_id",
+            partnerIds
+          ),
 
         supabaseAdmin
           .from("pogp_attributions")
           .select(
             "id, pogp_id, farm_id, source, attributed_at"
           )
-          .in("pogp_id", partnerIds),
+          .in(
+            "pogp_id",
+            partnerIds
+          ),
 
         supabaseAdmin
           .from("pogp_commissions")
           .select(
             "id, pogp_id, amount, status"
           )
-          .in("pogp_id", partnerIds),
+          .in(
+            "pogp_id",
+            partnerIds
+          ),
       ]);
 
       if (prospectsResult.error) {
@@ -100,7 +123,8 @@ export async function GET(request: Request) {
           prospectsResult.error
         );
       } else {
-        prospects = prospectsResult.data || [];
+        prospects =
+          prospectsResult.data || [];
       }
 
       if (attributionsResult.error) {
@@ -131,7 +155,10 @@ export async function GET(request: Request) {
     const farmIds = [
       ...new Set(
         attributions
-          .map((attribution) => attribution.farm_id)
+          .map(
+            (attribution) =>
+              attribution.farm_id
+          )
           .filter(Boolean)
       ),
     ];
@@ -141,13 +168,18 @@ export async function GET(request: Request) {
     let subscriptions: any[] = [];
 
     if (farmIds.length > 0) {
-      const { data: farmRows, error: farmsError } =
-        await supabaseAdmin
-          .from("farms")
-          .select(
-            "id, name, owner_id, created_at, active, farm_type, currency"
-          )
-          .in("id", farmIds);
+      const {
+        data: farmRows,
+        error: farmsError,
+      } = await supabaseAdmin
+        .from("farms")
+        .select(
+          "id, name, owner_id, created_at, active, farm_type, currency"
+        )
+        .in(
+          "id",
+          farmIds
+        );
 
       if (farmsError) {
         console.error(
@@ -155,25 +187,34 @@ export async function GET(request: Request) {
           farmsError
         );
       } else {
-        farms = farmRows || [];
+        farms =
+          farmRows || [];
       }
 
       const ownerIds = [
         ...new Set(
           farms
-            .map((farm) => farm.owner_id)
+            .map(
+              (farm) =>
+                farm.owner_id
+            )
             .filter(Boolean)
         ),
       ];
 
       if (ownerIds.length > 0) {
-        const { data: profileRows, error: profilesError } =
-          await supabaseAdmin
-            .from("profiles")
-            .select(
-              "id, full_name, email, farm_id"
-            )
-            .in("id", ownerIds);
+        const {
+          data: profileRows,
+          error: profilesError,
+        } = await supabaseAdmin
+          .from("profiles")
+          .select(
+            "id, full_name, email, farm_id"
+          )
+          .in(
+            "id",
+            ownerIds
+          );
 
         if (profilesError) {
           console.error(
@@ -181,7 +222,8 @@ export async function GET(request: Request) {
             profilesError
           );
         } else {
-          profiles = profileRows || [];
+          profiles =
+            profileRows || [];
         }
       }
 
@@ -191,9 +233,12 @@ export async function GET(request: Request) {
       } = await supabaseAdmin
         .from("subscriptions")
         .select(
-          "id, farm_id, plan, status, trial_start, trial_end, selected_plan, billing_cycle, next_billing_date"
+          "id, farm_id, plan, status, trial_start, trial_end, selected_plan, billing_cycle, next_billing_date, created_at"
         )
-        .in("farm_id", farmIds);
+        .in(
+          "farm_id",
+          farmIds
+        );
 
       if (subscriptionsError) {
         console.error(
@@ -212,25 +257,30 @@ export async function GET(request: Request) {
 
     const customers = attributions
       .map((attribution) => {
-        const farm = farms.find(
-          (item) =>
-            item.id === attribution.farm_id
-        );
+        const farm =
+          farms.find(
+            (item) =>
+              item.id ===
+              attribution.farm_id
+          );
 
         if (!farm) {
           return null;
         }
 
-        const owner = profiles.find(
-          (profile) =>
-            profile.id === farm.owner_id
-        );
+        const owner =
+          profiles.find(
+            (profile) =>
+              profile.id ===
+              farm.owner_id
+          );
 
         const subscription =
           subscriptions
             .filter(
               (item) =>
-                item.farm_id === farm.id
+                item.farm_id ===
+                farm.id
             )
             .sort(
               (a, b) =>
@@ -242,10 +292,12 @@ export async function GET(request: Request) {
                 ).getTime()
             )[0] || null;
 
-        const partner = partnerRows.find(
-          (item) =>
-            item.id === attribution.pogp_id
-        );
+        const partner =
+          partnerRows.find(
+            (item) =>
+              item.id ===
+              attribution.pogp_id
+          );
 
         return {
           id: attribution.id,
@@ -269,31 +321,33 @@ export async function GET(request: Request) {
           pogpEmail:
             partner?.email || "",
           pogpCode:
-            partner?.pogp_code || "â€”",
+            partner?.pogp_code ||
+            "—",
           source:
             attribution.source ||
             "manual",
           attributedAt:
             attribution.attributed_at,
-          subscription: subscription
-            ? {
-                plan:
-                  subscription.selected_plan ||
-                  subscription.plan ||
-                  "â€”",
-                status:
-                  subscription.status ||
-                  "â€”",
-                trialStart:
-                  subscription.trial_start,
-                trialEnd:
-                  subscription.trial_end,
-                billingCycle:
-                  subscription.billing_cycle,
-                nextBillingDate:
-                  subscription.next_billing_date,
-              }
-            : null,
+          subscription:
+            subscription
+              ? {
+                  plan:
+                    subscription.selected_plan ||
+                    subscription.plan ||
+                    "—",
+                  status:
+                    subscription.status ||
+                    "—",
+                  trialStart:
+                    subscription.trial_start,
+                  trialEnd:
+                    subscription.trial_end,
+                  billingCycle:
+                    subscription.billing_cycle,
+                  nextBillingDate:
+                    subscription.next_billing_date,
+                }
+              : null,
         };
       })
       .filter(Boolean);
@@ -303,44 +357,53 @@ export async function GET(request: Request) {
     // ==========================================================
 
     const partnersWithStats =
-      partnerRows.map((partner) => {
-        const partnerProspects =
-          prospects.filter(
-            (prospect) =>
-              prospect.pogp_id === partner.id
-          );
+      partnerRows.map(
+        (partner) => {
+          const partnerProspects =
+            prospects.filter(
+              (prospect) =>
+                prospect.pogp_id ===
+                partner.id
+            );
 
-        const partnerCustomers =
-          attributions.filter(
-            (attribution) =>
-              attribution.pogp_id === partner.id
-          );
+          const partnerCustomers =
+            attributions.filter(
+              (attribution) =>
+                attribution.pogp_id ===
+                partner.id
+            );
 
-        const partnerCommissions =
-          commissions.filter(
-            (commission) =>
-              commission.pogp_id === partner.id
-          );
+          const partnerCommissions =
+            commissions.filter(
+              (commission) =>
+                commission.pogp_id ===
+                partner.id
+            );
 
-        const commissionTotal =
-          partnerCommissions.reduce(
-            (total, commission) =>
-              total +
-              Number(
-                commission.amount || 0
-              ),
-            0
-          );
+          const commissionTotal =
+            partnerCommissions.reduce(
+              (
+                total,
+                commission
+              ) =>
+                total +
+                Number(
+                  commission.amount ||
+                    0
+                ),
+              0
+            );
 
-        return {
-          ...partner,
-          prospectCount:
-            partnerProspects.length,
-          customerCount:
-            partnerCustomers.length,
-          commissionTotal,
-        };
-      });
+          return {
+            ...partner,
+            prospectCount:
+              partnerProspects.length,
+            customerCount:
+              partnerCustomers.length,
+            commissionTotal,
+          };
+        }
+      );
 
     // ==========================================================
     // 6. Summary
@@ -354,10 +417,14 @@ export async function GET(request: Request) {
 
     const totalCommission =
       commissions.reduce(
-        (total, commission) =>
+        (
+          total,
+          commission
+        ) =>
           total +
           Number(
-            commission.amount || 0
+            commission.amount ||
+              0
           ),
         0
       );
@@ -365,7 +432,8 @@ export async function GET(request: Request) {
     const activePartners =
       partnerRows.filter(
         (partner) =>
-          partner.status === "active"
+          partner.status ===
+          "active"
       ).length;
 
     return NextResponse.json({
@@ -380,7 +448,8 @@ export async function GET(request: Request) {
         totalCommission,
       },
 
-      partners: partnersWithStats,
+      partners:
+        partnersWithStats,
 
       customers,
     });
@@ -393,15 +462,22 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         success: false,
-        error: "Internal server error",
+        error:
+          "Internal server error",
       },
       { status: 500 }
     );
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(
+  request: Request
+) {
   try {
+    // ==========================================================
+    // 1. Verify platform admin
+    // ==========================================================
+
     const auth =
       await requirePlatformAdmin(request);
 
@@ -418,34 +494,49 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = await request.json();
+    // ==========================================================
+    // 2. Read request
+    // ==========================================================
+
+    const body =
+      await request.json();
 
     const fullName =
-      String(body.fullName || "").trim();
+      String(
+        body.fullName || ""
+      ).trim();
 
     const email =
-      String(body.email || "")
-        .trim()
-        .toLowerCase();
+      String(
+        body.email || ""
+      ).trim()
+      .toLowerCase();
 
     const phone =
-      String(body.phone || "").trim();
+      String(
+        body.phone || ""
+      ).trim();
 
     const territory =
-      String(body.territory || "").trim();
+      String(
+        body.territory || ""
+      ).trim();
 
     const notes =
-      String(body.notes || "").trim();
+      String(
+        body.notes || ""
+      ).trim();
 
     // ==========================================================
-    // Validation
+    // 3. Validate input
     // ==========================================================
 
     if (!fullName) {
       return NextResponse.json(
         {
           success: false,
-          error: "Full name is required",
+          error:
+            "Full name is required",
         },
         { status: 400 }
       );
@@ -455,7 +546,8 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          error: "Email address is required",
+          error:
+            "Email address is required",
         },
         { status: 400 }
       );
@@ -479,111 +571,15 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          error: "Phone number is required",
+          error:
+            "Phone number is required",
         },
         { status: 400 }
       );
     }
 
     // ==========================================================
-    // GLOBAL EMAIL PROTECTION
-    //
-    // ONE EMAIL ADDRESS = ONE ACCOUNT/PERSON
-    //
-    // A POGP must not be created using an email that is
-    // already registered as a PoultryOps authentication user.
-    // ==========================================================
-
-    const normalizedEmail = email.trim().toLowerCase();
-
-    const {
-      data: authUsersData,
-      error: authLookupError,
-    } =
-      await supabaseAdmin.auth.admin.listUsers({
-        page: 1,
-        perPage: 1000,
-      });
-
-    if (authLookupError) {
-      console.error(
-        "POGP Auth email lookup failed:",
-        authLookupError
-      );
-
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Unable to verify whether this email address is already registered",
-        },
-        { status: 500 }
-      );
-    }
-
-    const existingAuthUser =
-      authUsersData.users.find(
-        (user) =>
-          user.email?.trim().toLowerCase() ===
-          normalizedEmail
-      );
-
-    if (existingAuthUser) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "This email address is already registered with PoultryOps. A registered PoultryOps email cannot also be used to create a POGP.",
-        },
-        { status: 409 }
-      );
-    }
-
-    // ==========================================================
-    // Check existing POGP email
-    //
-    // This protects against duplicate POGP records even when
-    // the email does not belong to an Auth account.
-    // ==========================================================
-
-    const {
-      data: existingPartner,
-      error: partnerEmailLookupError,
-    } = await supabaseAdmin
-      .from("pogp_partners")
-      .select("id, full_name, email, pogp_code")
-      .ilike("email", email)
-      .maybeSingle();
-
-    if (partnerEmailLookupError) {
-      console.error(
-        "POGP email lookup failed:",
-        partnerEmailLookupError
-      );
-
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Unable to verify whether this email address is already assigned to a POGP",
-        },
-        { status: 500 }
-      );
-    }
-
-    if (existingPartner) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "This email address is already assigned to a POGP partner. Each email address can only be used once.",
-        },
-        { status: 409 }
-      );
-    }
-
-    // ==========================================================
-    // Generate next POGP code
+    // 4. Generate next POGP code
     // ==========================================================
 
     const {
@@ -640,75 +636,106 @@ export async function POST(request: Request) {
       ).padStart(3, "0")}`;
 
     // ==========================================================
-    // Create independent POGP
+    // 5. Prevent duplicate email at partner level
     // ==========================================================
 
     const {
-      data: partner,
-      error: insertError,
+      data: existingPartner,
+      error: existingPartnerError,
     } = await supabaseAdmin
       .from("pogp_partners")
-      .insert({
-        profile_id: null,
-        full_name: fullName,
-        phone,
-        email,
-        pogp_code: pogpCode,
-        territory:
-          territory || null,
-        notes:
-          notes || null,
-        status: "active",
-      })
-      .select(`
-        id,
-        profile_id,
-        full_name,
-        phone,
-        email,
-        pogp_code,
-        status,
-        territory,
-        joined_at,
-        notes,
-        created_at
-      `)
-      .single();
+      .select("id")
+      .eq("email", email)
+      .maybeSingle();
 
-    if (insertError) {
+    if (existingPartnerError) {
       console.error(
-        "POGP partner creation failed:",
-        insertError
+        "Existing POGP lookup failed:",
+        existingPartnerError
       );
-
-      if (
-        insertError.code ===
-        "23505"
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            error:
-              "A POGP partner with this email already exists",
-          },
-          { status: 409 }
-        );
-      }
 
       return NextResponse.json(
         {
           success: false,
           error:
-            "Unable to create POGP partner",
+            "Unable to verify existing POGP account",
         },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      partner,
-    });
+    if (existingPartner) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "A POGP partner with this email already exists",
+        },
+        { status: 409 }
+      );
+    }
+
+    // ==========================================================
+    // 6. Create complete POGP account
+    // ==========================================================
+
+    const result =
+      await createPogpUser({
+        fullName,
+        email,
+        phone,
+        territory,
+        notes,
+        pogpCode,
+      });
+
+    if (!result.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            result.error ||
+            "Unable to create POGP account",
+        },
+        { status: 400 }
+      );
+    }
+
+    // ==========================================================
+    // 7. Return successful onboarding result
+    // ==========================================================
+
+    return NextResponse.json(
+      {
+        success: true,
+
+        partner: {
+          id:
+            result.partnerId,
+          profile_id:
+            result.userId,
+          full_name:
+            fullName,
+          phone,
+          email,
+          pogp_code:
+            pogpCode,
+          status:
+            "active",
+          territory:
+            territory || null,
+          notes:
+            notes || null,
+        },
+
+        userId:
+          result.userId,
+
+        message:
+          "POGP account created successfully. An invitation email containing the temporary password has been sent.",
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error(
       "POGP admin POST error:",
@@ -718,7 +745,8 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         success: false,
-        error: "Internal server error",
+        error:
+          "Internal server error",
       },
       { status: 500 }
     );

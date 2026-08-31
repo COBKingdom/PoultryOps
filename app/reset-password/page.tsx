@@ -1,12 +1,22 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import {
+  Suspense,
+  useState,
+} from "react";
+import {
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
 
 import { supabase } from "@/lib/supabase";
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const accountType =
+    searchParams.get("type");
 
   const [password, setPassword] =
     useState("");
@@ -25,120 +35,190 @@ export default function ResetPasswordPage() {
   ) {
     e.preventDefault();
 
-    if (
-      password !==
-      confirmPassword
-    ) {
-      setMessage(
-        "Passwords do not match"
-      );
+    setMessage("");
 
+    if (password.length < 8) {
+      setMessage(
+        "Password must be at least 8 characters."
+      );
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setMessage(
+        "Passwords do not match."
+      );
       return;
     }
 
     try {
       setLoading(true);
 
-      const { error } =
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        throw new Error(
+          "Your login session has expired. Please sign in again."
+        );
+      }
+
+      // ----------------------------------------------------------
+      // Update Supabase Auth password
+      // ----------------------------------------------------------
+
+      const { error: passwordError } =
         await supabase.auth.updateUser({
           password,
         });
 
-      if (error) {
-        throw error;
+      if (passwordError) {
+        throw passwordError;
       }
 
-      // First-login flow: if the user was required to change their
-      // temporary password, clear the flag and go straight to the dashboard.
+      // ----------------------------------------------------------
+      // Retrieve current profile
+      // ----------------------------------------------------------
+
       const {
-        data: { user },
-      } =
-        await supabase.auth.getUser();
+        data: profile,
+        error: profileError,
+      } = await supabase
+        .from("profiles")
+        .select(
+          "role, must_change_password"
+        )
+        .eq("id", user.id)
+        .single();
 
-      if (user) {
-        const { data: profile } =
-          await supabase
-            .from("profiles")
-            .select("must_change_password")
-            .eq("id", user.id)
-            .single();
+      if (profileError) {
+        throw profileError;
+      }
 
-        if (
-          profile?.must_change_password
-        ) {
-          await supabase
-            .from("profiles")
-            .update({
-              must_change_password: false,
-            })
-            .eq("id", user.id);
+      // ----------------------------------------------------------
+      // Clear temporary-password flag
+      // ----------------------------------------------------------
 
-          router.push(
-            "/dashboard"
-          );
+      if (profile?.must_change_password) {
+        const {
+          error: updateError,
+        } = await supabase
+          .from("profiles")
+          .update({
+            must_change_password: false,
+          })
+          .eq("id", user.id);
 
-          return;
+        if (updateError) {
+          throw updateError;
         }
       }
 
-      router.push(
-        "/login?reset=success"
+      // ----------------------------------------------------------
+      // POGP
+      // ----------------------------------------------------------
+
+      if (
+        profile?.role === "pogp" ||
+        accountType === "pogp"
+      ) {
+        router.push("/pogp");
+        return;
+      }
+
+      // ----------------------------------------------------------
+      // Normal farm user
+      // ----------------------------------------------------------
+
+      router.push("/dashboard");
+    } catch (error: any) {
+      console.error(
+        "Password reset error:",
+        error
       );
 
-    } catch (err: any) {
       setMessage(
-        err.message ||
-          "Failed to reset password"
+        error?.message ||
+          "Failed to update password."
       );
-
     } finally {
       setLoading(false);
     }
   }
 
+  const isPogp =
+    accountType === "pogp";
+
   return (
     <main className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
       <div className="w-full max-w-md bg-white rounded-2xl shadow p-6">
 
-        <h1 className="text-2xl font-bold">
-          Reset Password
-        </h1>
+        <div className="mb-6">
+          <p className="text-xs font-semibold tracking-[0.2em] text-blue-600 uppercase">
+            PoultryOps
+          </p>
 
-        <p className="text-slate-500 mt-2 mb-6">
-          Choose a new password.
-        </p>
+          <h1 className="text-2xl font-bold mt-2">
+            Create Your Password
+          </h1>
+
+          <p className="text-slate-500 mt-2">
+            {isPogp
+              ? "Welcome to the PoultryOps Growth Partner network. Please create your personal password to continue."
+              : "Your temporary password must be replaced before you can continue."}
+          </p>
+        </div>
 
         <form
           onSubmit={handleReset}
           className="space-y-4"
         >
-          <input
-            type="password"
-            placeholder="New Password"
-            value={password}
-            onChange={(e) =>
-              setPassword(
-                e.target.value
-              )
-            }
-            className="w-full border rounded-lg p-3"
-            required
-          />
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              New Password
+            </label>
 
-          <input
-            type="password"
-            placeholder="Confirm Password"
-            value={confirmPassword}
-            onChange={(e) =>
-              setConfirmPassword(
-                e.target.value
-              )
-            }
-            className="w-full border rounded-lg p-3"
-            required
-          />
+            <input
+              type="password"
+              value={password}
+              onChange={(e) =>
+                setPassword(e.target.value)
+              }
+              placeholder="Enter new password"
+              className="w-full border rounded-lg p-3"
+              minLength={8}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Confirm Password
+            </label>
+
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) =>
+                setConfirmPassword(
+                  e.target.value
+                )
+              }
+              placeholder="Confirm new password"
+              className="w-full border rounded-lg p-3"
+              minLength={8}
+              required
+            />
+          </div>
+
+          <div className="rounded-lg bg-slate-50 border p-3 text-sm text-slate-600">
+            Password must contain at least 8 characters.
+          </div>
 
           <button
+            type="submit"
             disabled={loading}
             className="
               w-full
@@ -147,11 +227,12 @@ export default function ResetPasswordPage() {
               p-3
               rounded-lg
               font-semibold
+              disabled:opacity-60
             "
           >
             {loading
               ? "Updating..."
-              : "Update Password"}
+              : "Create Password"}
           </button>
 
           {message && (
@@ -159,10 +240,24 @@ export default function ResetPasswordPage() {
               {message}
             </p>
           )}
-
         </form>
-
       </div>
     </main>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
+          <div className="text-slate-500">
+            Loading...
+          </div>
+        </main>
+      }
+    >
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

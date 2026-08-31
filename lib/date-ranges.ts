@@ -12,7 +12,7 @@ export type DateRangePreset =
   | "today"
   | "this_week"
   | "this_month"
-  | "last_month"
+  | "all_time"
   | "any_day"
   | "custom";
 
@@ -93,33 +93,12 @@ function endOfMonth(date: Date): Date {
 }
 
 /**
- * Returns the start of last month.
- */
-function startOfLastMonth(date: Date): Date {
-  return new Date(
-    date.getFullYear(),
-    date.getMonth() - 1,
-    1
-  );
-}
-
-/**
- * Returns the end of last month.
- */
-function endOfLastMonth(date: Date): Date {
-  return new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    0,
-    23,
-    59,
-    59,
-    999
-  );
-}
-
-/**
  * Computes a DateRange for the given preset.
+ *
+ * For "all_time", the range begins at the earliest supported
+ * calendar date and ends today. This effectively removes the
+ * practical date restriction while keeping the existing
+ * DateRange structure compatible with Supabase filters.
  *
  * For "any_day", the caller should supply the selected date
  * as customStart. The same date is then used as both start and end.
@@ -157,10 +136,10 @@ export function getDateRange(
       };
     }
 
-    case "last_month": {
+    case "all_time": {
       return {
-        start: toDateString(startOfLastMonth(now)),
-        end: toDateString(endOfLastMonth(now)),
+        start: "0001-01-01",
+        end: toDateString(now),
       };
     }
 
@@ -233,8 +212,8 @@ export function getPresetLabel(
     case "this_month":
       return "This Month";
 
-    case "last_month":
-      return "Last Month";
+    case "all_time":
+      return "All Time";
 
     case "any_day":
       return "Any Day";

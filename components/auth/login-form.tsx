@@ -9,21 +9,12 @@ import { supabase } from "@/lib/supabase";
 export default function LoginForm() {
   const router = useRouter();
 
-  const [email, setEmail] =
-    useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
 
-  const [password, setPassword] =
-    useState("");
-
-  const [loading, setLoading] =
-    useState(false);
-
-  const [message, setMessage] =
-    useState("");
-
-  async function handleLogin(
-    e: React.FormEvent
-  ) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
 
     try {
@@ -33,59 +24,81 @@ export default function LoginForm() {
       const {
         data,
         error,
-      } =
-        await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+      } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
 
       if (error) {
         throw error;
       }
 
-      const user =
-        data.user;
+      const user = data.user;
+
+      if (!user) {
+        throw new Error("Unable to identify logged-in user");
+      }
 
       const {
         data: profile,
         error: profileError,
-      } =
-        await supabase
-          .from("profiles")
-          .select("farm_id, must_change_password")
-          .eq("id", user.id)
-          .single();
+      } = await supabase
+        .from("profiles")
+        .select(
+          "farm_id, role, must_change_password"
+        )
+        .eq("id", user.id)
+        .single();
 
       if (profileError) {
         throw profileError;
       }
 
-      if (
-        !profile?.farm_id
-      ) {
-        router.push(
-          "/onboarding"
-        );
+      // ----------------------------------------------------------
+      // POGP USER
+      //
+      // POGPs are independent PoultryOps partners.
+      // They do NOT have a farm_id.
+      // ----------------------------------------------------------
 
+      if (profile?.role === "pogp") {
+        if (profile.must_change_password) {
+          router.push("/reset-password?type=pogp");
+          return;
+        }
+
+        router.push("/pogp");
         return;
       }
 
-      // First-login flow: invited users with a temporary password
-      // must change it before accessing the dashboard.
-      if (
-        profile?.must_change_password
-      ) {
-        router.push(
-          "/reset-password"
-        );
+      // ----------------------------------------------------------
+      // NORMAL FARM USER
+      // ----------------------------------------------------------
 
+      if (!profile?.farm_id) {
+        router.push("/onboarding");
         return;
       }
 
-      // Preserve intended destination if provided via ?next=
+      // ----------------------------------------------------------
+      // FIRST LOGIN
+      //
+      // Invited farm users must change their temporary password.
+      // ----------------------------------------------------------
+
+      if (profile.must_change_password) {
+        router.push("/reset-password");
+        return;
+      }
+
+      // ----------------------------------------------------------
+      // PRESERVE INTENDED DESTINATION
+      // ----------------------------------------------------------
+
       const params = new URLSearchParams(
         window.location.search
       );
+
       const next = params.get("next");
 
       if (
@@ -97,18 +110,18 @@ export default function LoginForm() {
         return;
       }
 
-      router.push(
-        "/dashboard"
-      );
+      // ----------------------------------------------------------
+      // DEFAULT FARM DASHBOARD
+      // ----------------------------------------------------------
 
+      router.push("/dashboard");
     } catch (error: any) {
-      console.error(error);
+      console.error("Login error:", error);
 
       setMessage(
-        error.message ||
+        error?.message ||
           "Invalid login credentials"
       );
-
     } finally {
       setLoading(false);
     }
@@ -124,9 +137,7 @@ export default function LoginForm() {
         placeholder="Email"
         value={email}
         onChange={(e) =>
-          setEmail(
-            e.target.value
-          )
+          setEmail(e.target.value)
         }
         className="
           w-full
@@ -142,9 +153,7 @@ export default function LoginForm() {
         placeholder="Password"
         value={password}
         onChange={(e) =>
-          setPassword(
-            e.target.value
-          )
+          setPassword(e.target.value)
         }
         className="
           w-full
@@ -169,6 +178,7 @@ export default function LoginForm() {
       </div>
 
       <button
+        type="submit"
         disabled={loading}
         className="
           w-full
@@ -177,6 +187,7 @@ export default function LoginForm() {
           p-3
           rounded-lg
           font-semibold
+          disabled:opacity-60
         "
       >
         {loading

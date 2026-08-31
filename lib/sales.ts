@@ -49,7 +49,7 @@ export async function getTotalRevenue(
       (sum, row) =>
         sum +
         Number(
-          row.total_amount
+          row.total_amount || 0
         ),
       0
     ) || 0
@@ -65,7 +65,12 @@ const BIRD_SALE_TYPES = [
 
 /**
  * Total number of birds sold from the farm.
- * Only bird-related sale types count toward birds removed from the flock.
+ *
+ * Only bird-related sale types count toward
+ * birds removed from the farm.
+ *
+ * This is intentionally farm-wide and is used
+ * by farm-level Available Birds calculations.
  */
 export async function getTotalBirdsSold(
   farmId: string
@@ -89,10 +94,63 @@ export async function getTotalBirdsSold(
           return (
             sum +
             Number(
-              row.quantity
+              row.quantity || 0
             )
           );
         }
+
+        return sum;
+      },
+      0
+    ) || 0
+  );
+}
+
+/**
+ * Total number of birds sold from one flock.
+ *
+ * IMPORTANT:
+ *
+ * This calculation is deliberately restricted
+ * to the supplied flock_id.
+ *
+ * A sale belonging to another flock must never
+ * reduce the Available Birds figure of this flock.
+ *
+ * Only bird-related sale types count.
+ */
+export async function getFlockBirdsSold(
+  flockId: string
+) {
+  const { data, error } =
+    await supabase
+      .from("sales")
+      .select(
+        "quantity, item_type, flock_id"
+      )
+      .eq(
+        "flock_id",
+        flockId
+      );
+
+  if (error) throw error;
+
+  return (
+    data?.reduce(
+      (sum, row) => {
+        if (
+          BIRD_SALE_TYPES.includes(
+            row.item_type
+          )
+        ) {
+          return (
+            sum +
+            Number(
+              row.quantity || 0
+            )
+          );
+        }
+
         return sum;
       },
       0

@@ -1,5 +1,8 @@
 import { supabase } from "@/lib/supabase";
-import { getTotalBirdsSold } from "@/lib/sales";
+import {
+  getTotalBirdsSold,
+  getFlockBirdsSold,
+} from "@/lib/sales";
 import {
   getTotalMortality,
   getFlockMortality,
@@ -222,13 +225,16 @@ export async function getFlockById(
  * birds currently available within that flock
  * for normal operations.
  *
- * Therefore active isolated birds are excluded
- * from this flock-level figure.
- *
  * Starting Birds
  * − Flock Mortality
- * − Birds Sold
+ * − Flock Birds Sold
  * − Active Isolated Birds
+ *
+ * IMPORTANT:
+ *
+ * Sales MUST be restricted to this flock.
+ * A sale belonging to another flock must never
+ * reduce this flock's available bird count.
  */
 export async function getFlockAvailableBirds(
   flockId: string
@@ -248,8 +254,8 @@ export async function getFlockAvailableBirds(
     getFlockMortality(
       flockId
     ),
-    getTotalBirdsSold(
-      flock.farm_id
+    getFlockBirdsSold(
+      flockId
     ),
     getIsolatedBirdCountForFlock(
       flockId
