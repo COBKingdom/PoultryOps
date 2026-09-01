@@ -2,9 +2,7 @@
 
 import { useState, useEffect } from "react";
 
-import {
-  updateExpense,
-} from "@/lib/expenses";
+import { updateExpense } from "@/lib/expenses";
 
 import { canEdit } from "@/lib/permissions/governance";
 
@@ -20,6 +18,23 @@ type Props = {
   profile?: any;
 };
 
+const EXPENSE_CATEGORIES = [
+  "Staff Salaries",
+  "Transportation",
+  "Fuel & Generator",
+  "Electricity",
+  "Water Supply",
+  "Maintenance & Repairs",
+  "Equipment Purchase",
+  "Marketing",
+  "Professional Services",
+  "Deworming",
+  "Biosecurity",
+  "Disinfectant",
+  "Health Inspection",
+  "Miscellaneous",
+];
+
 export default function EditExpenseForm({
   record,
   onClose,
@@ -27,18 +42,36 @@ export default function EditExpenseForm({
   user,
   profile,
 }: Props) {
-  const [expenseDate, setExpenseDate] = useState(record.expense_date || new Date().toISOString().split("T")[0]);
-  const [category, setCategory] = useState(record.category || "Feed");
-  const [amount, setAmount] = useState(record.amount?.toString() || "");
-  const [notes, setNotes] = useState(record.notes || "");
+  const [expenseDate, setExpenseDate] = useState(
+    record.expense_date ||
+      new Date().toISOString().split("T")[0]
+  );
+
+  const [category, setCategory] = useState(
+    record.category || "Miscellaneous"
+  );
+
+  const [amount, setAmount] = useState(
+    record.amount?.toString() || ""
+  );
+
+  const [notes, setNotes] = useState(
+    record.notes || ""
+  );
+
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [governanceError, setGovernanceError] = useState<string | null>(null);
+
+  const [governanceError, setGovernanceError] =
+    useState<string | null>(null);
 
   useEffect(() => {
     // Check Edit Governance on mount
     const governanceResult = canEdit(
-      { id: user?.id || "", role: profile?.role || "" },
+      {
+        id: user?.id || "",
+        role: profile?.role || "",
+      },
       record
     );
 
@@ -57,13 +90,17 @@ export default function EditExpenseForm({
     }
 
     try {
+      if (!amount || Number(amount) < 0) {
+        return;
+      }
+
       setLoading(true);
 
       await updateExpense(record.id, {
         expense_date: expenseDate,
         category: category,
-        amount: Number(amount || 0),
-        notes: notes,
+        amount: Number(amount),
+        notes: notes.trim() || null,
       });
 
       await onSaved?.();
@@ -74,9 +111,8 @@ export default function EditExpenseForm({
         setSuccess(false);
         onClose();
       }, 1500);
-
     } catch (error) {
-      console.error(error);
+      console.error("Error updating expense:", error);
     } finally {
       setLoading(false);
     }
@@ -140,6 +176,7 @@ export default function EditExpenseForm({
         }}
         className="space-y-4"
       >
+        {/* Date */}
         <input
           type="date"
           value={expenseDate}
@@ -150,25 +187,30 @@ export default function EditExpenseForm({
           required
         />
 
+        {/* Category */}
         <select
           value={category}
           onChange={(e) =>
             setCategory(e.target.value)
           }
           className="w-full border rounded-xl p-4"
+          required
         >
-          <option>Feed</option>
-          <option>Medication</option>
-          <option>Equipment</option>
-          <option>Labor</option>
-          <option>Utilities</option>
-          <option>Maintenance</option>
-          <option>Transportation</option>
-          <option>Other</option>
+          {EXPENSE_CATEGORIES.map((item) => (
+            <option
+              key={item}
+              value={item}
+            >
+              {item}
+            </option>
+          ))}
         </select>
 
+        {/* Amount */}
         <input
           type="number"
+          min="0"
+          step="any"
           placeholder="Amount"
           value={amount}
           onChange={(e) =>
@@ -178,6 +220,7 @@ export default function EditExpenseForm({
           required
         />
 
+        {/* Notes */}
         <input
           placeholder="Notes"
           value={notes}

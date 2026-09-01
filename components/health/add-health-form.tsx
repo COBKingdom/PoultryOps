@@ -1,74 +1,121 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import {
-  createHealthRecord,
-} from "@/lib/health";
+import { createHealthRecord } from "@/lib/health";
 
 import SaveButton from "@/components/ui/save-button";
 
 type Props = {
-  farmId: string;
+  farmId?: string;
   flocks: any[];
   onSaved?: () => Promise<void> | void;
 };
+
+const HEALTH_CATEGORIES = [
+  "Vaccine",
+  "Antibiotic",
+  "Vitamin",
+  "Multivitamin",
+  "Supplement",
+  "Treatment",
+  "Dewormer",
+  "Others (Specify)",
+];
 
 export default function AddHealthForm({
   farmId,
   flocks,
   onSaved,
 }: Props) {
-  const [flockId, setFlockId] =
-    useState("");
+  const [flockId, setFlockId] = useState("");
+  const [treatmentName, setTreatmentName] = useState("");
+  const [category, setCategory] = useState("Vaccine");
 
-  const [treatmentName, setTreatmentName] =
-    useState("");
+  const [quantity, setQuantity] = useState("");
+  const [quantityUnit, setQuantityUnit] = useState<"ml" | "g">("ml");
+  const [unitPrice, setUnitPrice] = useState("");
 
-  const [category, setCategory] =
-    useState("Vaccine");
+  const [notes, setNotes] = useState("");
 
-  const [cost, setCost] =
-    useState("");
+  const [recordDate, setRecordDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
 
-  const [notes, setNotes] =
-    useState("");
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
-  const [recordDate, setRecordDate] =
-    useState(
-      new Date()
-        .toISOString()
-        .split("T")[0]
-    );
+  const totalPrice =
+    quantity && unitPrice
+      ? Number(quantity) * Number(unitPrice)
+      : 0;
 
-  const [loading, setLoading] =
-    useState(false);
-
-  const [success, setSuccess] =
-    useState(false);
+  useEffect(() => {
+    if (category === "Others (Specify)" && !treatmentName) {
+      // Treatment name remains user-entered for Others (Specify).
+    }
+  }, [category, treatmentName]);
 
   async function handleSave() {
     try {
-      if (!flockId) return;
+      if (!farmId) {
+        console.error("Farm ID is required.");
+        return;
+      }
+
+      if (!flockId) {
+        console.error("Flock is required.");
+        return;
+      }
+
+      if (!treatmentName.trim()) {
+        console.error("Treatment name is required.");
+        return;
+      }
 
       setLoading(true);
+
+      const calculatedTotal =
+        quantity && unitPrice
+          ? Number(quantity) * Number(unitPrice)
+          : 0;
 
       await createHealthRecord({
         farm_id: farmId,
         flock_id: flockId,
         health_date: recordDate,
-        treatment_name:
-          treatmentName,
+        treatment_name: treatmentName.trim(),
         category,
-        cost:
-          Number(cost || 0),
-        notes,
+
+        quantity:
+          quantity !== ""
+            ? Number(quantity)
+            : null,
+
+        quantity_unit:
+          quantity !== ""
+            ? quantityUnit
+            : null,
+
+        unit_price:
+          unitPrice !== ""
+            ? Number(unitPrice)
+            : null,
+
+        total_price: calculatedTotal,
+        cost: calculatedTotal,
+
+        notes: notes.trim() || null,
       });
 
       await onSaved?.();
 
+      setFlockId("");
       setTreatmentName("");
-      setCost("");
+      setCategory("Vaccine");
+      setQuantity("");
+      setQuantityUnit("ml");
+      setUnitPrice("");
       setNotes("");
 
       setSuccess(true);
@@ -76,10 +123,8 @@ export default function AddHealthForm({
       setTimeout(() => {
         setSuccess(false);
       }, 2000);
-
     } catch (error) {
-      console.error(error);
-
+      console.error("Error saving health record:", error);
     } finally {
       setLoading(false);
     }
@@ -87,14 +132,9 @@ export default function AddHealthForm({
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
-
-      <h2 className="text-2xl font-bold mb-2">
+      <h2 className="text-2xl font-bold mb-6">
         Record Health Activity
       </h2>
-
-      <p className="text-sm text-slate-500 mb-4">
-        Medication and treatment costs should be recorded here rather than under Expenses.
-      </p>
 
       <form
         onSubmit={(e) => {
@@ -103,26 +143,19 @@ export default function AddHealthForm({
         }}
         className="space-y-4"
       >
-
+        {/* Date */}
         <input
           type="date"
           value={recordDate}
-          onChange={(e) =>
-            setRecordDate(
-              e.target.value
-            )
-          }
+          onChange={(e) => setRecordDate(e.target.value)}
           className="w-full border rounded-xl p-4"
           required
         />
 
+        {/* Flock */}
         <select
           value={flockId}
-          onChange={(e) =>
-            setFlockId(
-              e.target.value
-            )
-          }
+          onChange={(e) => setFlockId(e.target.value)}
           className="w-full border rounded-xl p-4"
           required
         >
@@ -130,69 +163,134 @@ export default function AddHealthForm({
             Select Flock
           </option>
 
-          {flocks.map(
-            (flock) => (
-              <option
-                key={flock.id}
-                value={flock.id}
-              >
-                {flock.flock_name}
-              </option>
-            )
-          )}
+          {flocks.map((flock: any) => (
+            <option
+              key={flock.id}
+              value={flock.id}
+            >
+              {flock.flock_name}
+            </option>
+          ))}
         </select>
 
+        {/* Treatment Name */}
         <input
-          placeholder="Treatment Name"
+          placeholder={
+            category === "Others (Specify)"
+              ? "Specify Treatment / Health Activity"
+              : "Treatment Name"
+          }
           value={treatmentName}
           onChange={(e) =>
-            setTreatmentName(
-              e.target.value
-            )
+            setTreatmentName(e.target.value)
           }
           className="w-full border rounded-xl p-4"
           required
         />
 
+        {/* Category */}
         <select
           value={category}
           onChange={(e) =>
-            setCategory(
-              e.target.value
-            )
+            setCategory(e.target.value)
           }
           className="w-full border rounded-xl p-4"
+          required
         >
-          <option>Vaccine</option>
-          <option>Antibiotic</option>
-          <option>Vitamin</option>
-          <option>Supplement</option>
-          <option>Treatment</option>
-          <option>Deworming</option>
-          <option>Biosecurity</option>
-          <option>Disinfectant</option>
-          <option>Health Inspection</option>
+          {HEALTH_CATEGORIES.map((item) => (
+            <option
+              key={item}
+              value={item}
+            >
+              {item}
+            </option>
+          ))}
         </select>
 
+        {/* Quantity + Unit */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <input
+            type="number"
+            min="0"
+            step="any"
+            placeholder="Quantity"
+            value={quantity}
+            onChange={(e) =>
+              setQuantity(e.target.value)
+            }
+            className="w-full border rounded-xl p-4"
+          />
+
+          <select
+            value={quantityUnit}
+            onChange={(e) =>
+              setQuantityUnit(
+                e.target.value as "ml" | "g"
+              )
+            }
+            className="w-full border rounded-xl p-4"
+          >
+            <option value="ml">
+              Millilitres (ml)
+            </option>
+            <option value="g">
+              Grams (g)
+            </option>
+          </select>
+        </div>
+
+        {/* Unit Price */}
         <input
           type="number"
-          placeholder="Cost"
-          value={cost}
+          min="0"
+          step="any"
+          placeholder={
+            quantityUnit === "ml"
+              ? "Unit Price per ml"
+              : "Unit Price per gram"
+          }
+          value={unitPrice}
           onChange={(e) =>
-            setCost(
-              e.target.value
-            )
+            setUnitPrice(e.target.value)
           }
           className="w-full border rounded-xl p-4"
         />
 
+        {/* Total Price */}
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <p className="text-sm text-slate-500">
+            Total Price
+          </p>
+
+          <p className="text-xl font-bold text-slate-900 mt-1">
+            {totalPrice.toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+          </p>
+
+          {quantity && unitPrice && (
+            <p className="text-xs text-slate-500 mt-1">
+              {Number(quantity).toLocaleString()}{" "}
+              {quantityUnit} ×{" "}
+              {Number(unitPrice).toLocaleString(
+                undefined,
+                {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                }
+              )}{" "}
+              per {quantityUnit}
+            </p>
+          )}
+        </div>
+
+        {/* Notes */}
         <input
           placeholder="Notes"
           value={notes}
           onChange={(e) =>
-            setNotes(
-              e.target.value
-            )
+            setNotes(e.target.value)
           }
           className="w-full border rounded-xl p-4"
         />
@@ -202,9 +300,7 @@ export default function AddHealthForm({
           success={success}
           label="Save Health Record"
         />
-
       </form>
-
     </div>
   );
 }

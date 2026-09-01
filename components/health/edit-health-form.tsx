@@ -1,11 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
-import {
-  updateHealth,
-} from "@/lib/health";
-
+import { updateHealth } from "@/lib/health";
 import { canEdit } from "@/lib/permissions/governance";
 
 import SaveButton from "@/components/ui/save-button";
@@ -21,6 +18,17 @@ type Props = {
   profile?: any;
 };
 
+const HEALTH_CATEGORIES = [
+  "Vaccine",
+  "Antibiotic",
+  "Vitamin",
+  "Multivitamin",
+  "Supplement",
+  "Treatment",
+  "Dewormer",
+  "Others (Specify)",
+];
+
 export default function EditHealthForm({
   record,
   flocks,
@@ -30,21 +38,55 @@ export default function EditHealthForm({
   profile,
 }: Props) {
   const [flockId, setFlockId] = useState(record.flock_id || "");
-  const [treatmentName, setTreatmentName] = useState(record.treatment_name || "");
-  const [category, setCategory] = useState(record.category || "Vaccine");
-  const [cost, setCost] = useState(record.cost?.toString() || "");
-  const [notes, setNotes] = useState(record.notes || "");
-  const [recordDate, setRecordDate] = useState(
-    record.health_date || new Date().toISOString().split("T")[0]
+  const [treatmentName, setTreatmentName] = useState(
+    record.treatment_name || ""
   );
+  const [category, setCategory] = useState(
+    record.category || "Vaccine"
+  );
+
+  const [quantity, setQuantity] = useState(
+    record.quantity != null
+      ? String(record.quantity)
+      : ""
+  );
+
+  const [quantityUnit, setQuantityUnit] = useState<"ml" | "g">(
+    record.quantity_unit === "g" ? "g" : "ml"
+  );
+
+  const [unitPrice, setUnitPrice] = useState(
+    record.unit_price != null
+      ? String(record.unit_price)
+      : ""
+  );
+
+  const [notes, setNotes] = useState(
+    record.notes || ""
+  );
+
+  const [recordDate, setRecordDate] = useState(
+    record.health_date ||
+      new Date().toISOString().split("T")[0]
+  );
+
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [governanceError, setGovernanceError] = useState<string | null>(null);
+  const [governanceError, setGovernanceError] =
+    useState<string | null>(null);
+
+  const totalPrice =
+    quantity && unitPrice
+      ? Number(quantity) * Number(unitPrice)
+      : 0;
 
   useEffect(() => {
     // Check Edit Governance on mount
     const governanceResult = canEdit(
-      { id: user?.id || "", role: profile?.role || "" },
+      {
+        id: user?.id || "",
+        role: profile?.role || "",
+      },
       record
     );
 
@@ -53,7 +95,6 @@ export default function EditHealthForm({
         governanceResult.reason ||
           "You cannot edit this record at this time."
       );
-      return;
     }
   }, [user, profile, record]);
 
@@ -67,15 +108,42 @@ export default function EditHealthForm({
         return;
       }
 
+      if (!treatmentName.trim()) {
+        return;
+      }
+
       setLoading(true);
+
+      const calculatedTotal =
+        quantity && unitPrice
+          ? Number(quantity) * Number(unitPrice)
+          : 0;
 
       await updateHealth(record.id, {
         flock_id: flockId,
         health_date: recordDate,
-        treatment_name: treatmentName,
-        category: category,
-        cost: Number(cost || 0),
-        notes: notes,
+        treatment_name: treatmentName.trim(),
+        category,
+
+        quantity:
+          quantity !== ""
+            ? Number(quantity)
+            : null,
+
+        quantity_unit:
+          quantity !== ""
+            ? quantityUnit
+            : null,
+
+        unit_price:
+          unitPrice !== ""
+            ? Number(unitPrice)
+            : null,
+
+        total_price: calculatedTotal,
+        cost: calculatedTotal,
+
+        notes: notes.trim() || null,
       });
 
       await onSaved?.();
@@ -86,9 +154,8 @@ export default function EditHealthForm({
         setSuccess(false);
         onClose();
       }, 1500);
-
     } catch (error) {
-      console.error(error);
+      console.error("Error updating health record:", error);
     } finally {
       setLoading(false);
     }
@@ -152,6 +219,7 @@ export default function EditHealthForm({
         }}
         className="space-y-4"
       >
+        {/* Date */}
         <input
           type="date"
           value={recordDate}
@@ -162,6 +230,7 @@ export default function EditHealthForm({
           required
         />
 
+        {/* Flock */}
         <select
           value={flockId}
           onChange={(e) =>
@@ -184,8 +253,13 @@ export default function EditHealthForm({
           ))}
         </select>
 
+        {/* Treatment Name */}
         <input
-          placeholder="Treatment Name"
+          placeholder={
+            category === "Others (Specify)"
+              ? "Specify Treatment / Health Activity"
+              : "Treatment Name"
+          }
           value={treatmentName}
           onChange={(e) =>
             setTreatmentName(e.target.value)
@@ -194,34 +268,104 @@ export default function EditHealthForm({
           required
         />
 
+        {/* Category */}
         <select
           value={category}
           onChange={(e) =>
             setCategory(e.target.value)
           }
           className="w-full border rounded-xl p-4"
+          required
         >
-          <option>Vaccine</option>
-          <option>Antibiotic</option>
-          <option>Vitamin</option>
-          <option>Supplement</option>
-          <option>Treatment</option>
-          <option>Deworming</option>
-          <option>Biosecurity</option>
-          <option>Disinfectant</option>
-          <option>Health Inspection</option>
+          {HEALTH_CATEGORIES.map((item) => (
+            <option
+              key={item}
+              value={item}
+            >
+              {item}
+            </option>
+          ))}
         </select>
 
+        {/* Quantity + Unit */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <input
+            type="number"
+            min="0"
+            step="any"
+            placeholder="Quantity"
+            value={quantity}
+            onChange={(e) =>
+              setQuantity(e.target.value)
+            }
+            className="w-full border rounded-xl p-4"
+          />
+
+          <select
+            value={quantityUnit}
+            onChange={(e) =>
+              setQuantityUnit(
+                e.target.value as "ml" | "g"
+              )
+            }
+            className="w-full border rounded-xl p-4"
+          >
+            <option value="ml">
+              Millilitres (ml)
+            </option>
+            <option value="g">
+              Grams (g)
+            </option>
+          </select>
+        </div>
+
+        {/* Unit Price */}
         <input
           type="number"
-          placeholder="Cost"
-          value={cost}
+          min="0"
+          step="any"
+          placeholder={
+            quantityUnit === "ml"
+              ? "Unit Price per ml"
+              : "Unit Price per gram"
+          }
+          value={unitPrice}
           onChange={(e) =>
-            setCost(e.target.value)
+            setUnitPrice(e.target.value)
           }
           className="w-full border rounded-xl p-4"
         />
 
+        {/* Total Price */}
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <p className="text-sm text-slate-500">
+            Total Price
+          </p>
+
+          <p className="text-xl font-bold text-slate-900 mt-1">
+            {totalPrice.toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+          </p>
+
+          {quantity && unitPrice && (
+            <p className="text-xs text-slate-500 mt-1">
+              {Number(quantity).toLocaleString()}{" "}
+              {quantityUnit} ×{" "}
+              {Number(unitPrice).toLocaleString(
+                undefined,
+                {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                }
+              )}{" "}
+              per {quantityUnit}
+            </p>
+          )}
+        </div>
+
+        {/* Notes */}
         <input
           placeholder="Notes"
           value={notes}
