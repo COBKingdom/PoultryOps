@@ -104,6 +104,54 @@ export default function AppShell({
     router,
   ]);
 
+  // ------------------------------------------------------------
+  // Platform suspension enforcement
+  //
+  // This is separate from subscription lifecycle.
+  //
+  // A suspended farm has farms.active = false.
+  //
+  // Platform administrators are explicitly excluded so that
+  // suspension of a farm cannot prevent access to the Admin
+  // Control Centre.
+  // ------------------------------------------------------------
+  if (
+    !authLoading &&
+    !permissionsLoading &&
+    !farmLoading &&
+    user &&
+    !isPlatformAdmin &&
+    farm &&
+    farm.active === false
+  ) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
+        <div className="w-full max-w-md rounded-xl bg-white p-8 text-center shadow-sm">
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-red-100">
+            <span className="text-2xl text-red-600">
+              !
+            </span>
+          </div>
+
+          <h1 className="text-xl font-semibold text-slate-900">
+            Your PoultryOps account has been suspended.
+          </h1>
+
+          <p className="mt-3 text-sm leading-6 text-slate-600">
+            Your account is currently unavailable because
+            your farm has been suspended by a PoultryOps
+            administrator.
+          </p>
+
+          <p className="mt-4 text-sm text-slate-500">
+            Please contact your PoultryOps administrator if
+            you believe this is an error.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen bg-slate-100">
 
