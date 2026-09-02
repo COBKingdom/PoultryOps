@@ -114,12 +114,18 @@ const tabs = [
 
 type Tab = (typeof tabs)[number];
 
+function displayValue(value?: string | null) {
+  return value || "Not provided";
+}
+
 function formatDate(value?: string | null) {
-  if (!value) return "�";
+  if (!value) return "Not provided";
 
   const date = new Date(value);
 
-  if (Number.isNaN(date.getTime())) return "�";
+  if (Number.isNaN(date.getTime())) {
+    return "Not provided";
+  }
 
   return new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
@@ -131,11 +137,13 @@ function formatDate(value?: string | null) {
 }
 
 function formatShortDate(value?: string | null) {
-  if (!value) return "�";
+  if (!value) return "Not provided";
 
   const date = new Date(value);
 
-  if (Number.isNaN(date.getTime())) return "�";
+  if (Number.isNaN(date.getTime())) {
+    return "Not provided";
+  }
 
   return new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
@@ -145,7 +153,7 @@ function formatShortDate(value?: string | null) {
 }
 
 function titleCase(value?: string | null) {
-  if (!value) return "�";
+  if (!value) return "Not provided";
 
   return value
     .replace(/_/g, " ")
@@ -153,6 +161,10 @@ function titleCase(value?: string | null) {
 }
 
 function getAuthSession() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
   const authKey = Object.keys(localStorage).find((key) =>
     key.endsWith("-auth-token")
   );
@@ -209,7 +221,9 @@ function StatusBadge({
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-medium ${large ? "text-sm" : "text-xs"} ${classes}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-medium ${
+        large ? "text-sm" : "text-xs"
+      } ${classes}`}
     >
       <span className="h-1.5 w-1.5 rounded-full bg-current" />
       {titleCase(status)}
@@ -263,7 +277,7 @@ function DetailRow({
           mono ? "font-mono text-xs" : ""
         }`}
       >
-        {value || "�"}
+        {value || "Not provided"}
       </span>
     </div>
   );
@@ -283,6 +297,27 @@ export default function CustomerDetailPage() {
   const [activeTab, setActiveTab] =
     useState<Tab>("Overview");
 
+  const [actionLoading, setActionLoading] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [actionMessage, setActionMessage] = useState("");
+
+  const [showDeleteDialog, setShowDeleteDialog] =
+    useState(false);
+
+  const [showSuspendDialog, setShowSuspendDialog] =
+    useState(false);
+
+  const [showReactivateDialog, setShowReactivateDialog] =
+    useState(false);
+
+  const [showTrialDialog, setShowTrialDialog] =
+    useState(false);
+
+  const [confirmationName, setConfirmationName] =
+    useState("");
+
+  const [trialDays, setTrialDays] = useState("7");
+
   async function loadCustomer() {
     try {
       setLoading(true);
@@ -291,7 +326,9 @@ export default function CustomerDetailPage() {
       const session = getAuthSession();
 
       if (!session?.access_token) {
-        setError("Your administrator session has expired. Please sign in again.");
+        setError(
+          "Your administrator session has expired. Please sign in again."
+        );
         return;
       }
 
@@ -343,6 +380,8 @@ export default function CustomerDetailPage() {
       data.subscription.trial_end
     ).getTime();
 
+    if (Number.isNaN(end)) return null;
+
     const now = Date.now();
 
     return Math.ceil(
@@ -359,6 +398,81 @@ export default function CustomerDetailPage() {
       ),
     [data?.payments]
   );
+
+  async function performAction(
+    action:
+      | "suspend"
+      | "reactivate"
+      | "extend_trial"
+      | "delete",
+    payload: Record<string, unknown> = {}
+  ) {
+    try {
+      setActionLoading(action);
+      setActionError("");
+      setActionMessage("");
+
+      const session = getAuthSession();
+
+      if (!session?.access_token) {
+        throw new Error(
+          "Your administrator session has expired. Please sign in again."
+        );
+      }
+
+      const response = await fetch(
+        `/api/admin/customers/${farmId}/manage`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            action,
+            ...payload,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.error || "The requested action failed."
+        );
+      }
+
+      if (action === "delete") {
+        router.push("/admin");
+        router.refresh();
+        return;
+      }
+
+      setActionMessage(
+        result.message || "Action completed successfully."
+      );
+
+      setShowSuspendDialog(false);
+      setShowReactivateDialog(false);
+      setShowTrialDialog(false);
+
+      await loadCustomer();
+    } catch (err) {
+      console.error(
+        `Admin customer action "${action}" failed:`,
+        err
+      );
+
+      setActionError(
+        err instanceof Error
+          ? err.message
+          : "The requested action failed."
+      );
+    } finally {
+      setActionLoading("");
+    }
+  }
 
   if (loading) {
     return (
@@ -391,7 +505,7 @@ export default function CustomerDetailPage() {
             onClick={() => router.push("/admin")}
             className="mb-6 text-sm font-medium text-slate-600 hover:text-slate-950"
           >
-            ? Back to Admin Control Centre
+            ← Back to Admin Control Centre
           </button>
 
           <div className="rounded-2xl border border-red-200 bg-white p-8 shadow-sm">
@@ -420,12 +534,20 @@ export default function CustomerDetailPage() {
     );
   }
 
-  const { farm, owner, users, subscription, payments, auditLogs, emailEvents, metrics } =
-    data;
+  const {
+    farm,
+    owner,
+    users,
+    subscription,
+    payments,
+    auditLogs,
+    emailEvents,
+    metrics,
+  } = data;
 
-  const status =
-    subscription?.status ||
-    (farm.active ? "active" : "suspended");
+  const status = !farm.active
+    ? "suspended"
+    : subscription?.status || "active";
 
   const plan =
     subscription?.status === "trial"
@@ -435,19 +557,17 @@ export default function CustomerDetailPage() {
   return (
     <main className="min-h-screen bg-[#f6f8fb] text-slate-950">
       <div className="mx-auto max-w-7xl px-5 py-7 lg:px-8">
-        {/* Breadcrumb */}
         <button
           type="button"
           onClick={() => router.push("/admin")}
           className="group flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-slate-950"
         >
           <span className="transition group-hover:-translate-x-0.5">
-            ?
+            ←
           </span>
           Admin Control Centre
         </button>
 
-        {/* Customer hero */}
         <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:p-8">
           <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-start">
             <div className="flex gap-4">
@@ -485,35 +605,53 @@ export default function CustomerDetailPage() {
                   </span>
 
                   <span className="hidden text-slate-300 sm:inline">
-                    �
+                    •
                   </span>
 
                   <span>
                     Farm ID{" "}
                     <strong className="font-mono font-medium text-slate-700">
-                      {farm.id.slice(0, 8)}�
+                      {farm.id.slice(0, 8)}…
                     </strong>
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <span className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
-                READ ONLY
+            <div className="flex flex-wrap items-center gap-3">
+              <span
+                className={`rounded-xl border px-3 py-2 text-xs font-semibold ${
+                  farm.active
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : "border-red-200 bg-red-50 text-red-700"
+                }`}
+              >
+                {farm.active ? "ACCOUNT ACTIVE" : "ACCOUNT SUSPENDED"}
               </span>
 
               <button
                 type="button"
                 onClick={loadCustomer}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                disabled={Boolean(actionLoading)}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50"
               >
                 Refresh
               </button>
             </div>
           </div>
 
-          {/* Metric strip */}
+          {actionMessage && (
+            <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+              {actionMessage}
+            </div>
+          )}
+
+          {actionError && (
+            <div className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800">
+              {actionError}
+            </div>
+          )}
+
           <div className="mt-8 grid gap-3 border-t border-slate-100 pt-6 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-2xl bg-slate-50 p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
@@ -536,7 +674,7 @@ export default function CustomerDetailPage() {
                   ? trialDaysRemaining > 0
                     ? `${trialDaysRemaining} days`
                     : "Expired"
-                  : "�"}
+                  : "Not available"}
               </p>
               <p className="mt-0.5 text-xs text-slate-500">
                 Ends {formatShortDate(subscription?.trial_end)}
@@ -570,7 +708,124 @@ export default function CustomerDetailPage() {
           </div>
         </div>
 
-        {/* Navigation */}
+        {/* FARM MANAGEMENT */}
+        <div className="mt-6 rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-100 px-6 py-5">
+            <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
+              <div>
+                <h2 className="text-base font-semibold text-slate-950">
+                  Farm Management
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Platform-level controls for this customer account.
+                  Subscription billing remains separate.
+                </p>
+              </div>
+
+              <span className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                ADMIN ONLY
+              </span>
+            </div>
+          </div>
+
+          <div className="grid gap-4 p-6 md:grid-cols-2 lg:grid-cols-4">
+            {farm.active ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setActionError("");
+                  setActionMessage("");
+                  setShowSuspendDialog(true);
+                }}
+                disabled={Boolean(actionLoading)}
+                className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-left transition hover:border-amber-300 hover:bg-amber-100 disabled:opacity-50"
+              >
+                <p className="text-sm font-bold text-amber-900">
+                  Suspend Customer
+                </p>
+                <p className="mt-1 text-xs leading-5 text-amber-800">
+                  Disable the customer account without changing its
+                  subscription record.
+                </p>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setActionError("");
+                  setActionMessage("");
+                  setShowReactivateDialog(true);
+                }}
+                disabled={Boolean(actionLoading)}
+                className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-left transition hover:border-emerald-300 hover:bg-emerald-100 disabled:opacity-50"
+              >
+                <p className="text-sm font-bold text-emerald-900">
+                  Reactivate Customer
+                </p>
+                <p className="mt-1 text-xs leading-5 text-emerald-800">
+                  Restore the platform account without changing its
+                  subscription record.
+                </p>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => {
+                setActionError("");
+                setActionMessage("");
+                setShowTrialDialog(true);
+              }}
+              disabled={Boolean(actionLoading)}
+              className="rounded-2xl border border-blue-200 bg-blue-50 p-5 text-left transition hover:border-blue-300 hover:bg-blue-100 disabled:opacity-50"
+            >
+              <p className="text-sm font-bold text-blue-900">
+                Extend Trial
+              </p>
+              <p className="mt-1 text-xs leading-5 text-blue-800">
+                Add days to the existing trial end date.
+              </p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActionError("");
+                setActionMessage("");
+                setConfirmationName("");
+                setShowDeleteDialog(true);
+              }}
+              disabled={Boolean(actionLoading)}
+              className="rounded-2xl border border-red-200 bg-red-50 p-5 text-left transition hover:border-red-300 hover:bg-red-100 disabled:opacity-50"
+            >
+              <p className="text-sm font-bold text-red-900">
+                Delete Customer
+              </p>
+              <p className="mt-1 text-xs leading-5 text-red-800">
+                Permanently remove the farm, customer data and Auth
+                users.
+              </p>
+            </button>
+
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+              <p className="text-sm font-bold text-slate-900">
+                Subscription
+              </p>
+              <p className="mt-1 text-xs leading-5 text-slate-600">
+                Current subscription status:
+              </p>
+              <div className="mt-3">
+                <StatusBadge
+                  status={subscription?.status}
+                />
+              </div>
+              <p className="mt-3 text-xs leading-5 text-slate-500">
+                Suspend/reactivate does not modify this status.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div className="mt-6 overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="flex min-w-max px-2">
             {tabs.map((tab) => (
@@ -594,7 +849,6 @@ export default function CustomerDetailPage() {
           </div>
         </div>
 
-        {/* Overview */}
         {activeTab === "Overview" && (
           <div className="mt-6 grid gap-6 lg:grid-cols-2">
             <Section
@@ -643,7 +897,9 @@ export default function CustomerDetailPage() {
               <DetailRow
                 label="Status"
                 value={
-                  <StatusBadge status={subscription?.status} />
+                  <StatusBadge
+                    status={subscription?.status}
+                  />
                 }
               />
               <DetailRow
@@ -687,7 +943,9 @@ export default function CustomerDetailPage() {
               <DetailRow
                 label="Status"
                 value={
-                  <StatusBadge status={owner?.status} />
+                  <StatusBadge
+                    status={owner?.status}
+                  />
                 }
               />
               <DetailRow
@@ -749,12 +1007,13 @@ export default function CustomerDetailPage() {
           </div>
         )}
 
-        {/* Users */}
         {activeTab === "Users" && (
           <div className="mt-6">
             <Section
               title="Farm users"
-              description={`${users.length} user${users.length === 1 ? "" : "s"} currently associated with this farm.`}
+              description={`${users.length} user${
+                users.length === 1 ? "" : "s"
+              } currently associated with this farm.`}
             >
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[760px]">
@@ -788,7 +1047,7 @@ export default function CustomerDetailPage() {
                           <p className="text-sm font-semibold text-slate-900">
                             {membership.profile
                               ?.full_name ||
-                              "Unnamed user"}
+                              "Name not provided"}
                           </p>
                           <p className="mt-0.5 text-xs text-slate-500">
                             {membership.profile?.email ||
@@ -828,7 +1087,6 @@ export default function CustomerDetailPage() {
           </div>
         )}
 
-        {/* Subscription */}
         {activeTab === "Subscription" && (
           <div className="mt-6 grid gap-6 lg:grid-cols-2">
             <Section
@@ -901,32 +1159,26 @@ export default function CustomerDetailPage() {
             </Section>
 
             <div className="lg:col-span-2 rounded-2xl border border-blue-200 bg-blue-50 p-5">
-              <div className="flex gap-3">
-                <div className="mt-0.5 text-blue-600">
-                  ?
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-blue-950">
-                    Subscription engine protected
-                  </p>
-                  <p className="mt-1 text-sm leading-6 text-blue-800">
-                    This workspace currently only reads subscription
-                    information. Trial expiry, suspension and
-                    reactivation continue to be controlled by the
-                    existing PoultryOps subscription system.
-                  </p>
-                </div>
-              </div>
+              <p className="text-sm font-semibold text-blue-950">
+                Subscription engine protected
+              </p>
+              <p className="mt-1 text-sm leading-6 text-blue-800">
+                Platform suspension is separate from subscription
+                billing. Suspending or reactivating this customer does
+                not change the subscription status, payment history,
+                plan, or Flutterwave records.
+              </p>
             </div>
           </div>
         )}
 
-        {/* Payments */}
         {activeTab === "Payments" && (
           <div className="mt-6">
             <Section
               title="Payment history"
-              description={`${payments.length} recorded payment${payments.length === 1 ? "" : "s"} for this customer.`}
+              description={`${payments.length} recorded payment${
+                payments.length === 1 ? "" : "s"
+              } for this customer.`}
             >
               {payments.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center">
@@ -1002,7 +1254,7 @@ export default function CustomerDetailPage() {
                           <td className="py-4 font-mono text-xs text-slate-500">
                             {payment.payment_reference ||
                               payment.transaction_id ||
-                              "�"}
+                              "Not provided"}
                           </td>
                         </tr>
                       ))}
@@ -1014,7 +1266,6 @@ export default function CustomerDetailPage() {
           </div>
         )}
 
-        {/* Activity */}
         {activeTab === "Activity" && (
           <div className="mt-6 grid gap-6 lg:grid-cols-2">
             <Section
@@ -1033,7 +1284,7 @@ export default function CustomerDetailPage() {
                       className="flex gap-4 rounded-xl border border-slate-100 p-4"
                     >
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
-                        ?
+                        @
                       </div>
 
                       <div className="min-w-0">
@@ -1042,7 +1293,7 @@ export default function CustomerDetailPage() {
                         </p>
 
                         <p className="mt-1 truncate text-xs text-slate-500">
-                          {event.email}
+                          {event.email || "No email"}
                         </p>
 
                         <p className="mt-1 text-xs text-slate-400">
@@ -1097,18 +1348,253 @@ export default function CustomerDetailPage() {
           </div>
         )}
 
-        {/* Footer */}
         <div className="mt-6 flex flex-col justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-xs text-slate-500 sm:flex-row sm:items-center">
           <span>
             PoultryOps Platform Administration
           </span>
 
           <span>
-            Customer data is read directly from the existing platform systems.
+            Customer management actions are restricted to Platform Administrators.
           </span>
         </div>
       </div>
+
+      {/* SUSPEND CONFIRMATION */}
+      {showSuspendDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-5">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+            <h2 className="text-xl font-bold text-slate-950">
+              Suspend customer?
+            </h2>
+
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              This will mark{" "}
+              <strong>{farm.name}</strong> as suspended at the
+              platform level.
+            </p>
+
+            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              The customer's subscription, payment history and
+              billing status will not be changed.
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowSuspendDialog(false)}
+                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={() => performAction("suspend")}
+                disabled={actionLoading === "suspend"}
+                className="rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
+              >
+                {actionLoading === "suspend"
+                  ? "Suspending..."
+                  : "Suspend Customer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* REACTIVATE CONFIRMATION */}
+      {showReactivateDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-5">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+            <h2 className="text-xl font-bold text-slate-950">
+              Reactivate customer?
+            </h2>
+
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              This will restore{" "}
+              <strong>{farm.name}</strong> to active platform
+              status.
+            </p>
+
+            <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+              The existing subscription status remains unchanged.
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() =>
+                  setShowReactivateDialog(false)
+                }
+                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  performAction("reactivate")
+                }
+                disabled={actionLoading === "reactivate"}
+                className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {actionLoading === "reactivate"
+                  ? "Reactivating..."
+                  : "Reactivate Customer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TRIAL EXTENSION */}
+      {showTrialDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-5">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+            <h2 className="text-xl font-bold text-slate-950">
+              Extend trial
+            </h2>
+
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              Add additional days to the customer's trial.
+            </p>
+
+            <label className="mt-5 block text-sm font-semibold text-slate-700">
+              Number of days
+              <input
+                type="number"
+                min="1"
+                max="365"
+                step="1"
+                value={trialDays}
+                onChange={(event) =>
+                  setTrialDays(event.target.value)
+                }
+                className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-950"
+              />
+            </label>
+
+            <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+              Current trial end:{" "}
+              <strong>
+                {formatDate(subscription?.trial_end)}
+              </strong>
+              <br />
+              Only the trial end date will be changed.
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowTrialDialog(false)}
+                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  performAction("extend_trial", {
+                    trialDays: Number(trialDays),
+                  })
+                }
+                disabled={
+                  actionLoading === "extend_trial"
+                }
+                className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {actionLoading === "extend_trial"
+                  ? "Extending..."
+                  : "Extend Trial"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE CONFIRMATION */}
+      {showDeleteDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-5">
+          <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+              <p className="text-sm font-bold text-red-900">
+                Permanent deletion
+              </p>
+
+              <p className="mt-2 text-sm leading-6 text-red-800">
+                This action permanently removes the customer's
+                application data, farm, subscription/payment records,
+                customer profiles and Supabase Auth users.
+              </p>
+            </div>
+
+            <h2 className="mt-6 text-xl font-bold text-slate-950">
+              Delete {farm.name}?
+            </h2>
+
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              This cannot be undone.
+              <br />
+              <br />
+              To continue, type the exact farm name:
+            </p>
+
+            <p className="mt-3 rounded-xl bg-slate-100 px-4 py-3 font-mono text-sm font-bold text-slate-900">
+              {farm.name}
+            </p>
+
+            <input
+              type="text"
+              value={confirmationName}
+              onChange={(event) =>
+                setConfirmationName(event.target.value)
+              }
+              placeholder="Type the exact farm name"
+              className="mt-4 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-red-500"
+            />
+
+            {actionError && (
+              <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800">
+                {actionError}
+              </div>
+            )}
+
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDeleteDialog(false);
+                  setConfirmationName("");
+                }}
+                disabled={actionLoading === "delete"}
+                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  performAction("delete", {
+                    confirmationName,
+                  })
+                }
+                disabled={
+                  actionLoading === "delete" ||
+                  confirmationName !== farm.name
+                }
+                className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {actionLoading === "delete"
+                  ? "Deleting customer..."
+                  : "Permanently Delete Customer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
-
