@@ -126,22 +126,155 @@ function formatCurrency(value: unknown, currency = "NGN") {
   }).format(amount);
 }
 
-function formatAge(value: unknown) {
-  if (value === null || value === undefined || value === "") {
+function formatAgeAtStart(
+  value: unknown
+) {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
     return "Not recorded";
   }
 
-  const totalDays = Math.round(Number(value) * 7);
+  const weeks = Number(value);
 
-  if (!Number.isFinite(totalDays)) {
+  if (
+    !Number.isFinite(weeks) ||
+    weeks < 0
+  ) {
     return "Not recorded";
   }
 
-  const weeks = Math.floor(totalDays / 7);
-  const days = totalDays % 7;
+  const totalDays =
+    Math.round(weeks * 7);
+
+  const wholeWeeks =
+    Math.floor(totalDays / 7);
+
+  const days =
+    totalDays % 7;
 
   if (days === 0) {
-    return `${weeks} ${weeks === 1 ? "week" : "weeks"}`;
+    return `${wholeWeeks} ${
+      wholeWeeks === 1
+        ? "week"
+        : "weeks"
+    }`;
+  }
+
+  if (wholeWeeks === 0) {
+    return `${days} ${
+      days === 1
+        ? "day"
+        : "days"
+    }`;
+  }
+
+  return `${wholeWeeks}w ${days}d`;
+}
+
+function getCurrentAgeDays(
+  flock: any
+): number | null {
+  if (
+    flock?.age_weeks === null ||
+    flock?.age_weeks === undefined ||
+    flock?.age_weeks === ""
+  ) {
+    return null;
+  }
+
+  const startingAgeWeeks =
+    Number(flock.age_weeks);
+
+  if (
+    !Number.isFinite(
+      startingAgeWeeks
+    ) ||
+    startingAgeWeeks < 0
+  ) {
+    return null;
+  }
+
+  const startDateValue =
+    flock.arrival_date ||
+    flock.created_at;
+
+  if (!startDateValue) {
+    return Math.round(
+      startingAgeWeeks * 7
+    );
+  }
+
+  const startDate =
+    new Date(startDateValue);
+
+  if (
+    Number.isNaN(
+      startDate.getTime()
+    )
+  ) {
+    return Math.round(
+      startingAgeWeeks * 7
+    );
+  }
+
+  const now = new Date();
+
+  const elapsedMilliseconds =
+    now.getTime() -
+    startDate.getTime();
+
+  const elapsedDays = Math.max(
+    0,
+    Math.floor(
+      elapsedMilliseconds /
+        (1000 * 60 * 60 * 24)
+    )
+  );
+
+  return (
+    Math.round(
+      startingAgeWeeks * 7
+    ) +
+    elapsedDays
+  );
+}
+
+function formatCurrentAge(
+  flock: any
+) {
+  const totalDays =
+    getCurrentAgeDays(flock);
+
+  if (
+    totalDays === null ||
+    !Number.isFinite(totalDays)
+  ) {
+    return "Not recorded";
+  }
+
+  const weeks =
+    Math.floor(totalDays / 7);
+
+  const days =
+    totalDays % 7;
+
+  if (days === 0) {
+    return `${weeks} ${
+      weeks === 1
+        ? "week"
+        : "weeks"
+    }`;
+  }
+
+  if (weeks === 0) {
+    return `${days} ${
+      days === 1
+        ? "day"
+        : "days"
+    }`;
   }
 
   return `${weeks}w ${days}d`;
@@ -1711,7 +1844,7 @@ export default function FlockDetailsPage() {
             </h2>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
             <KpiCard
               title="Available Birds"
               value={formatNumber(
@@ -1730,13 +1863,21 @@ export default function FlockDetailsPage() {
               description="Registered quantity"
             />
 
-            <KpiCard
-              title="Age"
-              value={formatAge(
-                flock.age_weeks
-              )}
-              icon={Calendar}
-            />
+<KpiCard
+  title="Age at Start"
+  value={formatAgeAtStart(
+    flock.age_weeks
+  )}
+  icon={Calendar}
+/>
+
+<KpiCard
+  title="Current Age"
+  value={formatCurrentAge(
+    flock
+  )}
+  icon={Calendar}
+/>
 
             <KpiCard
               title="Arrival"
@@ -1874,12 +2015,19 @@ export default function FlockDetailsPage() {
                     )}
                   />
 
-                  <InfoCard
-                    label="Age"
-                    value={formatAge(
-                      flock.age_weeks
-                    )}
-                  />
+<InfoCard
+  label="Age at Start"
+  value={formatAgeAtStart(
+    flock.age_weeks
+  )}
+/>
+
+<InfoCard
+  label="Current Age"
+  value={formatCurrentAge(
+    flock
+  )}
+/>
 
                   <InfoCard
                     label="Starting Birds"
