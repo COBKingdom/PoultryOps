@@ -24,188 +24,118 @@ export default function FarmHero({
       maximumFractionDigits: 2,
     });
 
+  const metrics = [
+    { label: "Available Birds", value: currentBirds, icon: Bird },
+    { label: "Birds in Isolation", value: isolatedBirds, icon: HeartPulse },
+    { label: "Available Eggs", value: availableEggs, icon: Egg },
+    { label: "Flocks", value: totalFlocks, icon: Layers3 },
+  ];
+
   return (
-    <div
+    <section
       className="
-        rounded-3xl
-        bg-gradient-to-br
-        from-blue-600
-        via-blue-700
-        to-slate-900
+        relative overflow-hidden rounded-3xl border border-[#16498f]
+        bg-gradient-to-br from-[#0b2f6b] via-[#10489a] to-[#0a2b61]
         text-white
-        overflow-hidden
-        shadow-xl
+        shadow-[0_18px_45px_rgba(6,31,73,0.14)]
       "
     >
-      <div className="p-6 md:p-8">
+      <div
+        aria-hidden="true"
+        className="
+          pointer-events-none absolute -right-24 -top-28 h-72 w-72
+          rounded-full bg-white/10 blur-3xl
+        "
+      />
 
-        <p
-          className="
-            text-blue-100
-            text-xs
-            uppercase
-            tracking-[0.2em]
-            font-semibold
-          "
-        >
-          PoultryOps
-        </p>
+      <div
+        aria-hidden="true"
+        className="
+          pointer-events-none absolute -bottom-32 left-1/3 h-64 w-64
+          rounded-full bg-blue-300/10 blur-3xl
+        "
+      />
 
-        <h2
-          className="
-            mt-3
-            text-3xl
-            md:text-5xl
-            font-bold
-            leading-tight
-          "
-        >
-          Dashboard Overview
-        </h2>
+      <div className="relative p-5 sm:p-6 lg:p-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p
+              className="
+                text-[11px] font-semibold uppercase tracking-[0.2em]
+                text-blue-100
+              "
+            >
+              PoultryOps
+            </p>
 
-        <p
-          className="
-            mt-2
-            text-blue-100
-            text-sm
-            md:text-base
-          "
-        >
-          Real-time farm performance overview
-        </p>
+            <h2
+              className="
+                mt-2 text-2xl font-bold tracking-tight
+                sm:text-3xl lg:text-4xl
+              "
+            >
+              Dashboard Overview
+            </h2>
+
+            <p className="mt-2 text-sm text-blue-50 sm:text-[15px]">
+              Real-time farm performance overview
+            </p>
+          </div>
+
+          <div
+            className="
+              hidden rounded-full border border-white/15 bg-white/10
+              px-3 py-1.5 text-[10px] font-semibold uppercase
+              tracking-[0.16em] text-blue-50 sm:block
+            "
+          >
+            Farm Overview
+          </div>
+        </div>
 
         <div
           className="
-            mt-8
-            grid
-            grid-cols-2
-            gap-4
+            mt-7 grid grid-cols-1 gap-3
+            sm:grid-cols-2 lg:grid-cols-4
           "
         >
-
-          {/* Available Birds */}
-          <div
-            className="
-              rounded-2xl
-              bg-white/10
-              backdrop-blur
-              p-4
-            "
-          >
-            <div className="flex items-center gap-2">
-
-              <Bird size={18} />
-
-              <span className="text-sm">
-                Available Birds
-              </span>
-
-            </div>
-
+          {metrics.map(({ label, value, icon: Icon }) => (
             <div
+              key={label}
               className="
-                mt-3
-                text-3xl
-                font-bold
+                rounded-2xl border border-white/15 bg-white/[0.10]
+                p-4 backdrop-blur-sm transition duration-200
+                hover:bg-white/[0.14]
               "
             >
-              {formatNumber(currentBirds)}
+              <div className="flex items-center gap-3">
+                <div
+                  className="
+                    flex h-9 w-9 shrink-0 items-center justify-center
+                    rounded-xl border border-white/15 bg-white/[0.12]
+                    text-white
+                  "
+                >
+                  <Icon size={18} strokeWidth={2} />
+                </div>
+
+                <span className="text-sm font-medium text-blue-50">
+                  {label}
+                </span>
+              </div>
+
+              <div
+                className="
+                  mt-4 text-3xl font-bold tracking-tight
+                  sm:text-[32px]
+                "
+              >
+                {formatNumber(value)}
+              </div>
             </div>
-          </div>
-
-          {/* Birds in Isolation */}
-          <div
-            className="
-              rounded-2xl
-              bg-white/10
-              backdrop-blur
-              p-4
-            "
-          >
-            <div className="flex items-center gap-2">
-
-              <HeartPulse size={18} />
-
-              <span className="text-sm">
-                Birds in Isolation
-              </span>
-
-            </div>
-
-            <div
-              className="
-                mt-3
-                text-3xl
-                font-bold
-              "
-            >
-              {formatNumber(isolatedBirds)}
-            </div>
-          </div>
-
-          {/* Available Eggs */}
-          <div
-            className="
-              rounded-2xl
-              bg-white/10
-              backdrop-blur
-              p-4
-            "
-          >
-            <div className="flex items-center gap-2">
-
-              <Egg size={18} />
-
-              <span className="text-sm">
-                Available Eggs
-              </span>
-
-            </div>
-
-            <div
-              className="
-                mt-3
-                text-3xl
-                font-bold
-              "
-            >
-              {formatNumber(availableEggs)}
-            </div>
-          </div>
-
-          {/* Flocks */}
-          <div
-            className="
-              rounded-2xl
-              bg-white/10
-              backdrop-blur
-              p-4
-            "
-          >
-            <div className="flex items-center gap-2">
-
-              <Layers3 size={18} />
-
-              <span className="text-sm">
-                Flocks
-              </span>
-
-            </div>
-
-            <div
-              className="
-                mt-3
-                text-3xl
-                font-bold
-              "
-            >
-              {formatNumber(totalFlocks)}
-            </div>
-          </div>
-
+          ))}
         </div>
-
       </div>
-    </div>
+    </section>
   );
 }
