@@ -27,6 +27,7 @@ import {
   Upload,
   Users,
   ShieldCheck,
+  Handshake,
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -253,6 +254,11 @@ export default function Sidebar() {
                 name: "POGP",
                 href: "/admin/pogp",
                 icon: Users,
+              },
+              {
+                name: "VEND",
+                href: "/admin/vend",
+                icon: Handshake,
               },
             ]}
             pathname={pathname}

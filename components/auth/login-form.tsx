@@ -72,6 +72,23 @@ export default function LoginForm() {
       }
 
       // ----------------------------------------------------------
+      // VEND USER
+      //
+      // VENDs are independent PoultryOps referral partners.
+      // They do NOT have a farm_id.
+      // ----------------------------------------------------------
+
+      if (profile?.role === "vend") {
+        if (profile.must_change_password) {
+          router.push("/reset-password?type=vend");
+          return;
+        }
+
+        router.push("/vend");
+        return;
+      }
+
+      // ----------------------------------------------------------
       // NORMAL FARM USER
       // ----------------------------------------------------------
 
