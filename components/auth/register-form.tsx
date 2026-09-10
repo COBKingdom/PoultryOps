@@ -16,13 +16,15 @@ export function RegisterForm() {
   const [message, setMessage] = useState("");
 
   const [pogpCode, setPogpCode] = useState<string | null>(null);
+  const [vendCode, setVendCode] = useState<string | null>(null);
 
   // ----------------------------------------------------------
   // Capture referral code from:
   //
-  // https://poultry.trueops.app/register?ref=POGP-001
+  // /register?ref=POGP-001
+  // /register?ref=VEND-001
   //
-  // We do not display the code as an input field.
+  // The code is not entered manually by the farmer.
   // ----------------------------------------------------------
 
   useEffect(() => {
@@ -30,6 +32,7 @@ export function RegisterForm() {
 
     if (!ref) {
       setPogpCode(null);
+      setVendCode(null);
       return;
     }
 
@@ -37,14 +40,21 @@ export function RegisterForm() {
 
     if (/^POGP-\d+$/.test(normalized)) {
       setPogpCode(normalized);
-    } else {
-      setPogpCode(null);
+      setVendCode(null);
+      return;
     }
+
+    if (/^VEND-\d+$/.test(normalized)) {
+      setVendCode(normalized);
+      setPogpCode(null);
+      return;
+    }
+
+    setPogpCode(null);
+    setVendCode(null);
   }, [searchParams]);
 
-  async function handleSubmit(
-    e: React.FormEvent
-  ) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
     try {
@@ -54,20 +64,23 @@ export function RegisterForm() {
       // ------------------------------------------------------
       // Create account
       //
-      // The POGP code is stored in Supabase user metadata.
-      // The farmer does not need to type the code again.
+      // The referral code is stored in Supabase user metadata.
+      // Attribution happens later when the farm is created.
       // ------------------------------------------------------
+
+      const referralData =
+        pogpCode
+          ? { pogp_code: pogpCode }
+          : vendCode
+            ? { vend_code: vendCode }
+            : undefined;
 
       const { error } =
         await supabase.auth.signUp({
           email: email.trim(),
           password,
           options: {
-            data: pogpCode
-              ? {
-                  pogp_code: pogpCode,
-                }
-              : undefined,
+            data: referralData,
           },
         });
 
@@ -76,7 +89,7 @@ export function RegisterForm() {
       }
 
       setMessage(
-        pogpCode
+        pogpCode || vendCode
           ? "Your account has been created. Check your email to verify your account. Your referral has been recorded."
           : "Check your email to verify your account, or sign in if you're already registered."
       );
@@ -112,16 +125,18 @@ export function RegisterForm() {
         Create your PoultryOps account.
       </p>
 
-      {pogpCode && (
+      {(pogpCode || vendCode) && (
         <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
           <p className="text-sm font-medium text-blue-900">
-            Referred by a PoultryOps Growth Partner
+            {pogpCode
+              ? "Referred by a PoultryOps Growth Partner"
+              : "Referred by a PoultryOps VEND Partner"}
           </p>
 
           <p className="mt-1 text-xs text-blue-700">
             Referral code:{" "}
             <span className="font-bold">
-              {pogpCode}
+              {pogpCode || vendCode}
             </span>
           </p>
         </div>

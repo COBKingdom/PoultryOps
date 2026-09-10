@@ -26,6 +26,32 @@ const AuthContext =
     refreshProfile: async () => {},
   });
 
+/*
+ * Supabase throws AuthSessionMissingError when
+ * getUser() is called while nobody is signed in.
+ *
+ * That is normal on public pages such as:
+ * /login
+ * /register
+ * /vend/join
+ *
+ * We therefore treat it as an anonymous state
+ * rather than logging it as an application error.
+ */
+function isAuthSessionMissingError(error: unknown) {
+  if (!error) return false;
+
+  const authError = error as {
+    name?: string;
+    message?: string;
+  };
+
+  return (
+    authError.name === "AuthSessionMissingError" ||
+    authError.message === "Auth session missing!"
+  );
+}
+
 export function AuthProvider({
   children,
 }: {
@@ -98,18 +124,37 @@ export function AuthProvider({
     try {
       const {
         data: { user: currentUser },
+        error,
       } =
         await supabase.auth.getUser();
+
+      if (error) {
+        if (isAuthSessionMissingError(error)) {
+          setProfile(null);
+          return;
+        }
+
+        console.error(
+          "Error refreshing authenticated user:",
+          error
+        );
+
+        setProfile(null);
+        return;
+      }
 
       if (!currentUser) {
         setProfile(null);
         return;
       }
 
-      await loadProfile(
-        currentUser
-      );
+      await loadProfile(currentUser);
     } catch (error) {
+      if (isAuthSessionMissingError(error)) {
+        setProfile(null);
+        return;
+      }
+
       console.error(
         "Error refreshing profile:",
         error
@@ -134,28 +179,49 @@ export function AuthProvider({
         } =
           await supabase.auth.getUser();
 
+        /*
+         * No active session is a normal state
+         * for public pages.
+         */
         if (error) {
+          if (isAuthSessionMissingError(error)) {
+            if (!mounted) return;
+
+            setUser(null);
+            setProfile(null);
+            return;
+          }
+
           throw error;
         }
 
         if (!mounted) return;
 
-        setUser(
-          currentUser ?? null
-        );
+        setUser(currentUser ?? null);
 
         if (currentUser) {
           /*
            * Load the profile separately from
            * the authentication listener.
            */
-          await loadProfile(
-            currentUser
-          );
+          await loadProfile(currentUser);
         } else {
           setProfile(null);
         }
       } catch (error) {
+        /*
+         * AuthSessionMissingError is expected for
+         * anonymous visitors and should never be
+         * treated as an application error.
+         */
+        if (isAuthSessionMissingError(error)) {
+          if (!mounted) return;
+
+          setUser(null);
+          setProfile(null);
+          return;
+        }
+
         console.error(
           "Error loading authenticated user:",
           error
@@ -266,8 +332,22 @@ export async function refreshProfile() {
   try {
     const {
       data: { user: currentUser },
+      error,
     } =
       await supabase.auth.getUser();
+
+    if (error) {
+      if (isAuthSessionMissingError(error)) {
+        return null;
+      }
+
+      console.error(
+        "Error refreshing authenticated user:",
+        error
+      );
+
+      return null;
+    }
 
     if (!currentUser) {
       return null;
@@ -275,7 +355,7 @@ export async function refreshProfile() {
 
     const {
       data: profile,
-      error,
+      error: profileError,
     } =
       await supabase
         .from("profiles")
@@ -283,10 +363,10 @@ export async function refreshProfile() {
         .eq("id", currentUser.id)
         .single();
 
-    if (error) {
+    if (profileError) {
       console.error(
         "Error refreshing profile:",
-        error
+        profileError
       );
 
       return null;
@@ -294,6 +374,10 @@ export async function refreshProfile() {
 
     return profile;
   } catch (error) {
+    if (isAuthSessionMissingError(error)) {
+      return null;
+    }
+
     console.error(
       "Error refreshing profile:",
       error

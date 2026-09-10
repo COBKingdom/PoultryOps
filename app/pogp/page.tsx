@@ -142,6 +142,9 @@ export default function POGPPage() {
   const [mobileOpen, setMobileOpen] =
     useState(false);
 
+  const [accountMenuOpen, setAccountMenuOpen] =
+    useState(false);
+
   useEffect(() => {
     loadPortal();
   }, []);
@@ -234,6 +237,7 @@ export default function POGPPage() {
   }
 
   async function handleLogout() {
+    setAccountMenuOpen(false);
     await supabase.auth.signOut();
     router.push("/login");
   }
@@ -250,7 +254,7 @@ export default function POGPPage() {
   }
 
   function formatDate(value: string) {
-    if (!value) return "—";
+    if (!value) return "â€”";
 
     return new Intl.DateTimeFormat(
       "en-GB",
@@ -621,23 +625,111 @@ export default function POGPPage() {
 
               <div className="hidden h-8 w-px bg-slate-200 sm:block" />
 
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#092653] text-xs font-bold text-[#f5c75d]">
-                  {initials}
-                </div>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setAccountMenuOpen((open) => !open)
+                  }
+                  className="flex items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition hover:bg-slate-50"
+                  aria-haspopup="menu"
+                  aria-expanded={accountMenuOpen}
+                  aria-label="Open account menu"
+                >
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#092653] text-xs font-bold text-[#f5c75d]">
+                    {initials}
+                  </div>
 
-                <div className="hidden text-left sm:block">
-                  <p className="text-xs font-bold text-[#0b1f3a]">
-                    {partner?.full_name ||
-                      "Growth Partner"}
-                  </p>
+                  <div className="hidden text-left sm:block">
+                    <p className="text-xs font-bold text-[#0b1f3a]">
+                      {partner?.full_name ||
+                        "Growth Partner"}
+                    </p>
 
-                  <p className="text-[10px] text-slate-400">
-                    {partner?.pogp_code}
-                  </p>
-                </div>
+                    <p className="text-[10px] text-slate-400">
+                      {partner?.pogp_code}
+                    </p>
+                  </div>
 
-                <ChevronDown className="hidden h-4 w-4 text-slate-400 sm:block" />
+                  <ChevronDown
+                    className={`hidden h-4 w-4 text-slate-400 transition-transform sm:block ${
+                      accountMenuOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                {accountMenuOpen && (
+                  <>
+                    <button
+                      type="button"
+                      aria-label="Close account menu"
+                      onClick={() =>
+                        setAccountMenuOpen(false)
+                      }
+                      className="fixed inset-0 z-40 cursor-default bg-transparent"
+                    />
+
+                    <div
+                      role="menu"
+                      className="absolute right-0 top-[calc(100%+10px)] z-50 w-72 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_18px_45px_rgba(8,31,70,0.14)]"
+                    >
+                      <div className="border-b border-slate-100 px-4 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#092653] text-sm font-bold text-[#f5c75d]">
+                            {initials}
+                          </div>
+
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-bold text-[#0b1f3a]">
+                              {partner?.full_name ||
+                                "Growth Partner"}
+                            </p>
+
+                            <p className="mt-0.5 truncate text-xs text-slate-400">
+                              {partner?.email}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 rounded-xl bg-slate-50 px-3 py-2">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                              Partner Code
+                            </span>
+                            <span className="font-mono text-xs font-bold text-[#0b1f3a]">
+                              {partner?.pogp_code}
+                            </span>
+                          </div>
+
+                          {partner?.territory && (
+                            <div className="mt-2 flex items-center justify-between gap-3">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                Territory
+                              </span>
+                              <span className="truncate text-xs font-semibold text-slate-600">
+                                {partner.territory}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="p-2">
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={handleLogout}
+                          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-600 transition hover:bg-red-50 hover:text-red-600"
+                        >
+                          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100">
+                            <LogOut className="h-4 w-4" />
+                          </span>
+                          <span>Sign Out</span>
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -1222,7 +1314,7 @@ export default function POGPPage() {
                       {prospect.contact_name ||
                         prospect.phone ||
                         prospect.email ||
-                        "—"}
+                        "â€”"}
                     </td>
 
                     <td className="px-6 py-4">
@@ -1664,18 +1756,18 @@ function formatRingMoney(
   value: number
 ) {
   if (value >= 1000000) {
-    return `₦${(
+    return `â‚¦${(
       value / 1000000
     ).toFixed(1)}m`;
   }
 
   if (value >= 1000) {
-    return `₦${Math.round(
+    return `â‚¦${Math.round(
       value / 1000
     )}k`;
   }
 
-  return `₦${value.toLocaleString(
+  return `â‚¦${value.toLocaleString(
     "en-NG"
   )}`;
 }
