@@ -41,9 +41,8 @@ function isUniqueViolation(error: {
 
 /**
  * Create the user's farm, farm user, trial subscription
- * and — when applicable — attribute the farm to a POGP.
- *
- * The owner's full name is stored in profiles.full_name.
+ * and — when applicable — attribute the farm to a POGP
+ * and/or VEND referral.
  */
 export async function createFarmAndTrial({
   userId,
@@ -263,6 +262,83 @@ export async function createFarmAndTrial({
     // from completing their account setup.
     console.warn(
       "[onboarding] POGP attribution request failed:",
+      error
+    );
+  }
+
+  // =============================================================
+  // VEND ATTRIBUTION
+  //
+  // The registration form stores the VEND referral code in the
+  // authenticated user's metadata.
+  //
+  // The server endpoint reads the authenticated user itself,
+  // validates the VEND code and creates the attribution.
+  //
+  // IMPORTANT:
+  // A missing VEND code is perfectly valid.
+  // An invalid code does not prevent farm creation.
+  // =============================================================
+
+  try {
+    const {
+      data: {
+        session,
+      },
+    } = await supabase.auth.getSession();
+
+    if (session?.access_token) {
+      const response = await fetch(
+        "/api/vend/attribute",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            farmId: farm.id,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        let errorDetail = `HTTP ${response.status}`;
+
+        try {
+          const body = await response.json();
+
+          if (body?.error) {
+            errorDetail = body.error;
+          }
+        } catch {
+          // Keep HTTP status detail.
+        }
+
+        console.warn(
+          "[onboarding] VEND attribution was not created:",
+          errorDetail
+        );
+      } else {
+        const result = await response.json();
+
+        if (result?.attributed) {
+          console.log(
+            "[onboarding] Farm attributed to VEND:",
+            result.vendCode
+          );
+        } else {
+          console.log(
+            "[onboarding] No VEND attribution required."
+          );
+        }
+      }
+    }
+  } catch (error) {
+    // VEND attribution must never prevent the farmer
+    // from completing their account setup.
+    console.warn(
+      "[onboarding] VEND attribution request failed:",
       error
     );
   }
