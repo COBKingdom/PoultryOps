@@ -28,6 +28,7 @@ import {
   Users,
   LogOut,
   ShieldCheck,
+  Handshake,
 } from "lucide-react";
 
 type Props = {
@@ -308,6 +309,11 @@ export default function MobileSidebar({
                   name: "POGP",
                   href: "/admin/pogp",
                   icon: Users,
+                },
+                {
+                  name: "VEND",
+                  href: "/admin/vend",
+                  icon: Handshake,
                 },
               ]}
               pathname={pathname}
