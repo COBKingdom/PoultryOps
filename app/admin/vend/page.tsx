@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { UserPlus } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import AppShell from "@/components/layout/app-shell";
+import AddVendModal from "@/components/admin/add-vend-modal";
 
 type RecruitedByPogp = {
   id: string;
@@ -404,6 +406,9 @@ export default function AdminVendPage() {
   const [copied, setCopied] =
     useState(false);
 
+  const [showAddVend, setShowAddVend] =
+    useState(false);
+
   async function loadVends() {
     try {
       setLoading(true);
@@ -668,12 +673,22 @@ export default function AdminVendPage() {
               </p>
             </div>
 
-            <button
-              onClick={loadVends}
-              className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
-            >
-              Refresh data
-            </button>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={() => setShowAddVend(true)}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+              >
+                <UserPlus className="h-4 w-4" />
+                Add VEND
+              </button>
+
+              <button
+                onClick={loadVends}
+                className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+              >
+                Refresh data
+              </button>
+            </div>
           </header>
 
           {/* KPI cards */}
@@ -1475,6 +1490,11 @@ export default function AdminVendPage() {
 
         </div>
       </main>
+      <AddVendModal
+        open={showAddVend}
+        onClose={() => setShowAddVend(false)}
+        onCreated={loadVends}
+      />
     </AppShell>
   );
 }
