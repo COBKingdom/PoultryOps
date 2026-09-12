@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { UserPlus } from "lucide-react";
@@ -406,6 +406,9 @@ export default function AdminVendPage() {
   const [copied, setCopied] =
     useState(false);
 
+  const [managingVend, setManagingVend] =
+    useState<"deactivate" | "reactivate" | "delete" | null>(null);
+
   const [showAddVend, setShowAddVend] =
     useState(false);
 
@@ -588,6 +591,82 @@ export default function AdminVendPage() {
       }, 1800);
     } catch {
       setCopied(false);
+    }
+  }
+
+  async function manageVend(
+    action: "deactivate" | "reactivate" | "delete"
+  ) {
+    if (!selectedVend) return;
+
+    const message =
+      action === "delete"
+        ? `Permanently delete ${selectedVend.full_name} (${selectedVend.vend_code})?\n\nThis action cannot be undone. VENDs with referral or commission history should not be deleted.`
+        : action === "deactivate"
+          ? `Deactivate ${selectedVend.full_name} (${selectedVend.vend_code})?\n\nThey will no longer be able to use the VEND portal until reactivated.`
+          : `Reactivate ${selectedVend.full_name} (${selectedVend.vend_code})?\n\nThey will regain access to the VEND portal.`;
+
+    if (!window.confirm(message)) {
+      return;
+    }
+
+    try {
+      setManagingVend(action);
+      setError(null);
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        throw new Error(
+          "Your admin session has expired. Please sign in again."
+        );
+      }
+
+      const response = await fetch(
+        "/api/admin/vend/manage",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization:
+              `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            vendId: selectedVend.id,
+            action,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.error ||
+            "Unable to update the VEND account."
+        );
+      }
+
+      if (action === "delete") {
+        setSelectedVendId(null);
+      }
+
+      await loadVends();
+    } catch (err) {
+      console.error(
+        "VEND management action failed:",
+        err
+      );
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to update the VEND account."
+      );
+    } finally {
+      setManagingVend(null);
     }
   }
 
@@ -1076,7 +1155,54 @@ export default function AdminVendPage() {
                     </div>
                   </div>
 
-                  {/* Referral link */}
+                  {/* Account Controls */}
+<section className="border-b border-slate-200 px-5 py-5">
+  <div>
+    <h3 className="text-sm font-semibold text-slate-900">Account Controls</h3>
+    <p className="mt-1 text-xs text-slate-500">
+      Manage this VEND partner&apos;s portal access.
+    </p>
+  </div>
+
+  <div className="mt-4 grid grid-cols-2 gap-3">
+    {selectedVend?.status === "active" ? (
+      <button
+        type="button"
+        onClick={() => manageVend("deactivate")}
+        disabled={managingVend !== null}
+        className="inline-flex h-10 items-center justify-center rounded-lg border border-amber-300 bg-amber-50 px-3 text-sm font-medium text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {managingVend === "deactivate" ? "Deactivating..." : "Deactivate"}
+      </button>
+    ) : (
+      <button
+        type="button"
+        onClick={() => manageVend("reactivate")}
+        disabled={managingVend !== null}
+        className="inline-flex h-10 items-center justify-center rounded-lg border border-emerald-300 bg-emerald-50 px-3 text-sm font-medium text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {managingVend === "reactivate" ? "Reactivating..." : "Reactivate"}
+      </button>
+    )}
+
+    <button
+      type="button"
+      onClick={() => manageVend("delete")}
+      disabled={managingVend !== null}
+      className="inline-flex h-10 items-center justify-center rounded-lg border border-red-300 bg-white px-3 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      {managingVend === "delete" ? "Deleting..." : "Delete"}
+    </button>
+  </div>
+
+  <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2.5 text-xs leading-5 text-slate-600">
+    <p>Deactivating will prevent this VEND from accessing their portal.</p>
+    <p className="mt-0.5">
+      Delete should only be used for VENDs with no referral or commission history.
+    </p>
+  </div>
+</section>
+{/* Referral link */}
                   <div className="border-b border-slate-200 p-5">
                     <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                       Farmer Referral Link
@@ -1538,3 +1664,4 @@ function MiniStat({
     </div>
   );
 }
+
