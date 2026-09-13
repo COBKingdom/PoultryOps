@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -78,6 +78,8 @@ export default function POGPPage() {
 
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
+  const [managingPartner, setManagingPartner] = useState(false);
 
   // New POGP form
   const [fullName, setFullName] = useState("");
@@ -281,6 +283,67 @@ export default function POGPPage() {
     }
   }
 
+  async function managePartner(
+    partner: Partner,
+    action: "deactivate" | "reactivate" | "delete"
+  ) {
+    const actionLabel =
+      action === "deactivate"
+        ? "deactivate"
+        : action === "reactivate"
+          ? "reactivate"
+          : "DELETE";
+
+    const confirmed = window.confirm(
+      action === "delete"
+        ? `Delete ${partner.full_name || "this POGP"} permanently?\n\nThis cannot be undone.`
+        : `${actionLabel.charAt(0).toUpperCase() + actionLabel.slice(1)} ${partner.full_name || "this POGP"}?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setManagingPartner(true);
+      setMessage("");
+
+      const headers = await getAuthHeaders();
+
+      const response = await fetch("/api/admin/pogp/manage", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          partnerId: partner.id,
+          action,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.error || `Unable to ${action} POGP`
+        );
+      }
+
+      setMessage(data.message || `POGP ${action} successful.`);
+
+      if (action === "delete") {
+        setSelectedPartnerId(null);
+      }
+
+      await loadData();
+    } catch (error) {
+      console.error("POGP management action failed:", error);
+
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : `Unable to ${action} POGP`
+      );
+    } finally {
+      setManagingPartner(false);
+    }
+  }
   function formatMoney(value: number) {
     return new Intl.NumberFormat(
       "en-NG",
@@ -606,6 +669,15 @@ export default function POGPPage() {
                                   partner.status
                                 }
                               />
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setSelectedPartnerId(partner.id)
+                                  }
+                                  className="ml-3 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                                >
+                                  Manage
+                                </button>
                             </td>
                           </tr>
                         )
@@ -726,6 +798,255 @@ export default function POGPPage() {
       {/* CUSTOMER LIST MODAL */}
       {/* ====================================================== */}
 
+      {/* ====================================================== */}
+      {/* POGP DETAIL / ACCOUNT CONTROL DRAWER */}
+      {/* ====================================================== */}
+
+      {selectedPartnerId &&
+        (() => {
+          const partner = partners.find(
+            (item) => item.id === selectedPartnerId
+          );
+
+          if (!partner) return null;
+
+          return (
+            <div className="fixed inset-0 z-50 bg-slate-950/40">
+              <button
+                type="button"
+                aria-label="Close POGP details"
+                onClick={() =>
+                  setSelectedPartnerId(null)
+                }
+                className="absolute inset-0 h-full w-full cursor-default"
+              />
+
+              <aside className="absolute right-0 top-0 flex h-full w-full max-w-md flex-col overflow-y-auto bg-white shadow-2xl">
+
+                <div className="border-b border-slate-200 px-5 py-5">
+                  <div className="flex items-start justify-between gap-4">
+
+                    <div className="min-w-0">
+                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-700">
+                        PoultryOps Growth Partner
+                      </div>
+
+                      <h2 className="mt-2 truncate text-xl font-bold text-slate-950">
+                        {partner.full_name ||
+                          "Unnamed partner"}
+                      </h2>
+
+                      <p className="mt-1 truncate text-sm text-slate-500">
+                        {partner.email}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelectedPartnerId(null)
+                      }
+                      className="rounded-lg px-3 py-2 text-2xl leading-none text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                      aria-label="Close"
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-between">
+                    <span className="inline-flex rounded-lg bg-blue-50 px-3 py-1.5 text-sm font-bold text-blue-700">
+                      {partner.pogp_code}
+                    </span>
+
+                    <StatusBadge
+                      status={partner.status}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-5 px-5 py-5">
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-xl bg-slate-50 p-4">
+                      <div className="text-xs text-slate-400">
+                        Territory
+                      </div>
+
+                      <div className="mt-1 text-sm font-semibold text-slate-900">
+                        {partner.territory || "—"}
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl bg-slate-50 p-4">
+                      <div className="text-xs text-slate-400">
+                        Joined
+                      </div>
+
+                      <div className="mt-1 text-sm font-semibold text-slate-900">
+                        {formatDate(partner.joined_at)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {partner.phone && (
+                    <div className="rounded-xl border border-slate-200 px-4 py-3">
+                      <div className="text-xs text-slate-400">
+                        Phone
+                      </div>
+
+                      <div className="mt-1 text-sm font-medium text-slate-900">
+                        {partner.phone}
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <div className="mb-3 text-sm font-bold text-slate-950">
+                      Partner Performance
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                      <MiniStat
+                        label="Prospects"
+                        value={partner.prospectCount}
+                      />
+
+                      <MiniStat
+                        label="Customers"
+                        value={partner.customerCount}
+                      />
+
+                      <MiniStat
+                        label="Commission"
+                        value={formatMoney(
+                          partner.commissionTotal
+                        )}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+                      Referral Code
+                    </div>
+
+                    <div className="mt-1 text-lg font-bold text-blue-900">
+                      {partner.pogp_code}
+                    </div>
+
+                    <p className="mt-1 text-xs leading-5 text-blue-700">
+                      This code identifies farms referred by
+                      this POGP partner.
+                    </p>
+                  </div>
+
+                  <div>
+                    <div className="mb-3 text-sm font-bold text-slate-950">
+                      Account Controls
+                    </div>
+
+                    <div className="rounded-xl border border-slate-200 p-4">
+
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <div className="text-sm font-semibold text-slate-900">
+                            Partner access
+                          </div>
+
+                          <p className="mt-1 text-xs leading-5 text-slate-500">
+                            Control whether this POGP can access
+                            the partner portal.
+                          </p>
+                        </div>
+
+                        <StatusBadge
+                          status={partner.status}
+                        />
+                      </div>
+
+                      <div className="mt-4 flex gap-2">
+
+                        {partner.status.toLowerCase() ===
+                        "active" ? (
+                          <button
+                            type="button"
+                            disabled={managingPartner}
+                            onClick={() =>
+                              managePartner(
+                                partner,
+                                "deactivate"
+                              )
+                            }
+                            className="flex-1 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-800 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {managingPartner
+                              ? "Working..."
+                              : "Deactivate"}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={managingPartner}
+                            onClick={() =>
+                              managePartner(
+                                partner,
+                                "reactivate"
+                              )
+                            }
+                            className="flex-1 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {managingPartner
+                              ? "Working..."
+                              : "Reactivate"}
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          disabled={managingPartner}
+                          onClick={() =>
+                            managePartner(
+                              partner,
+                              "delete"
+                            )
+                          }
+                          className="flex-1 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Delete
+                        </button>
+
+                      </div>
+
+                      {(partner.customerCount > 0 ||
+                        partner.commissionTotal > 0) && (
+                        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-xs leading-5 text-amber-800">
+                          This POGP has referral or commission
+                          history. Deletion may be blocked.
+                          Deactivation is recommended instead.
+                        </div>
+                      )}
+
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      openPartnerCustomers(partner.id)
+                    }
+                    className="w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                  >
+                    View {partner.customerCount} Customer
+                    {partner.customerCount === 1
+                      ? ""
+                      : "s"}
+                  </button>
+
+                </div>
+              </aside>
+            </div>
+          );
+        })()}
       {showCustomers && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/50 p-4 md:p-8">
           <div className="mx-auto max-w-6xl rounded-2xl bg-white shadow-2xl">
@@ -1237,3 +1558,5 @@ function MiniStat({
     </div>
   );
 }
+
+
