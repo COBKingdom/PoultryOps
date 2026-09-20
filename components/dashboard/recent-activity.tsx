@@ -1,132 +1,186 @@
+"use client";
+
+import Link from "next/link";
+
 import {
   Egg,
   Wheat,
   Receipt,
   ShoppingCart,
   AlertTriangle,
-  CheckCircle,
+  ArrowRight,
+  Sparkles,
 } from "lucide-react";
 
+const operations = [
+  {
+    title: "Egg Production",
+    description: "Daily collection and production",
+    href: "/eggs",
+    icon: Egg,
+    iconBg: "bg-amber-50",
+    iconColor: "text-amber-600",
+  },
+  {
+    title: "Feed Management",
+    description: "Consumption and feed stock",
+    href: "/feed",
+    icon: Wheat,
+    iconBg: "bg-emerald-50",
+    iconColor: "text-emerald-600",
+  },
+  {
+    title: "Expenses",
+    description: "Operational spending",
+    href: "/expenses",
+    icon: Receipt,
+    iconBg: "bg-red-50",
+    iconColor: "text-red-600",
+  },
+  {
+    title: "Sales",
+    description: "Revenue and transactions",
+    href: "/sales",
+    icon: ShoppingCart,
+    iconBg: "bg-blue-50",
+    iconColor: "text-blue-600",
+  },
+  {
+    title: "Mortality",
+    description: "Bird losses and trends",
+    href: "/mortality",
+    icon: AlertTriangle,
+    iconBg: "bg-orange-50",
+    iconColor: "text-orange-600",
+  },
+  {
+    title: "Feed Intelligence",
+    description: "Feed performance and insights",
+    href: "/feed-intelligence",
+    icon: Sparkles,
+    iconBg: "bg-violet-50",
+    iconColor: "text-violet-600",
+  },
+];
+
 export default function RecentActivity() {
-  const activities = [
-    {
-      title:
-        "Egg Production",
-      detail:
-        "Track daily egg collection and flock productivity.",
-      icon: Egg,
-    },
-    {
-      title:
-        "Feed Management",
-      detail:
-        "Monitor feed consumption and inventory levels.",
-      icon: Wheat,
-    },
-    {
-      title:
-        "Expenses",
-      detail:
-        "Record and review operational spending.",
-      icon: Receipt,
-    },
-    {
-      title:
-        "Sales",
-      detail:
-        "Track farm revenue and customer transactions.",
-      icon: ShoppingCart,
-    },
-    {
-      title:
-        "Mortality",
-      detail:
-        "Monitor bird losses and flock health trends.",
-      icon: AlertTriangle,
-    },
-  ];
-
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
-
-      <div className="mb-6">
-
-        <h2 className="text-xl font-bold text-slate-900">
+    <section>
+      <div className="mb-3">
+        <h2
+          className="
+            text-base
+            font-semibold
+            tracking-tight
+            text-slate-900
+          "
+        >
           Farm Operations
         </h2>
 
-        <p className="text-sm text-slate-500 mt-1">
-          Key areas being monitored within your farm
+        <p
+          className="
+            mt-0.5
+            text-xs
+            text-slate-500
+          "
+        >
+          Manage your core farm activities
         </p>
-
       </div>
 
-      <div className="space-y-4">
+      <div
+        className="
+          grid
+          grid-cols-1
+          gap-2
+          sm:grid-cols-2
+          sm:gap-3
+          lg:grid-cols-3
+        "
+      >
+        {operations.map((operation) => {
+          const Icon = operation.icon;
 
-        {activities.map(
-          (
-            activity,
-            index
-          ) => {
-            const Icon =
-              activity.icon;
-
-            return (
+          return (
+            <Link
+              key={operation.href}
+              href={operation.href}
+              className="
+                group
+                flex
+                items-center
+                gap-3
+                rounded-2xl
+                border
+                border-slate-200
+                bg-white
+                px-4
+                py-3.5
+                shadow-sm
+                transition-all
+                duration-200
+                hover:border-blue-200
+                hover:bg-slate-50
+                hover:shadow-md
+                active:scale-[0.99]
+              "
+            >
               <div
-                key={index}
-                className="
+                className={`
                   flex
+                  h-9
+                  w-9
+                  shrink-0
                   items-center
-                  gap-4
-                  p-4
-                  rounded-2xl
-                  bg-slate-50
-                  hover:bg-slate-100
-                  transition-all
-                "
+                  justify-center
+                  rounded-xl
+                  ${operation.iconBg}
+                `}
               >
+                <Icon
+                  size={18}
+                  className={operation.iconColor}
+                />
+              </div>
 
-                <div
+              <div className="min-w-0 flex-1">
+                <p
                   className="
-                    w-12
-                    h-12
-                    rounded-xl
-                    bg-blue-100
-                    flex
-                    items-center
-                    justify-center
+                    text-sm
+                    font-semibold
+                    text-slate-900
                   "
                 >
-                  <Icon
-                    size={22}
-                    className="text-blue-600"
-                  />
-                </div>
+                  {operation.title}
+                </p>
 
-                <div className="flex-1">
-
-                  <p className="font-medium text-slate-900">
-                    {activity.title}
-                  </p>
-
-                  <p className="text-sm text-slate-500">
-                    {activity.detail}
-                  </p>
-
-                </div>
-
-                <CheckCircle
-                  size={18}
-                  className="text-green-500"
-                />
-
+                <p
+                  className="
+                    mt-0.5
+                    truncate
+                    text-[11px]
+                    text-slate-500
+                  "
+                >
+                  {operation.description}
+                </p>
               </div>
-            );
-          }
-        )}
 
+              <ArrowRight
+                size={15}
+                className="
+                  shrink-0
+                  text-slate-300
+                  transition-all
+                  group-hover:translate-x-0.5
+                  group-hover:text-blue-500
+                "
+              />
+            </Link>
+          );
+        })}
       </div>
-
-    </div>
+    </section>
   );
 }

@@ -54,7 +54,7 @@ export default function KpiCard({
     Icon = Bird;
 
     iconBg =
-      "bg-blue-100";
+      "bg-blue-50";
 
     iconColor =
       "text-blue-600";
@@ -69,7 +69,7 @@ export default function KpiCard({
     Icon = Bird;
 
     iconBg =
-      "bg-indigo-100";
+      "bg-indigo-50";
 
     iconColor =
       "text-indigo-600";
@@ -84,7 +84,7 @@ export default function KpiCard({
     Icon = Egg;
 
     iconBg =
-      "bg-amber-100";
+      "bg-amber-50";
 
     iconColor =
       "text-amber-600";
@@ -99,7 +99,7 @@ export default function KpiCard({
     Icon = TrendingUp;
 
     iconBg =
-      "bg-green-100";
+      "bg-green-50";
 
     iconColor =
       "text-green-600";
@@ -123,7 +123,7 @@ export default function KpiCard({
     Icon = ReceiptText;
 
     iconBg =
-      "bg-red-100";
+      "bg-red-50";
 
     iconColor =
       "text-red-600";
@@ -162,7 +162,7 @@ export default function KpiCard({
         "Profit";
 
       iconBg =
-        "bg-green-100";
+        "bg-green-50";
 
       iconColor =
         "text-green-600";
@@ -174,7 +174,7 @@ export default function KpiCard({
         "Loss";
 
       iconBg =
-        "bg-red-100";
+        "bg-red-50";
 
       iconColor =
         "text-red-600";
@@ -190,7 +190,7 @@ export default function KpiCard({
     Icon = Activity;
 
     iconBg =
-      "bg-cyan-100";
+      "bg-cyan-50";
 
     iconColor =
       "text-cyan-600";
@@ -202,28 +202,26 @@ export default function KpiCard({
   return (
     <div
       className="
-        bg-white
-        rounded-3xl
+        rounded-2xl
         border
         border-slate-200
-        p-5
+        bg-white
+        px-4
+        py-4
         shadow-sm
-        hover:shadow-xl
-        hover:-translate-y-1
-        transition-all
-        duration-300
+        transition-shadow
+        duration-200
+        hover:shadow-md
       "
     >
-      <div className="flex items-start justify-between">
-
-        <div>
-
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
           <p
             className="
-              text-xs
-              uppercase
-              tracking-wider
+              text-[11px]
               font-semibold
+              uppercase
+              tracking-wide
               text-slate-500
             "
           >
@@ -232,10 +230,12 @@ export default function KpiCard({
 
           <h3
             className={`
-              mt-3
-              text-3xl
-              md:text-4xl
+              mt-1
+              truncate
+              text-2xl
               font-bold
+              tracking-tight
+              sm:text-3xl
               ${valueColor}
             `}
           >
@@ -244,33 +244,33 @@ export default function KpiCard({
 
           <p
             className="
-              mt-2
-              text-xs
+              mt-1
+              truncate
+              text-[11px]
               text-slate-500
             "
           >
             {subtitle}
           </p>
-
         </div>
 
         <div
           className={`
-            w-14
-            h-14
-            rounded-2xl
             flex
+            h-10
+            w-10
+            shrink-0
             items-center
             justify-center
+            rounded-xl
             ${iconBg}
           `}
         >
           <Icon
-            size={26}
+            size={19}
             className={iconColor}
           />
         </div>
-
       </div>
     </div>
   );

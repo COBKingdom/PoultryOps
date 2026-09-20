@@ -12,39 +12,40 @@ import {
 } from "@/lib/date-ranges";
 
 import AppShell from "@/components/layout/app-shell";
-
-import KpiCard from "@/components/dashboard/kpi-card";
-import QuickActions from "@/components/dashboard/quick-actions";
-import FarmHero from "@/components/dashboard/farm-hero";
-import FarmHealth from "@/components/dashboard/farm-health";
-import RecentActivity from "@/components/dashboard/recent-activity";
 import OwnerOnly from "@/components/auth/owner-only";
 
 import ReportFilter from "@/components/reports/report-filter";
 
+import FarmHero from "@/components/dashboard/farm-hero";
+import AttentionNeeded from "@/components/dashboard/attention-needed";
+import FarmHealth from "@/components/dashboard/farm-health";
+import FinancialOverview from "@/components/dashboard/financial-overview";
+import QuickActions from "@/components/dashboard/quick-actions";
+import RecentActivity from "@/components/dashboard/recent-activity";
+
 /*
  * Demo-only showcase for DEMO-001.
- * Normal farms keep the original dashboard below.
+ * Normal farms use the production dashboard below.
  */
 import DemoDashboard from "@/components/dashboard/demo-dashboard";
 
 /**
- * Demo-only initial date range for DEMO-001
- * ("PoultryOps Demo Farm").
+ * Demo-only initial date range for DEMO-001.
  *
- * Returns a local "last 30 days" selection (today back 30 days)
- * using only the existing custom-range infrastructure. No shared
- * global date-range preset is added.
+ * Uses the existing custom-range infrastructure and
+ * does not introduce a new global date preset.
  */
 function getDemoInitialDateRangeSelection(): DateRangeSelection {
   const now = new Date();
   const start = new Date(now);
+
   start.setDate(start.getDate() - 30);
 
   const toDateString = (date: Date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
+
     return `${year}-${month}-${day}`;
   };
 
@@ -66,25 +67,19 @@ export default function DashboardPage() {
   } = useCurrentFarm();
 
   /*
-   * DEMO-001 is identified before state init so its
-   * default date range can be set without affecting
-   * any other farm.
+   * DEMO-001 is kept completely separate from
+   * the normal subscriber dashboard.
    */
   const isDemo =
     farm?.farm_code === "DEMO-001" ||
     farm?.name === "PoultryOps Demo Farm";
 
   /*
-   * Dashboard date filter.
+   * Existing dashboard date filter.
    *
    * Defaults to Today.
    *
-   * The financial figures respond to the
-   * selected date range.
-   *
-   * Operational figures such as available
-   * birds, birds in isolation, available eggs
-   * and flock count remain current farm figures.
+   * No change to the existing date-range infrastructure.
    */
   const [
     dateRangeSelection,
@@ -94,19 +89,18 @@ export default function DashboardPage() {
   );
 
   /*
-   * Tracks whether the user has manually adjusted the
-   * date filter. Used to stop applying the demo default
-   * once the user interacts with the filter.
+   * Used only for the existing DEMO-001 behaviour.
    */
-  const [userEditedFilter, setUserEditedFilter] =
-    useState(false);
+  const [
+    userEditedFilter,
+    setUserEditedFilter,
+  ] = useState(false);
 
   /*
-   * For DEMO-001 only, default to the trailing 30 days so
-   * the seeded operational history is showcased on load.
-   * The demo default applies only until the user interacts
-   * with the filter, so a manual change is never overridden.
-   * Normal farms are completely unaffected.
+   * DEMO-001 defaults to the trailing 30 days
+   * until the user manually changes the filter.
+   *
+   * Normal farms are unaffected.
    */
   const effectiveDateRange =
     isDemo && !userEditedFilter
@@ -120,6 +114,11 @@ export default function DashboardPage() {
     setDateRangeSelection(selection);
   }
 
+  /*
+   * Existing dashboard statistics.
+   *
+   * No calculations have been changed.
+   */
   const {
     currentBirds,
     isolatedBirds,
@@ -136,12 +135,14 @@ export default function DashboardPage() {
     effectiveDateRange.range
   );
 
+  /*
+   * Existing loading state.
+   */
   if (farmLoading) {
     return (
       <AppShell email={user?.email}>
-        <div className="flex items-center justify-center h-96">
+        <div className="flex h-96 items-center justify-center">
           <div className="text-center">
-
             <div
               className="
                 inline-block
@@ -159,7 +160,6 @@ export default function DashboardPage() {
             <p className="mt-4 text-slate-600">
               Loading dashboard...
             </p>
-
           </div>
         </div>
       </AppShell>
@@ -167,20 +167,15 @@ export default function DashboardPage() {
   }
 
   /*
-   * DEMO-001 ("PoultryOps Demo Farm") receives a
-   * premium, sales-ready showcase.
+   * DEMO-001 remains completely separate.
    *
-   * Every other farm renders the original
-   * dashboard below — completely unchanged.
+   * Nothing in the new Command Centre layout
+   * affects the demo dashboard.
    */
   if (isDemo) {
     return (
       <OwnerOnly>
-
-        <AppShell
-          email={user?.email}
-        >
-
+        <AppShell email={user?.email}>
           <DemoDashboard
             farm={farm}
             stats={{
@@ -198,142 +193,97 @@ export default function DashboardPage() {
             dateRangeSelection={effectiveDateRange}
             setDateRangeSelection={handleDateRangeChange}
           />
-
         </AppShell>
-
       </OwnerOnly>
     );
   }
 
+  /*
+   * NORMAL SUBSCRIBER DASHBOARD
+   *
+   * Layout hierarchy:
+   *
+   * 1. Date context
+   * 2. Farm Performance
+   * 3. Attention / Health / Financial
+   * 4. Farm Operations
+   * 5. Quick Actions
+   *
+   * All underlying data remains unchanged.
+   */
   return (
     <OwnerOnly>
+      <AppShell email={user?.email}>
+        <div className="space-y-5">
 
-      <AppShell
-        email={user?.email}
-      >
-
-        <div className="space-y-4">
-
-          {/* ─────────────────────────────────────────────
-              FARM HERO
-          ───────────────────────────────────────────── */}
-
-          <FarmHero
-            currentBirds={
-              currentBirds
-            }
-            isolatedBirds={
-              isolatedBirds
-            }
-            availableEggs={
-              availableEggs
-            }
-            totalFlocks={
-              totalFlocks
-            }
-          />
-
-          {/* ─────────────────────────────────────────────
-              DATE FILTER
-
-              Subscription / trial information does not
-              belong on the operational dashboard.
-              That information remains in Billing /
-              Subscription.
-          ───────────────────────────────────────────── */}
+          {/* DATE FILTER */}
 
           <div
             className="
               flex
-              justify-start
-              sm:justify-end
-              w-full
+              justify-end
             "
           >
-
             <ReportFilter
-              value={
-                effectiveDateRange
-              }
-              onChange={
-                handleDateRangeChange
-              }
+              value={effectiveDateRange}
+              onChange={handleDateRangeChange}
             />
-
           </div>
 
-          {/* ─────────────────────────────────────────────
-              FINANCIAL KPIs
-          ───────────────────────────────────────────── */}
+          {/* FARM PERFORMANCE HERO */}
 
-          <div
-            className="
-              grid
-              grid-cols-1
-              sm:grid-cols-3
-              gap-4
-            "
-          >
-
-            <KpiCard
-              title="Revenue"
-              value={
-                totalRevenue
-              }
-              currency={
-                farm?.currency
-              }
-            />
-
-            <KpiCard
-              title="Expenses"
-              value={
-                totalExpenses
-              }
-              currency={
-                farm?.currency
-              }
-            />
-
-            <KpiCard
-              title="Profit / Loss"
-              value={profit}
-              currency={
-                farm?.currency
-              }
-            />
-
-          </div>
-
-          {/* ─────────────────────────────────────────────
-              QUICK ACTIONS
-          ───────────────────────────────────────────── */}
-
-          <QuickActions />
-
-          {/* ─────────────────────────────────────────────
-              FARM HEALTH
-          ───────────────────────────────────────────── */}
-
-          <FarmHealth
-            currentBirds={
-              currentBirds
-            }
-            productionPercentage={
-              productionPercentage
-            }
+          <FarmHero
+            currentBirds={currentBirds}
+            isolatedBirds={isolatedBirds}
+            availableEggs={availableEggs}
+            totalFlocks={totalFlocks}
           />
 
-          {/* ─────────────────────────────────────────────
-              RECENT ACTIVITY
-          ───────────────────────────────────────────── */}
+          {/* COMMAND CENTRE SUMMARY */}
+
+<div
+  className="
+    grid
+    grid-cols-1
+    gap-4
+    lg:grid-cols-3
+    lg:items-stretch
+  "
+>
+            {/* ATTENTION */}
+
+            <AttentionNeeded
+              isolatedBirds={isolatedBirds}
+              totalMortality={totalMortality}
+            />
+
+            {/* FARM HEALTH */}
+
+            <FarmHealth
+              currentBirds={currentBirds}
+              productionPercentage={productionPercentage}
+            />
+
+            {/* FINANCIAL OVERVIEW */}
+
+            <FinancialOverview
+              totalRevenue={totalRevenue}
+              totalExpenses={totalExpenses}
+              profit={profit}
+              currency={farm?.currency}
+            />
+          </div>
+
+          {/* FARM OPERATIONS */}
 
           <RecentActivity />
 
+          {/* QUICK ACTIONS */}
+
+          <QuickActions />
+
         </div>
-
       </AppShell>
-
     </OwnerOnly>
   );
 }
