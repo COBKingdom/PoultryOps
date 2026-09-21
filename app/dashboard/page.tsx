@@ -20,8 +20,10 @@ import FarmHero from "@/components/dashboard/farm-hero";
 import AttentionNeeded from "@/components/dashboard/attention-needed";
 import FarmHealth from "@/components/dashboard/farm-health";
 import FinancialOverview from "@/components/dashboard/financial-overview";
+import ProductionPerformance from "@/components/dashboard/production-performance";
 import QuickActions from "@/components/dashboard/quick-actions";
 import RecentActivity from "@/components/dashboard/recent-activity";
+
 
 /*
  * Demo-only showcase for DEMO-001.
@@ -274,13 +276,21 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* FARM OPERATIONS */}
+{/* FARM OPERATIONS */}
 
-          <RecentActivity />
+<RecentActivity />
 
-          {/* QUICK ACTIONS */}
+{/* PRODUCTION PERFORMANCE */}
 
-          <QuickActions />
+<ProductionPerformance
+  todayEggs={todayEggs}
+  availableEggs={availableEggs}
+  productionPercentage={productionPercentage}
+/>
+
+{/* QUICK ACTIONS */}
+
+<QuickActions />
 
         </div>
       </AppShell>
