@@ -1765,18 +1765,18 @@ function formatRingMoney(
   value: number
 ) {
   if (value >= 1000000) {
-    return `â‚¦${(
+    return `₦${(
       value / 1000000
     ).toFixed(1)}m`;
   }
 
   if (value >= 1000) {
-    return `â‚¦${Math.round(
+    return `₦${Math.round(
       value / 1000
     )}k`;
   }
 
-  return `â‚¦${value.toLocaleString(
+  return `₦${value.toLocaleString(
     "en-NG"
   )}`;
 }
