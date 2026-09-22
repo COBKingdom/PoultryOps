@@ -6,6 +6,21 @@ import { useRouter } from "next/navigation";
 
 import { supabase } from "@/lib/supabase";
 
+/*
+ * Existing shared PoultryOps Demo account.
+ *
+ * Only this email is treated as the Demo. Every other account
+ * keeps the existing login behaviour untouched.
+ */
+const DEMO_EMAIL = "demo@poultryops.app";
+
+/*
+ * Browser storage key for the opaque Demo visitor token issued by
+ * /api/demo/visit. The token is how a repeat Demo access is matched
+ * to an existing visitor record.
+ */
+const DEMO_VISITOR_TOKEN_KEY = "poultryops_demo_visitor_token";
+
 export default function LoginForm() {
   const router = useRouter();
 
@@ -14,12 +29,73 @@ export default function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
+  /*
+   * Demo visitor capture fields.
+   *
+   * Requested only when the Demo email is being used.
+   */
+  const [demoFullName, setDemoFullName] = useState("");
+  const [demoPhone, setDemoPhone] = useState("");
+
+  const isDemoLogin =
+    email.trim().toLowerCase() === DEMO_EMAIL;
+
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
 
     try {
       setLoading(true);
       setMessage("");
+
+      // ----------------------------------------------------------
+      // Demo visitor capture
+      //
+      // Runs BEFORE the existing authentication call so that the
+      // login only continues once the visitor has been recorded.
+      // ----------------------------------------------------------
+
+      if (isDemoLogin) {
+        if (!demoFullName.trim()) {
+          throw new Error("Full name is required for Demo access");
+        }
+
+        if (!demoPhone.trim()) {
+          throw new Error(
+            "Phone number is required for Demo access"
+          );
+        }
+
+        const existingToken = window.localStorage.getItem(
+          DEMO_VISITOR_TOKEN_KEY
+        );
+
+        const visitResponse = await fetch("/api/demo/visit", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            visitor_token: existingToken || undefined,
+            full_name: demoFullName.trim(),
+            phone: demoPhone.trim(),
+          }),
+        });
+
+        const visitData = await visitResponse.json();
+
+        if (!visitResponse.ok || !visitData.success) {
+          throw new Error(
+            visitData.error || "Unable to start Demo access"
+          );
+        }
+
+        if (visitData.visitor_token) {
+          window.localStorage.setItem(
+            DEMO_VISITOR_TOKEN_KEY,
+            visitData.visitor_token
+          );
+        }
+      }
 
       const {
         data,
@@ -180,6 +256,53 @@ export default function LoginForm() {
         "
         required
       />
+
+      {isDemoLogin && (
+        <div className="space-y-3 rounded-lg border border-blue-100 bg-blue-50/60 p-3">
+          <div>
+            <p className="text-sm font-semibold text-slate-700">
+              Demo access
+            </p>
+            <p className="text-xs text-slate-500">
+              Please tell us who is using the Demo.
+            </p>
+          </div>
+
+          <input
+            type="text"
+            placeholder="Full name"
+            value={demoFullName}
+            onChange={(e) =>
+              setDemoFullName(e.target.value)
+            }
+            className="
+              w-full
+              border
+              bg-white
+              p-3
+              rounded-lg
+            "
+            required
+          />
+
+          <input
+            type="tel"
+            placeholder="Phone number"
+            value={demoPhone}
+            onChange={(e) =>
+              setDemoPhone(e.target.value)
+            }
+            className="
+              w-full
+              border
+              bg-white
+              p-3
+              rounded-lg
+            "
+            required
+          />
+        </div>
+      )}
 
       <div className="flex justify-end">
         <Link

@@ -5,6 +5,7 @@ import {
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
+import ReferralTools from "@/components/pogp/referral-tools";
 import {
   ArrowRight,
   BarChart3,
@@ -861,6 +862,14 @@ export default function POGPPage() {
                   }
                 />
               </div>
+                            {/* Referral Tools */}
+              {partner?.pogp_code && (
+                <ReferralTools
+                  pogpCode={partner.pogp_code}
+                />
+              )}
+
+              {/* Main dashboard row */}
 
               {/* Main dashboard row */}
               <div className="mt-6 grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">

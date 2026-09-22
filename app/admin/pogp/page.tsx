@@ -80,6 +80,7 @@ export default function POGPPage() {
   const [message, setMessage] = useState("");
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
   const [managingPartner, setManagingPartner] = useState(false);
+  const [partnerSearch, setPartnerSearch] = useState("");
 
   // New POGP form
   const [fullName, setFullName] = useState("");
@@ -388,6 +389,20 @@ export default function POGPPage() {
         )
       : null;
 
+  const partnerQuery = partnerSearch.trim().toLowerCase();
+
+  const visiblePartners = partnerQuery
+    ? partners.filter((partner) => {
+        const name = partner.full_name?.toLowerCase() || "";
+        const code = partner.pogp_code?.toLowerCase() || "";
+
+        return (
+          name.includes(partnerQuery) ||
+          code.includes(partnerQuery)
+        );
+      })
+    : partners;
+
   return (
     <AppShell>
       <main className="min-h-screen bg-slate-50 px-4 py-6 md:px-6 md:py-8">
@@ -520,6 +535,16 @@ export default function POGPPage() {
                     : "s"}
                 </div>
               </div>
+
+              <input
+                type="search"
+                value={partnerSearch}
+                onChange={(event) =>
+                  setPartnerSearch(event.target.value)
+                }
+                placeholder="Search by partner name or POGP code"
+                className="mt-4 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+              />
             </div>
 
             {loading ? (
@@ -592,7 +617,7 @@ export default function POGPPage() {
                     </thead>
 
                     <tbody className="divide-y divide-slate-100">
-                      {partners.map(
+                      {visiblePartners.map(
                         (partner) => (
                           <tr
                             key={
@@ -688,7 +713,7 @@ export default function POGPPage() {
 
                 {/* Mobile cards */}
                 <div className="divide-y divide-slate-100 md:hidden">
-                  {partners.map(
+                  {visiblePartners.map(
                     (partner) => (
                       <div
                         key={
@@ -773,10 +798,26 @@ export default function POGPPage() {
                             )}
                           />
                         </div>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSelectedPartnerId(partner.id)
+                          }
+                          className="mt-4 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                        >
+                          Manage
+                        </button>
                       </div>
                     )
                   )}
                 </div>
+
+                {visiblePartners.length === 0 && (
+                  <div className="px-6 py-12 text-center text-sm text-slate-500">
+                    No POGP partners match “{partnerSearch.trim()}”.
+                  </div>
+                )}
               </>
             )}
           </section>

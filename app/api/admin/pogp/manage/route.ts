@@ -211,7 +211,7 @@ export async function POST(request: Request) {
       count: attributionCount,
       error: attributionError,
     } = await supabaseAdmin
-      .from("referral_attributions")
+      .from("pogp_attributions")
       .select("id", {
         count: "exact",
         head: true,
