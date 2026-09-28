@@ -37,15 +37,15 @@ export default function FeedSummary({
       );
 
   return (
-    <div className="grid grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+      <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm min-w-0">
 
         <p className="text-sm text-slate-500">
           Today
         </p>
 
-        <h3 className="text-3xl font-bold">
+        <h3 className="text-2xl sm:text-3xl font-bold break-words leading-tight">
           {Number(todayConsumed).toLocaleString(undefined, {
             minimumFractionDigits: 0,
             maximumFractionDigits: 2,
@@ -58,25 +58,25 @@ export default function FeedSummary({
 
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+      <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm min-w-0">
 
         <p className="text-sm text-slate-500">
           Records
         </p>
 
-        <h3 className="text-3xl font-bold">
+        <h3 className="text-2xl sm:text-3xl font-bold break-words leading-tight">
           {records.length}
         </h3>
 
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+      <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm min-w-0">
 
         <p className="text-sm text-slate-500">
           Total Consumed
         </p>
 
-        <h3 className="text-3xl font-bold text-blue-600">
+        <h3 className="text-2xl sm:text-3xl font-bold text-blue-600 break-words leading-tight">
           {Number(totalConsumed).toLocaleString(undefined, {
             minimumFractionDigits: 0,
             maximumFractionDigits: 2,
