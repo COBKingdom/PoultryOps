@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+
 import LoginForm from "@/components/auth/login-form";
 
 export default function LoginPage() {
@@ -12,7 +14,9 @@ export default function LoginPage() {
           Access your PoultryOps account
         </p>
 
-        <LoginForm />
+        <Suspense fallback={null}>
+          <LoginForm />
+        </Suspense>
       </div>
     </main>
   );

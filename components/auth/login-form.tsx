@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { supabase } from "@/lib/supabase";
 
@@ -23,11 +23,20 @@ const DEMO_VISITOR_TOKEN_KEY = "poultryops_demo_visitor_token";
 
 export default function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendMessage, setResendMessage] = useState("");
+
+  const verified = searchParams.get("verified") === "1";
+  const verificationError =
+    searchParams.get("verification_error") === "1";
 
   /*
    * Demo visitor capture fields.
@@ -40,12 +49,47 @@ export default function LoginForm() {
   const isDemoLogin =
     email.trim().toLowerCase() === DEMO_EMAIL;
 
+  async function handleResendVerification() {
+    const targetEmail = email.trim().toLowerCase();
+
+    if (!targetEmail) {
+      setResendMessage("Please enter your email address first.");
+      return;
+    }
+
+    try {
+      setResending(true);
+      setResendMessage("");
+
+      const response = await fetch("/api/vend/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: targetEmail }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      setResendMessage(
+        data.message ||
+          "If the email belongs to an unverified PoultryOps VEND account, a verification email has been sent."
+      );
+    } catch {
+      setResendMessage(
+        "If the email belongs to an unverified PoultryOps VEND account, a verification email has been sent."
+      );
+    } finally {
+      setResending(false);
+    }
+  }
+
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
 
     try {
       setLoading(true);
       setMessage("");
+      setNeedsVerification(false);
+      setResendMessage("");
 
       // ----------------------------------------------------------
       // Demo visitor capture
@@ -211,6 +255,20 @@ export default function LoginForm() {
     } catch (error: any) {
       console.error("Login error:", error);
 
+      const rawMessage = String(error?.message || "");
+
+      // Unconfirmed email — friendly VEND-aware message with resend.
+      // Farm-user and POGP behaviour is otherwise unchanged.
+      if (
+        rawMessage.toLowerCase().includes("email not confirmed") ||
+        rawMessage.toLowerCase().includes("email is not confirmed") ||
+        rawMessage.toLowerCase().includes("not confirmed")
+      ) {
+        setNeedsVerification(true);
+        setMessage("Please verify your email before logging in.");
+        return;
+      }
+
       setMessage(
         error?.message ||
           "Invalid login credentials"
@@ -335,10 +393,40 @@ export default function LoginForm() {
           : "Login"}
       </button>
 
+      {verified && (
+        <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+          Email verified successfully. You can now log in.
+        </p>
+      )}
+
+      {verificationError && (
+        <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+          We couldn&apos;t complete email verification. Please try the
+          verification link again or request a new verification email.
+        </p>
+      )}
+
       {message && (
         <p className="text-sm text-red-500">
           {message}
         </p>
+      )}
+
+      {needsVerification && (
+        <div className="rounded-lg border border-blue-100 bg-blue-50/60 p-3">
+          <button
+            type="button"
+            onClick={handleResendVerification}
+            disabled={resending}
+            className="text-sm font-semibold text-blue-700 hover:underline disabled:opacity-60"
+          >
+            {resending ? "Sending..." : "Resend verification email"}
+          </button>
+
+          {resendMessage && (
+            <p className="mt-2 text-sm text-slate-600">{resendMessage}</p>
+          )}
+        </div>
       )}
     </form>
   );

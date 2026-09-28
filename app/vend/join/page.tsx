@@ -21,6 +21,8 @@ const PRODUCTION_APP_URL = "https://poultry.trueops.app";
 type RegistrationResult = {
   success: boolean;
   error?: string;
+  message?: string;
+  verificationEmailSent?: boolean;
   vend?: {
     id: string;
     fullName: string;
@@ -41,6 +43,8 @@ export default function VendJoinPage() {
   const [email, setEmail] = useState("");
   const [territory, setTerritory] = useState("");
   const [pogpCode, setPogpCode] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -52,6 +56,31 @@ export default function VendJoinPage() {
 
     setError("");
     setResult(null);
+
+    // ---------------------------------------------------------
+    // Client-side password checks (mirrors server rules).
+    // PoultryOps authentication standard: minimum 8 characters.
+    // ---------------------------------------------------------
+    if (!password) {
+      setError("Password is required.");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+
+    if (!confirmPassword) {
+      setError("Please confirm your password.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -66,6 +95,8 @@ export default function VendJoinPage() {
           email,
           territory,
           pogpCode,
+          password,
+          confirmPassword,
         }),
       });
 
@@ -83,6 +114,8 @@ export default function VendJoinPage() {
       setEmail("");
       setTerritory("");
       setPogpCode("");
+      setPassword("");
+      setConfirmPassword("");
     } catch (err) {
       console.error("VEND registration error:", err);
 
@@ -353,11 +386,30 @@ export default function VendJoinPage() {
                   </div>
 
                   <Field
-                    label="POGP referral code"
+                    label="POGP referral code (optional)"
                     value={pogpCode}
                     onChange={setPogpCode}
-                    placeholder="e.g. POGP-001"
-                    hint="Leave blank if you were not recruited by a POGP."
+                    placeholder="e.g. POGP-002 or 002"
+                    hint="Enter the POGP code as POGP-002 or simply 002. Leave blank if you were not recruited by a POGP."
+                  />
+
+                  <Field
+                    label="Password"
+                    type="password"
+                    value={password}
+                    onChange={setPassword}
+                    placeholder="Minimum 8 characters"
+                    required
+                    hint="Password must be at least 8 characters."
+                  />
+
+                  <Field
+                    label="Confirm password"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={setConfirmPassword}
+                    placeholder="Re-enter your password"
+                    required
                   />
 
                   <button
@@ -439,6 +491,7 @@ function Field({
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         required={required}
+        minLength={type === "password" ? 8 : undefined}
         className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
       />
 
@@ -605,6 +658,23 @@ function SuccessCard({
         Your unique VEND code has been created. Use your referral link or QR
         code when introducing PoultryOps to poultry farmers.
       </p>
+
+      <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-left">
+        <p className="text-sm leading-6 text-slate-600">
+          We&apos;ve sent a verification email to your email address. Please
+          verify your email before logging in.
+        </p>
+
+        <p className="mt-2 text-sm leading-6 text-slate-600">
+          Already verified?{" "}
+          <a
+            href="/login"
+            className="font-bold text-blue-700 hover:underline"
+          >
+            Log in
+          </a>
+        </p>
+      </div>
 
       <div className="mt-7 grid gap-5 md:grid-cols-[1fr_230px] md:items-center">
         {/* VEND code */}

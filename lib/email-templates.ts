@@ -384,3 +384,55 @@ export function subscriptionRenewedTemplate(
     html: emailWrapper("Subscription Renewed", body),
   }
 }
+
+export function vendVerificationEmailTemplate(
+  fullName: string,
+  vendCode: string,
+  actionLink: string
+): { subject: string; html: string } {
+  const frontendUrl = process.env.FRONTEND_URL ?? ""
+  const name = fullName || "there"
+  const code = vendCode || "your VEND code"
+  const loginUrl = `${frontendUrl}/login`
+
+  const body = `
+    <p style="color:#374151;font-size:15px;margin:0 0 20px;line-height:1.6;">Hello ${name},</p>
+    <p style="color:#374151;font-size:15px;margin:0 0 20px;line-height:1.6;">
+      Welcome to the <strong style="color:#0d1b3e;">PoultryOps VEND Partner Portal</strong>!
+      Your VEND account has been created with code
+      <strong style="color:#0d1b3e;">${code}</strong>.
+    </p>
+    <p style="color:#374151;font-size:15px;margin:0 0 20px;line-height:1.6;">
+      Please verify your email address before logging in. Verification keeps
+      your account secure and confirms we can reach you about commissions
+      and referrals.
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center" style="padding-bottom:20px;">
+          <a href="${actionLink}"
+             style="display:inline-block;background:#2563eb;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:10px;">
+            Verify My Email &rarr;
+          </a>
+        </td>
+      </tr>
+    </table>
+    <p style="color:#6b7280;font-size:13px;margin:0 0 12px;line-height:1.7;">
+      If the button does not work, copy and paste this link into your browser:
+    </p>
+    <p style="color:#2563eb;font-size:12px;margin:0 0 20px;line-height:1.7;word-break:break-all;">
+      <a href="${actionLink}" style="color:#2563eb;text-decoration:underline;">${actionLink}</a>
+    </p>
+    <p style="color:#374151;font-size:15px;margin:0 0 20px;line-height:1.6;">
+      After verification you can log in to your VEND Portal here:
+      <a href="${loginUrl}" style="color:#2563eb;text-decoration:none;font-weight:700;">${loginUrl}</a>
+    </p>
+    <p style="color:#6b7280;font-size:13px;margin:0;line-height:1.7;">
+      If you did not create this account, you can safely ignore this email.
+    </p>`
+
+  return {
+    subject: "✅ Verify your PoultryOps VEND email",
+    html: emailWrapper("Verify Your Email", body),
+  }
+}

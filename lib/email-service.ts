@@ -24,6 +24,7 @@ import {
   paymentReceivedTemplate,
   subscriptionActivatedTemplate,
   subscriptionRenewedTemplate,
+  vendVerificationEmailTemplate,
 } from "@/lib/email-templates"
 
 // ============================================================
@@ -359,4 +360,75 @@ export async function sendSubscriptionRenewedEmail(
       renewalDate,
     }
   )
+}
+
+/**
+ * Sends the VEND email-verification message.
+ * Transactional — resendable, no permanent one-time block.
+ *
+ * Records email_events "vend_verification" only after a
+ * successful send — never before.
+ */
+export async function sendVendVerificationEmail(
+  userId: string,
+  email: string,
+  fullName: string,
+  vendCode: string,
+  actionLink: string
+): Promise<void> {
+  const { subject, html } = vendVerificationEmailTemplate(
+    fullName,
+    vendCode,
+    actionLink
+  )
+
+  console.log("[VEND VERIFICATION EMAIL] Sending verification:", {
+    email,
+    vendCode,
+  })
+
+  await dispatchEmail(email, subject, html)
+
+  await recordEmailEvent(userId, "vend_verification", email, {
+    vendCode,
+  })
+
+  console.log(
+    `[VEND VERIFICATION EMAIL] Successfully handed to Resend for ${email}`
+  )
+}
+
+/**
+ * Returns milliseconds since the most recent successful
+ * "vend_verification" email event for the user, or null
+ * when no such event exists.
+ *
+ * Used for a short resend cooldown — verification must
+ * stay resendable, so emailAlreadySent() is not suitable.
+ */
+export async function msSinceLastVendVerificationEmail(
+  userId: string
+): Promise<number | null> {
+  const supabase = getSupabase()
+
+  const { data, error } = await supabase
+    .from("email_events")
+    .select("sent_at")
+    .eq("user_id", userId)
+    .eq("event_type", "vend_verification")
+    .order("sent_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (error) {
+    throw error
+  }
+
+  if (!data?.sent_at) return null
+
+  const sentAt = new Date(data.sent_at).getTime()
+
+  if (Number.isNaN(sentAt)) return null
+
+  return Date.now() - sentAt
 }

@@ -6,7 +6,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useCurrentFarm } from "@/hooks/useCurrentFarm";
 import { useEggProduction } from "@/hooks/useEggProduction";
 
-import { getFarmFlocks } from "@/lib/flocks";
+import {
+  getFarmFlocks,
+  getAvailableBirds,
+  getFlockAvailableBirds,
+} from "@/lib/flocks";
 
 import { canEdit } from "@/lib/permissions/governance";
 
@@ -47,6 +51,12 @@ export default function EggsPage() {
 
   const [flocks, setFlocks] =
     useState<any[]>([]);
+
+  const [availableBirds, setAvailableBirds] =
+    useState(0);
+
+  const [availableBirdsLoading, setAvailableBirdsLoading] =
+    useState(false);
 
   const {
     records,
@@ -98,6 +108,55 @@ export default function EggsPage() {
 
     load();
   }, [farmId]);
+
+  /*
+   * Load available birds for the current
+   * Egg Production context.
+   *
+   * All Flocks:
+   *   Uses farm-wide available birds.
+   *
+   * Specific flock:
+   *   Uses the existing flock-level
+   *   Available Birds calculation.
+   *
+   * This does not alter any existing
+   * flock or dashboard calculations.
+   */
+  useEffect(() => {
+    async function loadAvailableBirds() {
+      if (!farmId) {
+        setAvailableBirds(0);
+        return;
+      }
+
+      setAvailableBirdsLoading(true);
+
+      try {
+        const value =
+          selectedFlockId === "all"
+            ? await getAvailableBirds(farmId)
+            : await getFlockAvailableBirds(
+                selectedFlockId
+              );
+
+        setAvailableBirds(
+          Math.max(0, Number(value) || 0)
+        );
+      } catch (error) {
+        console.error(
+          "Failed to load available birds:",
+          error
+        );
+
+        setAvailableBirds(0);
+      } finally {
+        setAvailableBirdsLoading(false);
+      }
+    }
+
+    loadAvailableBirds();
+  }, [farmId, selectedFlockId]);
 
   /*
    * Apply date range + flock filter.
@@ -224,6 +283,51 @@ export default function EggsPage() {
   ]);
 
   /*
+   * Production performance.
+   *
+   * Production Rate =
+   * Eggs Collected / Available Birds × 100
+   *
+   * The rate uses the same selected
+   * period + flock context as the
+   * Egg Production KPIs.
+   */
+  const performance = useMemo(() => {
+    const eggsCollected =
+      Number(kpiValues.eggsCollected) || 0;
+
+    const crackedEggs =
+      Number(kpiValues.crackedEggs) || 0;
+
+    const birds =
+      Math.max(
+        0,
+        Number(availableBirds) || 0
+      );
+
+    const productionRate =
+      birds > 0
+        ? (eggsCollected / birds) * 100
+        : 0;
+
+    const crackedRate =
+      eggsCollected > 0
+        ? (crackedEggs / eggsCollected) * 100
+        : 0;
+
+    return {
+      eggsCollected,
+      crackedEggs,
+      birds,
+      productionRate,
+      crackedRate,
+    };
+  }, [
+    kpiValues,
+    availableBirds,
+  ]);
+
+  /*
    * Pagination.
    */
   const totalItems =
@@ -314,6 +418,128 @@ export default function EggsPage() {
         <h1 className="text-2xl font-bold text-slate-900">
           Egg Production
         </h1>
+
+        {/* Production Performance */}
+        <div
+          className="
+            rounded-2xl
+            border
+            border-slate-200
+            bg-white
+            p-5
+            shadow-sm
+          "
+        >
+          <div
+            className="
+              flex
+              flex-col
+              gap-5
+              lg:flex-row
+              lg:items-center
+              lg:justify-between
+            "
+          >
+            {/* Performance heading */}
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <div
+                  className="
+                    flex
+                    h-9
+                    w-9
+                    shrink-0
+                    items-center
+                    justify-center
+                    rounded-xl
+                    bg-blue-50
+                    text-blue-600
+                  "
+                >
+                  <TrendingUp size={18} />
+                </div>
+
+                <div>
+                  <h2 className="text-sm font-bold text-slate-900">
+                    Production Performance
+                  </h2>
+
+                  <p className="text-xs text-slate-500">
+                    Production efficiency for the selected period
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Production rate */}
+            <div className="lg:min-w-[220px] lg:text-right">
+              <div className="flex items-end justify-between lg:justify-end lg:gap-3">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Production Rate
+                </span>
+
+                <span className="text-2xl font-bold text-slate-900">
+                  {availableBirdsLoading
+                    ? "—"
+                    : `${performance.productionRate.toFixed(1)}%`}
+                </span>
+              </div>
+
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className="h-full rounded-full bg-blue-600 transition-all"
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      Math.max(
+                        0,
+                        performance.productionRate
+                      )
+                    )}%`,
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Performance context */}
+          <div
+            className="
+              mt-5
+              flex
+              flex-col
+              gap-3
+              border-t
+              border-slate-100
+              pt-4
+              sm:flex-row
+              sm:items-center
+              sm:justify-between
+            "
+          >
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-tight text-slate-500">
+                Available Birds
+              </p>
+
+              <p className="mt-1 text-lg font-bold text-slate-900">
+                {availableBirdsLoading
+                  ? "—"
+                  : performance.birds.toLocaleString()}
+              </p>
+            </div>
+
+            <div className="sm:text-right">
+              <p className="text-[11px] font-semibold uppercase tracking-tight text-slate-500">
+                Cracked Rate
+              </p>
+
+              <p className="mt-1 text-lg font-bold text-slate-900">
+                {performance.crackedRate.toFixed(1)}%
+              </p>
+            </div>
+          </div>
+        </div>
 
         {/* KPI Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

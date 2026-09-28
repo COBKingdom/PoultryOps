@@ -1,19 +1,164 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { sendVendVerificationEmail } from "@/lib/email-service";
+
+const GLOBAL_EMAIL_TAKEN_MESSAGE =
+  "This email address is already registered with PoultryOps. Please use another email address.";
+
+// PoultryOps authentication standard: minimum 8 characters
+// (consistent with app/reset-password/page.tsx).
+const MIN_PASSWORD_LENGTH = 8;
 
 function normalizeEmail(value: string) {
   return value.trim().toLowerCase();
-}
-
-function normalizeCode(value: string) {
-  return value.trim().toUpperCase();
 }
 
 function normalizePhone(value: string) {
   return value.trim().replace(/\s+/g, "");
 }
 
+/*
+ * Forgiving POGP code normalization (authoritative, server-side).
+ *
+ * Accepts:
+ *   POGP-002 -> POGP-002
+ *   pogp-002 -> POGP-002
+ *   002      -> POGP-002
+ *   2        -> POGP-002
+ *   " 002 "  -> POGP-002
+ */
+function normalizePogpCode(rawValue: string) {
+  const cleaned = String(rawValue || "")
+    .trim()
+    .toUpperCase();
+
+  if (!cleaned) return "";
+
+  let numeric = cleaned;
+
+  if (numeric.startsWith("POGP")) {
+    numeric = numeric.slice(4);
+  }
+
+  numeric = numeric.replace(/^[\s\-_–—:]+/, "").trim();
+  numeric = numeric.replace(/\s+/g, "");
+
+  if (!/^\d+$/.test(numeric)) {
+    return cleaned.startsWith("POGP-")
+      ? cleaned
+      : `POGP-${cleaned}`;
+  }
+
+  const num = parseInt(numeric, 10);
+
+  if (!Number.isSafeInteger(num) || num < 1) return "";
+
+  return `POGP-${String(num).padStart(3, "0")}`;
+}
+
+/*
+ * Global email uniqueness check.
+ *
+ * Covers the PoultryOps identity/application-user architecture:
+ * - profiles (farm owners, farm staff, POGP, VEND, any app user)
+ * - vend_partners
+ * - pogp_partners
+ * - Supabase Auth users (paginated scan; Auth has no get-by-email API)
+ *
+ * Returns true when the email is already taken anywhere.
+ * Never reveals which type of account owns the email.
+ */
+async function isEmailTakenGlobally(email: string): Promise<boolean> {
+  const { data: profileMatch, error: profileError } = await supabaseAdmin
+    .from("profiles")
+    .select("id")
+    .eq("email", email)
+    .maybeSingle();
+
+  if (profileError) {
+    throw profileError;
+  }
+
+  if (profileMatch) return true;
+
+  const { data: vendMatch, error: vendError } = await supabaseAdmin
+    .from("vend_partners")
+    .select("id")
+    .eq("email", email)
+    .maybeSingle();
+
+  if (vendError) {
+    throw vendError;
+  }
+
+  if (vendMatch) return true;
+
+  const { data: pogpMatch, error: pogpError } = await supabaseAdmin
+    .from("pogp_partners")
+    .select("id")
+    .eq("email", email)
+    .maybeSingle();
+
+  if (pogpError) {
+    throw pogpError;
+  }
+
+  if (pogpMatch) return true;
+
+  // Supabase Auth check — scan paginated user list for a
+  // case-insensitive email match.
+  const perPage = 1000;
+  let page = 1;
+
+  for (let i = 0; i < 20; i++) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({
+      page,
+      perPage,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    const users = data?.users || [];
+
+    if (
+      users.some(
+        (u) =>
+          String(u.email || "")
+            .trim()
+            .toLowerCase() === email
+      )
+    ) {
+      return true;
+    }
+
+    if (users.length < perPage) break;
+
+    page += 1;
+  }
+
+  return false;
+}
+
+async function rollbackAuthUser(userId: string) {
+  try {
+    // Remove the profile row if it was created before the failure.
+    await supabaseAdmin.from("profiles").delete().eq("id", userId);
+
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
+
+    if (error) {
+      console.error("VEND rollback Auth deletion failed:", error);
+    }
+  } catch (error) {
+    console.error("VEND rollback exception:", error);
+  }
+}
+
 export async function POST(request: Request) {
+  let createdUserId: string | null = null;
+
   try {
     const body = await request.json();
 
@@ -21,9 +166,9 @@ export async function POST(request: Request) {
     const phone = normalizePhone(String(body.phone || ""));
     const email = normalizeEmail(String(body.email || ""));
     const territory = String(body.territory || "").trim();
-    const pogpCode = body.pogpCode
-      ? normalizeCode(String(body.pogpCode))
-      : "";
+    const password = String(body.password || "");
+    const confirmPassword = String(body.confirmPassword || "");
+    const rawPogpCode = String(body.pogpCode || "");
 
     // ---------------------------------------------------------
     // Basic validation
@@ -57,9 +202,46 @@ export async function POST(request: Request) {
     }
 
     // ---------------------------------------------------------
-    // Validate optional recruiting POGP
+    // Password validation (never log or store the password)
+    // ---------------------------------------------------------
+    if (!password) {
+      return NextResponse.json(
+        { error: "Password is required." },
+        { status: 400 }
+      );
+    }
+
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      return NextResponse.json(
+        {
+          error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!confirmPassword) {
+      return NextResponse.json(
+        { error: "Please confirm your password." },
+        { status: 400 }
+      );
+    }
+
+    if (password !== confirmPassword) {
+      return NextResponse.json(
+        { error: "Passwords do not match." },
+        { status: 400 }
+      );
+    }
+
+    // ---------------------------------------------------------
+    // Normalize + validate optional recruiting POGP (authoritative)
     // ---------------------------------------------------------
     let recruitedByPogpId: string | null = null;
+
+    const pogpCode = rawPogpCode.trim()
+      ? normalizePogpCode(rawPogpCode)
+      : "";
 
     if (pogpCode) {
       const { data: pogp, error: pogpError } = await supabaseAdmin
@@ -82,77 +264,50 @@ export async function POST(request: Request) {
         return NextResponse.json(
           {
             error:
-              "The POGP referral code is invalid or inactive. Please check the code and try again.",
+              "POGP code not found. Please check the code and try again.",
           },
           { status: 400 }
         );
       }
 
       recruitedByPogpId = pogp.id;
+    } else if (rawPogpCode.trim() && !pogpCode) {
+      return NextResponse.json(
+        {
+          error:
+            "POGP code not found. Please check the code and try again.",
+        },
+        { status: 400 }
+      );
     }
 
     // ---------------------------------------------------------
-    // Prevent duplicate email
+    // Global email uniqueness (Auth + profiles + partner records)
     // ---------------------------------------------------------
-    const { data: existingEmail, error: emailLookupError } =
-      await supabaseAdmin
-        .from("vend_partners")
-        .select("id, vend_code, full_name, status")
-        .eq("email", email)
-        .maybeSingle();
-
-    if (emailLookupError) {
-      console.error("VEND email lookup error:", emailLookupError);
+    try {
+      if (await isEmailTakenGlobally(email)) {
+        return NextResponse.json(
+          { error: GLOBAL_EMAIL_TAKEN_MESSAGE },
+          { status: 409 }
+        );
+      }
+    } catch (emailLookupError) {
+      console.error("VEND global email lookup error:", emailLookupError);
 
       return NextResponse.json(
-        { error: "Unable to check existing VEND records." },
+        { error: "Unable to check existing PoultryOps records." },
         { status: 500 }
       );
     }
 
-    if (existingEmail) {
-      return NextResponse.json(
-        {
-          error: "A VEND partner with this email already exists.",
-          vendCode: existingEmail.vend_code,
-          existing: true,
-        },
-        { status: 409 }
-      );
-    }
-
     // ---------------------------------------------------------
-    // Prevent duplicate phone
+    // NOTE: phone uniqueness is intentionally NOT enforced.
+    // The same number may exist elsewhere in different formats.
     // ---------------------------------------------------------
-    const { data: existingPhone, error: phoneLookupError } =
-      await supabaseAdmin
-        .from("vend_partners")
-        .select("id, vend_code, full_name, status")
-        .eq("phone", phone)
-        .maybeSingle();
-
-    if (phoneLookupError) {
-      console.error("VEND phone lookup error:", phoneLookupError);
-
-      return NextResponse.json(
-        { error: "Unable to check existing VEND records." },
-        { status: 500 }
-      );
-    }
-
-    if (existingPhone) {
-      return NextResponse.json(
-        {
-          error: "A VEND partner with this phone number already exists.",
-          vendCode: existingPhone.vend_code,
-          existing: true,
-        },
-        { status: 409 }
-      );
-    }
 
     // ---------------------------------------------------------
     // Generate the next VEND number atomically
+    // (preserves existing VEND number/code generation logic)
     // ---------------------------------------------------------
     const { data: sequenceData, error: sequenceError } =
       await supabaseAdmin.rpc("get_next_vend_number");
@@ -187,11 +342,85 @@ export async function POST(request: Request) {
     const vendCode = `VEND-${String(nextNumber).padStart(3, "0")}`;
 
     // ---------------------------------------------------------
-    // Create VEND partner
+    // Create Supabase Auth user (UNVERIFIED)
+    // ---------------------------------------------------------
+    const { data: authData, error: authError } =
+      await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: false,
+        user_metadata: {
+          full_name: fullName,
+          account_type: "vend",
+        },
+      });
+
+    if (authError || !authData.user) {
+      const message = String(authError?.message || "").toLowerCase();
+
+      if (
+        message.includes("already registered") ||
+        message.includes("already exists") ||
+        message.includes("duplicate") ||
+        message.includes("already been registered")
+      ) {
+        return NextResponse.json(
+          { error: GLOBAL_EMAIL_TAKEN_MESSAGE },
+          { status: 409 }
+        );
+      }
+
+      console.error("VEND Auth creation error:", authError);
+
+      return NextResponse.json(
+        {
+          error:
+            "Unable to create your VEND login account. Please try again.",
+        },
+        { status: 500 }
+      );
+    }
+
+    createdUserId = authData.user.id;
+
+    // ---------------------------------------------------------
+    // Create profiles record
+    // ---------------------------------------------------------
+    const { error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .insert({
+        id: createdUserId,
+        email,
+        full_name: fullName,
+        farm_id: null,
+        role: "vend",
+        status: "active",
+        must_change_password: false,
+      });
+
+    if (profileError) {
+      console.error("VEND profile creation error:", profileError);
+
+      await rollbackAuthUser(createdUserId);
+      createdUserId = null;
+
+      return NextResponse.json(
+        {
+          error:
+            "Unable to complete your VEND registration. Please try again.",
+        },
+        { status: 500 }
+      );
+    }
+
+    // ---------------------------------------------------------
+    // Create vend_partners record (preserves profile_id link +
+    // existing POGP attribution)
     // ---------------------------------------------------------
     const { data: vend, error: insertError } = await supabaseAdmin
       .from("vend_partners")
       .insert({
+        profile_id: createdUserId,
         full_name: fullName,
         email,
         phone,
@@ -208,6 +437,9 @@ export async function POST(request: Request) {
     if (insertError) {
       console.error("VEND creation error:", insertError);
 
+      await rollbackAuthUser(createdUserId);
+      createdUserId = null;
+
       return NextResponse.json(
         {
           error:
@@ -218,12 +450,57 @@ export async function POST(request: Request) {
     }
 
     // ---------------------------------------------------------
-    // Success
+    // Success (account remains UNVERIFIED until email verification)
+    //
+    // Verification email failure must NOT roll back the valid
+    // VEND account — the resend endpoint allows recovery.
     // ---------------------------------------------------------
+    let verificationEmailSent = false;
+
+    try {
+      const frontendUrl = (
+        process.env.FRONTEND_URL || "https://poultry.trueops.app"
+      ).replace(/\/$/, "");
+
+      const { data: linkData, error: linkError } =
+        await supabaseAdmin.auth.admin.generateLink({
+          type: "signup",
+          email,
+          password,
+          options: {
+            redirectTo: `${frontendUrl}/auth/callback?next=/login?verified=1`,
+          },
+        });
+
+      const actionLink = linkData?.properties?.action_link;
+
+      if (linkError || !actionLink) {
+        console.error("VEND verification link error:", linkError);
+      } else {
+        await sendVendVerificationEmail(
+          createdUserId,
+          email,
+          fullName,
+          vendCode,
+          actionLink
+        );
+
+        verificationEmailSent = true;
+      }
+    } catch (verificationError) {
+      console.error(
+        "VEND verification email error:",
+        verificationError
+      );
+    }
+
     return NextResponse.json(
       {
         success: true,
-        message: "VEND registration successful.",
+        message: verificationEmailSent
+          ? "VEND registration successful."
+          : "VEND registration successful, but the verification email could not be sent. Please request a new verification email and try again.",
+        verificationEmailSent,
         vend: {
           id: vend.id,
           fullName: vend.full_name,
@@ -243,6 +520,10 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     console.error("VEND join API error:", error);
+
+    if (createdUserId) {
+      await rollbackAuthUser(createdUserId);
+    }
 
     return NextResponse.json(
       {
