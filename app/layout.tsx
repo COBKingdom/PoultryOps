@@ -1,17 +1,11 @@
 import type { Metadata } from "next";
-
-import {
-  Geist,
-  Geist_Mono,
-} from "next/font/google";
-
+import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 
 import "./globals.css";
 
 import { AuthProvider } from "@/contexts/AuthContext";
 import { PermissionProvider } from "@/lib/permissions";
-
 import DemoRouteGuard from "@/components/layout/demo-route-guard";
 
 const geistSans = Geist({
@@ -41,7 +35,6 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-
         <Script
           src="https://checkout.flutterwave.com/v3.js"
           strategy="afterInteractive"
@@ -54,7 +47,6 @@ export default function RootLayout({
             </DemoRouteGuard>
           </PermissionProvider>
         </AuthProvider>
-
       </body>
     </html>
   );
