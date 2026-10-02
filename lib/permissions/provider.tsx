@@ -10,10 +10,12 @@ import React, {
 
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
+
 import {
   PermissionCode,
   Role,
   ROLES,
+  PERMISSIONS,
 } from "./constants";
 
 interface PermissionContextValue {
@@ -30,6 +32,9 @@ interface PermissionContextValue {
 
   // Platform administration
   isPlatformAdmin: boolean;
+
+  // Demo mode
+  isDemoMode: boolean;
 
   // State
   loading: boolean;
@@ -63,8 +68,29 @@ interface PermissionState {
   role: Role | null;
   permissions: Set<PermissionCode>;
   isPlatformAdmin: boolean;
+  isDemoMode: boolean;
   loading: boolean;
   error: Error | null;
+}
+
+const DEMO_FARM_CODE = "DEMO-001";
+
+const DEMO_BLOCKED_PERMISSIONS = new Set<PermissionCode>([
+  PERMISSIONS.SETTINGS_VIEW,
+  PERMISSIONS.TEAM_VIEW,
+  PERMISSIONS.MIGRATION_VIEW,
+]);
+
+function isDemoMutationPermission(
+  permission: PermissionCode
+): boolean {
+  const value = String(permission);
+
+  return (
+    value.endsWith("_CREATE") ||
+    value.endsWith("_EDIT") ||
+    value.endsWith("_DELETE")
+  );
 }
 
 export function PermissionProvider({
@@ -81,9 +107,35 @@ export function PermissionProvider({
       role: null,
       permissions: new Set(),
       isPlatformAdmin: false,
+      isDemoMode: false,
       loading: true,
       error: null,
     });
+
+  async function detectDemoMode(
+    farmId?: string | null
+  ): Promise<boolean> {
+    if (!farmId) {
+      return false;
+    }
+
+    try {
+      const { data: farm } = await supabase
+        .from("farms")
+        .select("farm_code")
+        .eq("id", farmId)
+        .maybeSingle();
+
+      return farm?.farm_code === DEMO_FARM_CODE;
+    } catch (error) {
+      console.error(
+        "Demo mode detection error:",
+        error
+      );
+
+      return false;
+    }
+  }
 
   useEffect(() => {
     if (authLoading) {
@@ -95,6 +147,7 @@ export function PermissionProvider({
         role: null,
         permissions: new Set(),
         isPlatformAdmin: false,
+        isDemoMode: false,
         loading: false,
         error: null,
       });
@@ -139,6 +192,11 @@ export function PermissionProvider({
 
         const data = await response.json();
 
+        const demoMode =
+          await detectDemoMode(
+            profile.farm_id
+          );
+
         setState({
           role: data.role,
           permissions: new Set(
@@ -146,6 +204,7 @@ export function PermissionProvider({
           ),
           isPlatformAdmin:
             Boolean(data.isPlatformAdmin),
+          isDemoMode: demoMode,
           loading: false,
           error: null,
         });
@@ -171,7 +230,11 @@ export function PermissionProvider({
     };
 
     loadPermissions();
-  }, [user, profile, authLoading]);
+  }, [
+    user,
+    profile,
+    authLoading,
+  ]);
 
   const refreshPermissions =
     useCallback(async () => {
@@ -215,6 +278,11 @@ export function PermissionProvider({
 
         const data = await response.json();
 
+        const demoMode =
+          await detectDemoMode(
+            profile.farm_id
+          );
+
         setState({
           role: data.role,
           permissions: new Set(
@@ -222,6 +290,7 @@ export function PermissionProvider({
           ),
           isPlatformAdmin:
             Boolean(data.isPlatformAdmin),
+          isDemoMode: demoMode,
           loading: false,
           error: null,
         });
@@ -247,18 +316,53 @@ export function PermissionProvider({
     }, [user, profile]);
 
   const can = useCallback(
-    (permission: PermissionCode): boolean => {
+    (
+      permission: PermissionCode
+    ): boolean => {
       if (!state.role) {
         return false;
       }
 
-      if (state.role === ROLES.OWNER) {
+      /*
+       * DEMO MODE
+       *
+       * Demo users can VIEW the application,
+       * but cannot create, edit, delete, access
+       * settings, manage team members or migrate data.
+       */
+      if (state.isDemoMode) {
+        if (
+          DEMO_BLOCKED_PERMISSIONS.has(
+            permission
+          )
+        ) {
+          return false;
+        }
+
+        if (
+          isDemoMutationPermission(
+            permission
+          )
+        ) {
+          return false;
+        }
+      }
+
+      if (
+        state.role === ROLES.OWNER
+      ) {
         return true;
       }
 
-      return state.permissions.has(permission);
+      return state.permissions.has(
+        permission
+      );
     },
-    [state.role, state.permissions]
+    [
+      state.role,
+      state.permissions,
+      state.isDemoMode,
+    ]
   );
 
   const canAny = useCallback(
@@ -269,15 +373,34 @@ export function PermissionProvider({
         return false;
       }
 
-      if (state.role === ROLES.OWNER) {
+      if (
+        state.isDemoMode
+      ) {
+        return permissions.some(
+          (permission) =>
+            can(permission)
+        );
+      }
+
+      if (
+        state.role === ROLES.OWNER
+      ) {
         return true;
       }
 
-      return permissions.some((permission) =>
-        state.permissions.has(permission)
+      return permissions.some(
+        (permission) =>
+          state.permissions.has(
+            permission
+          )
       );
     },
-    [state.role, state.permissions]
+    [
+      state.role,
+      state.permissions,
+      state.isDemoMode,
+      can,
+    ]
   );
 
   const canAll = useCallback(
@@ -288,15 +411,34 @@ export function PermissionProvider({
         return false;
       }
 
-      if (state.role === ROLES.OWNER) {
+      if (
+        state.isDemoMode
+      ) {
+        return permissions.every(
+          (permission) =>
+            can(permission)
+        );
+      }
+
+      if (
+        state.role === ROLES.OWNER
+      ) {
         return true;
       }
 
-      return permissions.every((permission) =>
-        state.permissions.has(permission)
+      return permissions.every(
+        (permission) =>
+          state.permissions.has(
+            permission
+          )
       );
     },
-    [state.role, state.permissions]
+    [
+      state.role,
+      state.permissions,
+      state.isDemoMode,
+      can,
+    ]
   );
 
   const hasRole = useCallback(
@@ -319,9 +461,14 @@ export function PermissionProvider({
     state.role === ROLES.STAFF;
 
   const getPermissions =
-    useCallback((): PermissionCode[] => {
-      return Array.from(state.permissions);
-    }, [state.permissions]);
+    useCallback(
+      (): PermissionCode[] => {
+        return Array.from(
+          state.permissions
+        );
+      },
+      [state.permissions]
+    );
 
   const value: PermissionContextValue = {
     can,
@@ -333,15 +480,20 @@ export function PermissionProvider({
     isStaffOrHigher,
     isPlatformAdmin:
       state.isPlatformAdmin,
+    isDemoMode:
+      state.isDemoMode,
     loading:
-      state.loading || authLoading,
+      state.loading ||
+      authLoading,
     error: state.error,
     refreshPermissions,
     getPermissions,
   };
 
   return (
-    <PermissionContext.Provider value={value}>
+    <PermissionContext.Provider
+      value={value}
+    >
       {children}
     </PermissionContext.Provider>
   );

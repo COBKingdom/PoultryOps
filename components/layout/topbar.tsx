@@ -9,7 +9,10 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { Eye } from "lucide-react";
+
 import { supabase } from "@/lib/supabase";
+import { usePermissions } from "@/lib/permissions";
 
 type Props = {
   email?: string;
@@ -22,6 +25,10 @@ export default function Topbar({
 }: Props) {
   const router =
     useRouter();
+
+  const {
+    isDemoMode,
+  } = usePermissions();
 
   const [menuOpen, setMenuOpen] =
     useState(false);
@@ -91,37 +98,34 @@ export default function Topbar({
   return (
     <div
       className="
-        bg-white
-        border-b
-        border-slate-200
-        px-4
+        sticky top-0 z-20
+        flex items-center justify-between
+        border-b border-slate-200
+        bg-white px-4 py-4
         md:px-6
-        py-4
-        flex
-        items-center
-        justify-between
-        sticky
-        top-0
-        z-20
       "
     >
+
       <div>
 
-        <p
-          className="
-            text-sm
-            text-slate-500
-          "
-        >
-          {greeting}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-sm text-slate-500">
+            {greeting}
+          </p>
+
+          {isDemoMode && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-1 text-[10px] font-bold tracking-wide text-blue-700">
+              <Eye size={11} />
+              DEMO
+            </span>
+          )}
+        </div>
 
         <h1
           className="
-            text-2xl
-            md:text-3xl
-            font-bold
+            text-2xl font-bold
             text-slate-900
+            md:text-3xl
           "
         >
           {farmName ||
@@ -130,9 +134,8 @@ export default function Topbar({
 
         <p
           className="
-            text-xs
+            mt-1 text-xs
             text-slate-400
-            mt-1
           "
         >
           {today}
@@ -143,35 +146,22 @@ export default function Topbar({
       <div
         ref={menuRef}
         className="
-          flex
-          items-center
+          relative flex items-center
           gap-4
-          relative
         "
       >
+
         <div
           className="
-            hidden
+            hidden text-right
             lg:block
-            text-right
           "
         >
-          <p
-            className="
-              text-xs
-              text-slate-500
-            "
-          >
+          <p className="text-xs text-slate-500">
             Signed in as
           </p>
 
-          <p
-            className="
-              text-sm
-              font-medium
-              text-slate-900
-            "
-          >
+          <p className="text-sm font-medium text-slate-900">
             {email}
           </p>
         </div>
@@ -183,18 +173,12 @@ export default function Topbar({
             )
           }
           className="
-            w-12
-            h-12
-            rounded-full
-            bg-blue-600
-            text-white
-            flex
-            items-center
-            justify-center
-            font-semibold
-            text-lg
+            flex h-12 w-12
+            items-center justify-center
+            rounded-full bg-blue-600
+            text-lg font-semibold
+            text-white transition
             hover:bg-blue-700
-            transition
           "
         >
           {email
@@ -205,46 +189,45 @@ export default function Topbar({
         {menuOpen && (
           <div
             className="
-              absolute
-              right-0
-              top-14
-              w-64
-              bg-white
-              border
-              border-slate-200
-              rounded-2xl
-              shadow-xl
+              absolute right-0 top-14
+              z-50 w-64
               overflow-hidden
-              z-50
+              rounded-2xl border
+              border-slate-200
+              bg-white
+              shadow-xl
             "
           >
 
-            <div
-              className="
-                px-4
-                py-3
-                border-b
-                border-slate-100
-              "
-            >
-              <p
-                className="
-                  text-xs
-                  text-slate-500
-                "
-              >
+            <div className="border-b border-slate-100 px-4 py-3">
+              <p className="text-xs text-slate-500">
                 Signed in as
               </p>
 
-              <p
-                className="
-                  text-sm
-                  font-medium
-                "
-              >
+              <p className="text-sm font-medium">
                 {email}
               </p>
             </div>
+
+            {isDemoMode && (
+              <div className="border-b border-blue-100 bg-blue-50 px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <Eye
+                    size={15}
+                    className="text-blue-600"
+                  />
+
+                  <span className="text-xs font-bold text-blue-700">
+                    DEMO MODE
+                  </span>
+                </div>
+
+                <p className="mt-1 text-xs text-blue-600">
+                  Settings and account
+                  management are disabled.
+                </p>
+              </div>
+            )}
 
             <Link
               href="/profile"
@@ -252,60 +235,51 @@ export default function Topbar({
                 setMenuOpen(false)
               }
               className="
-                block
-                px-4
-                py-3
+                block px-4 py-3
                 hover:bg-slate-50
               "
             >
               Profile
             </Link>
 
-            <Link
-              href="/settings"
-              onClick={() =>
-                setMenuOpen(false)
-              }
-              className="
-                block
-                px-4
-                py-3
-                hover:bg-slate-50
-              "
-            >
-              Settings
-            </Link>
+            {!isDemoMode && (
+              <>
+                <Link
+                  href="/settings"
+                  onClick={() =>
+                    setMenuOpen(false)
+                  }
+                  className="
+                    block px-4 py-3
+                    hover:bg-slate-50
+                  "
+                >
+                  Settings
+                </Link>
 
-            <Link
-              href="/settings/subscription"
-              onClick={() =>
-                setMenuOpen(false)
-              }
-              className="
-                block
-                px-4
-                py-3
-                hover:bg-slate-50
-              "
-            >
-              Subscription
-            </Link>
+                <Link
+                  href="/settings/subscription"
+                  onClick={() =>
+                    setMenuOpen(false)
+                  }
+                  className="
+                    block px-4 py-3
+                    hover:bg-slate-50
+                  "
+                >
+                  Subscription
+                </Link>
+              </>
+            )}
 
-            <div
-              className="
-                border-t
-                border-slate-100
-              "
-            >
+            <div className="border-t border-slate-100">
               <button
                 onClick={
                   handleSignOut
                 }
                 className="
-                  w-full
+                  w-full px-4 py-3
                   text-left
-                  px-4
-                  py-3
                   text-red-600
                   hover:bg-red-50
                 "

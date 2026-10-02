@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import {
+  usePathname,
+  useRouter,
+} from "next/navigation";
 
 import { usePermissions } from "@/lib/permissions";
 import { PERMISSIONS } from "@/lib/permissions";
@@ -22,13 +25,11 @@ import {
   BarChart3,
   ChartColumn,
   Brain,
-  Settings,
-  Upload,
   User,
-  Users,
   LogOut,
   ShieldCheck,
   Handshake,
+  Eye,
 } from "lucide-react";
 
 type Props = {
@@ -40,12 +41,16 @@ export default function MobileSidebar({
   open,
   onClose,
 }: Props) {
-  const pathname = usePathname();
-  const router = useRouter();
+  const pathname =
+    usePathname();
+
+  const router =
+    useRouter();
 
   const {
     can,
     isPlatformAdmin,
+    isDemoMode,
   } = usePermissions();
 
   const operations = [
@@ -141,26 +146,6 @@ export default function MobileSidebar({
     },
   ];
 
-  const tools = [
-    {
-      name: "Migration",
-      href: "/migration",
-      icon: Upload,
-      permission:
-        PERMISSIONS.MIGRATION_VIEW,
-    },
-  ];
-
-  const team = [
-    {
-      name: "Team",
-      href: "/team",
-      icon: Users,
-      permission:
-        PERMISSIONS.TEAM_VIEW,
-    },
-  ];
-
   if (!open) {
     return null;
   }
@@ -190,22 +175,15 @@ export default function MobileSidebar({
 
         {/* Header */}
         <div className="border-b border-slate-800 p-5">
-
           <div className="flex items-center justify-between">
 
             <div className="flex items-center gap-3">
 
-              <div
-                className="
-                  flex h-10 w-10 items-center justify-center
-                  rounded-xl bg-blue-600 font-bold
-                "
-              >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 font-bold">
                 P
               </div>
 
               <div>
-
                 <h2 className="text-lg font-bold">
                   PoultryOps
                 </h2>
@@ -213,7 +191,6 @@ export default function MobileSidebar({
                 <p className="text-xs text-slate-400">
                   Poultry Farm Management
                 </p>
-
               </div>
 
             </div>
@@ -228,6 +205,18 @@ export default function MobileSidebar({
 
           </div>
 
+          {isDemoMode && (
+            <div className="mt-4 flex items-center gap-2 rounded-xl border border-blue-500/30 bg-blue-500/10 px-3 py-2">
+              <Eye
+                size={15}
+                className="text-blue-400"
+              />
+
+              <span className="text-xs font-semibold text-blue-300">
+                DEMO MODE
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Navigation */}
@@ -275,51 +264,32 @@ export default function MobileSidebar({
             onClose={onClose}
           />
 
-          <MenuSection
-            title="TOOLS"
-            items={tools.filter(
-              (item) =>
-                can(item.permission)
+          {isPlatformAdmin &&
+            !isDemoMode && (
+              <MenuSection
+                title="ADMINISTRATION"
+                items={[
+                  {
+                    name:
+                      "Admin Control Centre",
+                    href: "/admin",
+                    icon: ShieldCheck,
+                  },
+                  {
+                    name: "POGP",
+                    href: "/admin/pogp",
+                    icon: User,
+                  },
+                  {
+                    name: "VEND",
+                    href: "/admin/vend",
+                    icon: Handshake,
+                  },
+                ]}
+                pathname={pathname}
+                onClose={onClose}
+              />
             )}
-            pathname={pathname}
-            onClose={onClose}
-          />
-
-          <MenuSection
-            title="TEAM"
-            items={team.filter(
-              (item) =>
-                can(item.permission)
-            )}
-            pathname={pathname}
-            onClose={onClose}
-          />
-
-          {/* Platform Administration */}
-          {isPlatformAdmin && (
-            <MenuSection
-              title="ADMINISTRATION"
-              items={[
-                {
-                  name: "Admin Control Centre",
-                  href: "/admin",
-                  icon: ShieldCheck,
-                },
-                {
-                  name: "POGP",
-                  href: "/admin/pogp",
-                  icon: Users,
-                },
-                {
-                  name: "VEND",
-                  href: "/admin/vend",
-                  icon: Handshake,
-                },
-              ]}
-              pathname={pathname}
-              onClose={onClose}
-            />
-          )}
 
         </div>
 
@@ -334,17 +304,18 @@ export default function MobileSidebar({
             onClose={onClose}
           />
 
-          {can(
-            PERMISSIONS.SETTINGS_VIEW
-          ) && (
-            <MenuItem
-              pathname={pathname}
-              href="/settings"
-              name="Settings"
-              icon={Settings}
-              onClose={onClose}
-            />
-          )}
+          {!isDemoMode &&
+            can(
+              PERMISSIONS.SETTINGS_VIEW
+            ) && (
+              <MenuItem
+                pathname={pathname}
+                href="/settings"
+                name="Settings"
+                icon={User}
+                onClose={onClose}
+              />
+            )}
 
           <button
             onClick={handleSignOut}
@@ -362,7 +333,6 @@ export default function MobileSidebar({
           </button>
 
         </div>
-
       </aside>
     </>
   );
@@ -383,7 +353,6 @@ function MenuSection({
 
   return (
     <div>
-
       <p
         className="
           mb-2 text-xs font-semibold tracking-wider
@@ -394,7 +363,6 @@ function MenuSection({
       </p>
 
       <div className="space-y-1">
-
         {items.map(
           (item: any) => (
             <MenuItem
@@ -405,9 +373,7 @@ function MenuSection({
             />
           )
         )}
-
       </div>
-
     </div>
   );
 }
