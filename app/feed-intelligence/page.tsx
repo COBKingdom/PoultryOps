@@ -396,6 +396,9 @@ export default function FeedIntelligencePage() {
 
   const currency = farm?.currency || "NGN";
 
+  const panelClass =
+    "relative overflow-hidden rounded-xl border border-blue-100 bg-white shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)] before:absolute before:inset-x-0 before:top-0 before:h-[3px] before:bg-blue-500/85";
+
   if (authLoading || farmLoading) {
     return (
       <AppShell email={user?.email}>
@@ -418,7 +421,7 @@ export default function FeedIntelligencePage() {
     return (
       <AppShell email={user?.email}>
         <div className="flex min-h-[60vh] items-center justify-center">
-          <div className="max-w-md rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+          <div className={`${panelClass} max-w-md p-10 text-center`}>
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
               <Brain size={28} />
             </div>
@@ -443,7 +446,7 @@ export default function FeedIntelligencePage() {
           {/* Page header */}
           <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex items-start gap-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-blue-100 bg-blue-50 text-blue-600">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-white text-blue-600 shadow-[2px_3px_0_rgba(37,99,235,0.08)]">
                 <Brain size={27} strokeWidth={2} />
               </div>
 
@@ -463,7 +466,7 @@ export default function FeedIntelligencePage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 rounded-2xl border border-blue-100 bg-white px-4 py-3 shadow-sm">
+            <div className="relative flex items-center gap-3 overflow-hidden rounded-xl border border-blue-100 bg-white px-4 py-3 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-500">
                 <Sparkles size={20} />
               </div>
@@ -480,7 +483,7 @@ export default function FeedIntelligencePage() {
           </div>
 
           {/* Workspace navigation */}
-          <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm">
+          <div className="overflow-x-auto rounded-xl border border-blue-100 bg-white p-1.5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
             <div className="flex min-w-max items-center gap-1">
               <button
                 type="button"
@@ -520,7 +523,7 @@ export default function FeedIntelligencePage() {
               {/* Calculator */}
               <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.03fr)_minmax(420px,0.97fr)]">
                 {/* Input card */}
-                <section className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+                <section className={`${panelClass} overflow-hidden`}>
                   <div className="border-b border-slate-100 p-5 sm:p-6">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-3">
@@ -800,7 +803,7 @@ export default function FeedIntelligencePage() {
                 </section>
 
                 {/* Results card */}
-                <section className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+                <section className={`${panelClass} overflow-hidden`}>
                   <div className="flex items-center justify-between gap-4 border-b border-slate-100 p-5 sm:p-6">
                     <div className="flex items-center gap-3">
                       <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
@@ -957,7 +960,7 @@ export default function FeedIntelligencePage() {
               </div>
 
               {/* Farm intelligence snapshot */}
-              <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+              <section className={`${panelClass} p-5 sm:p-6`}>
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-600">
@@ -987,7 +990,7 @@ export default function FeedIntelligencePage() {
 
               {/* Future intelligence cards — deliberately non-functional */}
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <div className="rounded-3xl border border-blue-100 bg-white p-5 shadow-sm md:col-span-3">
+                <div className={`${panelClass} p-5 md:col-span-3`}>
                   <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                     <div className="flex items-start gap-3">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
@@ -997,7 +1000,7 @@ export default function FeedIntelligencePage() {
                         <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-600">
                           Ask Feed Intelligence
                         </p>
-                        <h3 className="mt-1 text-lg font-bold text-slate-900">
+<h3 className="mt-1 text-lg font-bold text-slate-900">
                           Ask about the actual feed data
                         </h3>
                         <p className="mt-1 max-w-2xl text-sm leading-5 text-slate-500">
@@ -1051,7 +1054,7 @@ export default function FeedIntelligencePage() {
                       </div>
 
                       {askAnswer && (
-                        <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-900">
+                        <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-900">
                           <span className="font-bold">PoultryOps:</span>{" "}
                           {askAnswer}
                         </div>
@@ -1060,7 +1063,7 @@ export default function FeedIntelligencePage() {
                   </div>
                 </div>
 
-                <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className={`${panelClass} p-5`}>
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
                     <Package size={19} />
                   </div>
@@ -1076,7 +1079,7 @@ export default function FeedIntelligencePage() {
                   </span>
                 </div>
 
-                <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className={`${panelClass} p-5`}>
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
                     <Save size={19} />
                   </div>
@@ -1096,7 +1099,7 @@ export default function FeedIntelligencePage() {
           ) : (
             <>
               {/* Existing actual-consumption analytics, redesigned */}
-              <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+              <section className={`${panelClass} p-5 sm:p-6`}>
                 <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
                   <div>
                     <div className="flex items-center gap-3">
@@ -1257,7 +1260,7 @@ export default function FeedIntelligencePage() {
                 }
               />
 
-              <div className="rounded-2xl border border-blue-100 bg-blue-50 px-5 py-4">
+              <div className="relative overflow-hidden rounded-xl border border-blue-100 bg-blue-50 px-5 py-4 shadow-sm">
                 <p className="text-sm leading-6 text-blue-900">
                   <span className="font-bold">
                     Current actual-consumption layer:
