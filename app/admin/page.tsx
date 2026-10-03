@@ -1302,38 +1302,29 @@ function KpiCard({
   label: string;
   value: string | number;
   detail: string;
-  accent?:
-    | "slate"
-    | "blue"
-    | "amber"
-    | "red"
-    | "green";
+  accent?: "slate" | "blue" | "amber" | "red" | "green";
   onClick?: () => void;
 }) {
   const accents = {
     slate: {
       dot: "bg-slate-400",
-      label: "text-slate-600",
+      ring: "ring-slate-100",
     },
-
     blue: {
       dot: "bg-blue-600",
-      label: "text-blue-700",
+      ring: "ring-blue-100",
     },
-
     amber: {
       dot: "bg-amber-500",
-      label: "text-amber-700",
+      ring: "ring-amber-100",
     },
-
     red: {
       dot: "bg-red-500",
-      label: "text-red-700",
+      ring: "ring-red-100",
     },
-
     green: {
       dot: "bg-emerald-500",
-      label: "text-emerald-700",
+      ring: "ring-emerald-100",
     },
   };
 
@@ -1358,20 +1349,21 @@ function KpiCard({
             }
           : undefined
       }
-      className={`group relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[0_3px_14px_rgba(37,99,235,0.08)] transition-all duration-200 ${
-        onClick
-          ? "cursor-pointer hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-[0_8px_24px_rgba(37,99,235,0.16)] focus:outline-none focus:ring-2 focus:ring-blue-300"
-          : ""
-      }`}
+      className={`relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5
+        shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]
+        transition-all duration-200
+        ${
+          onClick
+            ? "cursor-pointer hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-[5px_7px_0_rgba(37,99,235,0.13),0_12px_28px_rgba(15,23,42,0.10)] focus:outline-none focus:ring-2 focus:ring-blue-200 focus:ring-offset-1"
+            : ""
+        }`}
     >
-      {/* subtle blue top accent */}
-      <div className="absolute inset-x-0 top-0 h-0.5 bg-blue-500 opacity-60 transition-opacity group-hover:opacity-100" />
+      {/* Subtle PoultryOps blue accent */}
+      <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
 
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div
-            className={`text-sm font-medium ${currentAccent.label}`}
-          >
+      <div className="flex items-start justify-between gap-3 pt-1">
+        <div className="min-w-0">
+          <div className="text-sm font-medium text-slate-500">
             {label}
           </div>
 
@@ -1385,7 +1377,7 @@ function KpiCard({
         </div>
 
         <div
-          className={`h-3 w-3 rounded-full ${currentAccent.dot} shadow-[0_0_0_4px_rgba(37,99,235,0.08)]`}
+          className={`mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full ring-4 ${currentAccent.dot} ${currentAccent.ring}`}
         />
       </div>
     </div>
