@@ -1,10 +1,3 @@
-import {
-  TrendingUp,
-  ReceiptText,
-  Wallet,
-  AlertTriangle,
-} from "lucide-react";
-
 import { formatCurrency } from "@/lib/currency";
 
 type Props = {
@@ -25,140 +18,126 @@ export default function ReportKpis({
         gap-4
       "
     >
+      {/* Revenue */}
+      <div
+        className="
+          relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5
+          shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]
+        "
+      >
+        <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-
-        <div className="flex items-center justify-between">
-
-          <div>
-
-            <p className="text-slate-500 text-sm">
+        <div className="flex items-start justify-between gap-3 pt-1">
+          <div className="min-w-0">
+            <div className="text-sm font-medium text-slate-500">
               Revenue
-            </p>
+            </div>
 
-            <h3 className="text-4xl font-bold text-green-600 mt-2">
+            <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
               {formatCurrency(report.revenue, { currency })}
-            </h3>
+            </div>
 
+            <div className="mt-1 text-xs text-slate-400">
+              Revenue in selected period
+            </div>
           </div>
 
-          <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
-
-            <TrendingUp
-              size={24}
-              className="text-green-600"
-            />
-
-          </div>
-
+          <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-emerald-500 ring-4 ring-emerald-100" />
         </div>
-
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+      {/* Expenses */}
+      <div
+        className="
+          relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5
+          shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]
+        "
+      >
+        <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
 
-        <div className="flex items-center justify-between">
-
-          <div>
-
-            <p className="text-slate-500 text-sm">
+        <div className="flex items-start justify-between gap-3 pt-1">
+          <div className="min-w-0">
+            <div className="text-sm font-medium text-slate-500">
               Expenses
-            </p>
+            </div>
 
-            <h3 className="text-4xl font-bold text-red-600 mt-2">
+            <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
               {formatCurrency(report.expenses, { currency })}
-            </h3>
+            </div>
 
+            <div className="mt-1 text-xs text-slate-400">
+              Expenses in selected period
+            </div>
           </div>
 
-          <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center">
-
-            <ReceiptText
-              size={24}
-              className="text-red-600"
-            />
-
-          </div>
-
+          <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-red-500 ring-4 ring-red-100" />
         </div>
-
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+      {/* Profit */}
+      <div
+        className="
+          relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5
+          shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]
+        "
+      >
+        <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
 
-        <div className="flex items-center justify-between">
-
-          <div>
-
-            <p className="text-slate-500 text-sm">
+        <div className="flex items-start justify-between gap-3 pt-1">
+          <div className="min-w-0">
+            <div className="text-sm font-medium text-slate-500">
               Profit
-            </p>
+            </div>
 
-            <h3
-              className={`text-4xl font-bold mt-2 ${
-                report.profit >= 0
-                  ? "text-green-600"
-                  : "text-red-600"
-              }`}
-            >
+            <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
               {formatCurrency(report.profit, { currency })}
-            </h3>
+            </div>
 
+            <div className="mt-1 text-xs text-slate-400">
+              Net profit in selected period
+            </div>
           </div>
 
           <div
-            className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+            className={`mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full ring-4 ${
               report.profit >= 0
-                ? "bg-green-100"
-                : "bg-red-100"
+                ? "bg-emerald-500 ring-emerald-100"
+                : "bg-red-500 ring-red-100"
             }`}
-          >
-            <Wallet
-              size={24}
-              className={
-                report.profit >= 0
-                  ? "text-green-600"
-                  : "text-red-600"
-              }
-            />
-          </div>
-
+          />
         </div>
-
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+      {/* Mortality */}
+      <div
+        className="
+          relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5
+          shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]
+        "
+      >
+        <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
 
-        <div className="flex items-center justify-between">
-
-          <div>
-
-            <p className="text-slate-500 text-sm">
+        <div className="flex items-start justify-between gap-3 pt-1">
+          <div className="min-w-0">
+            <div className="text-sm font-medium text-slate-500">
               Mortality
-            </p>
+            </div>
 
-            <h3 className="text-4xl font-bold text-amber-600 mt-2">
+            <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
               {Number(report.mortality).toLocaleString(undefined, {
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 2,
               })}
-            </h3>
+            </div>
 
+            <div className="mt-1 text-xs text-slate-400">
+              Birds lost in selected period
+            </div>
           </div>
 
-          <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
-
-            <AlertTriangle
-              size={24}
-              className="text-amber-600"
-            />
-
-          </div>
-
+          <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-amber-500 ring-4 ring-amber-100" />
         </div>
-
       </div>
-
     </div>
   );
 }

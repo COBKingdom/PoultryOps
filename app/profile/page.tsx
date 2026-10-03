@@ -5,7 +5,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useDashboard } from "@/hooks/useDashboard";
 
 import AppShell from "@/components/layout/app-shell";
-import { User, Building2, CreditCard, ExternalLink, ShieldCheck, Clock, AlertTriangle } from "lucide-react";
+import {
+  User,
+  Building2,
+  CreditCard,
+  ExternalLink,
+  ShieldCheck,
+  Clock,
+  AlertTriangle,
+} from "lucide-react";
 
 export default function ProfilePage() {
   const { user, profile } = useAuth();
@@ -20,9 +28,13 @@ export default function ProfilePage() {
             <div className="h-8 w-48 bg-slate-200 rounded-lg" />
             <div className="h-4 w-72 bg-slate-200 rounded-lg" />
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-56 bg-slate-200 rounded-2xl animate-pulse" />
+              <div
+                key={i}
+                className="h-56 bg-slate-200 rounded-2xl animate-pulse"
+              />
             ))}
           </div>
         </div>
@@ -47,7 +59,10 @@ export default function ProfilePage() {
   const daysRemaining = trialEnd
     ? Math.max(
         0,
-        Math.ceil((trialEnd.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+        Math.ceil(
+          (trialEnd.getTime() - today.getTime()) /
+            (1000 * 60 * 60 * 24)
+        )
       )
     : 0;
 
@@ -62,22 +77,23 @@ export default function ProfilePage() {
       case "worker":
         return "Farm Worker";
       default:
-        return role ? role.charAt(0).toUpperCase() + role.slice(1) : "Member";
+        return role
+          ? role.charAt(0).toUpperCase() + role.slice(1)
+          : "Member";
     }
   }
 
   const formattedRole = getRoleLabel(profile?.role);
 
   return (
-    <AppShell
-      email={user?.email}
-    >
+    <AppShell email={user?.email}>
       <div className="p-4 md:p-8 space-y-8 max-w-6xl mx-auto">
         {/* Header */}
         <div className="space-y-1">
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">
             My Profile
           </h1>
+
           <p className="text-base text-slate-500">
             Manage your account and view your farm membership.
           </p>
@@ -86,14 +102,35 @@ export default function ProfilePage() {
         {/* Content Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* ACCOUNT CARD */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm hover:shadow-md transition-all duration-200 space-y-5">
+          <div
+            className="
+              relative overflow-hidden rounded-xl
+              border border-blue-100
+              bg-white
+              p-6
+              shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]
+              transition-all duration-200
+              hover:-translate-y-0.5
+              hover:border-blue-200
+              hover:shadow-[5px_7px_0_rgba(37,99,235,0.13),0_12px_28px_rgba(15,23,42,0.10)]
+              space-y-5
+            "
+          >
+            <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
+
             <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
               <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
                 <User className="w-5 h-5" />
               </div>
+
               <div>
-                <h2 className="text-lg font-bold text-slate-900">Account</h2>
-                <p className="text-xs text-slate-500">User identity and access role</p>
+                <h2 className="text-lg font-bold text-slate-900">
+                  Account
+                </h2>
+
+                <p className="text-xs text-slate-500">
+                  User identity and access role
+                </p>
               </div>
             </div>
 
@@ -102,30 +139,58 @@ export default function ProfilePage() {
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                   Email Address
                 </span>
-                <span className="font-medium text-slate-900">{user?.email || "—"}</span>
+
+                <span className="font-medium text-slate-900">
+                  {user?.email || "—"}
+                </span>
               </div>
 
               <div className="flex flex-col gap-1">
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                   Account Role
                 </span>
+
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-blue-600" />
-                  <span className="font-semibold text-slate-900">{formattedRole}</span>
+
+                  <span className="font-semibold text-slate-900">
+                    {formattedRole}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* FARM CARD */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm hover:shadow-md transition-all duration-200 space-y-5">
+          <div
+            className="
+              relative overflow-hidden rounded-xl
+              border border-blue-100
+              bg-white
+              p-6
+              shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]
+              transition-all duration-200
+              hover:-translate-y-0.5
+              hover:border-blue-200
+              hover:shadow-[5px_7px_0_rgba(37,99,235,0.13),0_12px_28px_rgba(15,23,42,0.10)]
+              space-y-5
+            "
+          >
+            <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
+
             <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
               <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
                 <Building2 className="w-5 h-5" />
               </div>
+
               <div>
-                <h2 className="text-lg font-bold text-slate-900">Farm Membership</h2>
-                <p className="text-xs text-slate-500">Assigned farm details</p>
+                <h2 className="text-lg font-bold text-slate-900">
+                  Farm Membership
+                </h2>
+
+                <p className="text-xs text-slate-500">
+                  Assigned farm details
+                </p>
               </div>
             </div>
 
@@ -134,7 +199,10 @@ export default function ProfilePage() {
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                   Farm Name
                 </span>
-                <span className="font-medium text-slate-900">{farm?.name || "—"}</span>
+
+                <span className="font-medium text-slate-900">
+                  {farm?.name || "—"}
+                </span>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -142,6 +210,7 @@ export default function ProfilePage() {
                   <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                     Farm Type
                   </span>
+
                   <span className="font-medium text-slate-900 capitalize">
                     {farm?.farm_type || "Poultry"}
                   </span>
@@ -151,22 +220,46 @@ export default function ProfilePage() {
                   <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                     Operating Currency
                   </span>
-                  <span className="font-medium text-slate-900">{farm?.currency || "NGN"}</span>
+
+                  <span className="font-medium text-slate-900">
+                    {farm?.currency || "NGN"}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* SUBSCRIPTION CARD */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm hover:shadow-md transition-all duration-200 space-y-5">
+          <div
+            className="
+              relative overflow-hidden rounded-xl
+              border border-blue-100
+              bg-white
+              p-6
+              shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]
+              transition-all duration-200
+              hover:-translate-y-0.5
+              hover:border-blue-200
+              hover:shadow-[5px_7px_0_rgba(37,99,235,0.13),0_12px_28px_rgba(15,23,42,0.10)]
+              space-y-5
+            "
+          >
+            <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
+
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
                   <CreditCard className="w-5 h-5" />
                 </div>
+
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900">Subscription Status</h2>
-                  <p className="text-xs text-slate-500">Plan and trial details</p>
+                  <h2 className="text-lg font-bold text-slate-900">
+                    Subscription Status
+                  </h2>
+
+                  <p className="text-xs text-slate-500">
+                    Plan and trial details
+                  </p>
                 </div>
               </div>
 
@@ -191,8 +284,11 @@ export default function ProfilePage() {
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                   Current Plan
                 </span>
+
                 <span className="font-semibold text-slate-900 capitalize">
-                  {subscription?.plan === "trial" ? "14-Day Trial" : subscription?.plan || "Trial"}
+                  {subscription?.plan === "trial"
+                    ? "14-Day Trial"
+                    : subscription?.plan || "Trial"}
                 </span>
               </div>
 
@@ -200,7 +296,14 @@ export default function ProfilePage() {
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                   Days Remaining
                 </span>
-                <span className={`font-semibold ${isTrialExpired ? "text-red-600" : "text-blue-600"}`}>
+
+                <span
+                  className={`font-semibold ${
+                    isTrialExpired
+                      ? "text-red-600"
+                      : "text-blue-600"
+                  }`}
+                >
                   {daysRemaining} Days
                 </span>
               </div>
@@ -208,11 +311,21 @@ export default function ProfilePage() {
               {trialEnd && (
                 <div className="col-span-2 flex flex-col gap-1 pt-2 border-t border-slate-100">
                   <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                    {subscription?.status === "trial" ? "Trial Ends On" : "Renewal Date"}
+                    {subscription?.status === "trial"
+                      ? "Trial Ends On"
+                      : "Renewal Date"}
                   </span>
+
                   <div className="flex items-center gap-2 text-slate-700">
                     <Clock className="w-4 h-4 text-slate-400" />
-                    <span className="font-medium">{trialEnd.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+
+                    <span className="font-medium">
+                      {trialEnd.toLocaleDateString(undefined, {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </span>
                   </div>
                 </div>
               )}
@@ -220,10 +333,30 @@ export default function ProfilePage() {
           </div>
 
           {/* QUICK ACTIONS CARD */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm hover:shadow-md transition-all duration-200 space-y-5">
+          <div
+            className="
+              relative overflow-hidden rounded-xl
+              border border-blue-100
+              bg-white
+              p-6
+              shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]
+              transition-all duration-200
+              hover:-translate-y-0.5
+              hover:border-blue-200
+              hover:shadow-[5px_7px_0_rgba(37,99,235,0.13),0_12px_28px_rgba(15,23,42,0.10)]
+              space-y-5
+            "
+          >
+            <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
+
             <div className="pb-3 border-b border-slate-100">
-              <h2 className="text-lg font-bold text-slate-900">Quick Actions</h2>
-              <p className="text-xs text-slate-500">Shortcuts to common administration tools</p>
+              <h2 className="text-lg font-bold text-slate-900">
+                Quick Actions
+              </h2>
+
+              <p className="text-xs text-slate-500">
+                Shortcuts to common administration tools
+              </p>
             </div>
 
             <div className="space-y-3">
@@ -232,6 +365,7 @@ export default function ProfilePage() {
                 className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all text-sm font-medium text-slate-800 group"
               >
                 <span>Go to Dashboard</span>
+
                 <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
               </Link>
 
@@ -242,6 +376,7 @@ export default function ProfilePage() {
                     className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all text-sm font-medium text-slate-800 group"
                   >
                     <span>Manage Farm Settings</span>
+
                     <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
                   </Link>
 
@@ -250,6 +385,7 @@ export default function ProfilePage() {
                     className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all text-sm font-medium text-slate-800 group"
                   >
                     <span>Manage Subscription</span>
+
                     <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
                   </Link>
                 </>

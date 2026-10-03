@@ -654,80 +654,151 @@ export default function FlocksPage() {
 
         {/* Operational KPIs */}
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="mb-2 flex items-center gap-2">
-              <Package
-                className="text-slate-600"
-                size={18}
-              />
+          <div
+            className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5
+              shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]
+              transition-all duration-200
+              hover:-translate-y-0.5 hover:border-blue-200
+              hover:shadow-[5px_7px_0_rgba(37,99,235,0.13),0_12px_28px_rgba(15,23,42,0.10)]"
+          >
+            <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
 
-              <p className="text-[11px] font-semibold uppercase tracking-tight text-slate-500">
-                Total Flocks
-              </p>
+            <div className="flex items-start justify-between gap-3 pt-1">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <Package
+                    className="text-slate-500"
+                    size={17}
+                  />
+
+                  <p className="text-sm font-medium text-slate-500">
+                    Total Flocks
+                  </p>
+                </div>
+
+                <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+                  {flocks.length}
+                </div>
+
+                <div className="mt-1 text-xs text-slate-400">
+                  Registered flocks
+                </div>
+              </div>
+
+              <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-slate-400 ring-4 ring-slate-100" />
             </div>
-
-            <p className="text-2xl font-bold text-slate-900">
-              {flocks.length}
-            </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="mb-2 flex items-center gap-2">
-              <Package
-                className="text-blue-600"
-                size={18}
-              />
+          <div
+            className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5
+              shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]
+              transition-all duration-200
+              hover:-translate-y-0.5 hover:border-blue-200
+              hover:shadow-[5px_7px_0_rgba(37,99,235,0.13),0_12px_28px_rgba(15,23,42,0.10)]"
+          >
+            <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
 
-              <p className="text-[11px] font-semibold uppercase tracking-tight text-slate-500">
-                Total Birds
-              </p>
+            <div className="flex items-start justify-between gap-3 pt-1">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <Package
+                    className="text-blue-600"
+                    size={17}
+                  />
+
+                  <p className="text-sm font-medium text-slate-500">
+                    Total Birds
+                  </p>
+                </div>
+
+                <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+                  {totalBirds.toLocaleString()}
+                </div>
+
+                <div className="mt-1 text-xs text-slate-400">
+                  Birds across all flocks
+                </div>
+              </div>
+
+              <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-blue-600 ring-4 ring-blue-100" />
             </div>
-
-            <p className="text-2xl font-bold text-slate-900">
-              {totalBirds.toLocaleString()}
-            </p>
           </div>
 
-<div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-  <div className="mb-2 flex items-center gap-2">
-    <Package
-      className="text-green-600"
-      size={18}
-    />
+          <div
+            className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5
+              shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]
+              transition-all duration-200
+              hover:-translate-y-0.5 hover:border-blue-200
+              hover:shadow-[5px_7px_0_rgba(37,99,235,0.13),0_12px_28px_rgba(15,23,42,0.10)]"
+          >
+            <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
 
-    <p className="text-[11px] font-semibold uppercase tracking-tight text-slate-500">
-      Flock Types
-    </p>
-  </div>
+            <div className="flex items-start justify-between gap-3 pt-1">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <Package
+                    className="text-emerald-600"
+                    size={17}
+                  />
 
-  <p className="text-2xl font-bold text-slate-900">
-    {birdTypes.length}
-  </p>
-</div>
+                  <p className="text-sm font-medium text-slate-500">
+                    Flock Types
+                  </p>
+                </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="mb-2 flex items-center gap-2">
-              <Package
-                className="text-purple-600"
-                size={18}
-              />
+                <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+                  {birdTypes.length}
+                </div>
 
-              <p className="text-[11px] font-semibold uppercase tracking-tight text-slate-500">
-                AVG. FLOCK SIZE
-              </p>
+                <div className="mt-1 text-xs text-slate-400">
+                  Types currently registered
+                </div>
+              </div>
+
+              <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-emerald-500 ring-4 ring-emerald-100" />
             </div>
+          </div>
 
-            <p className="text-2xl font-bold text-slate-900">
-              {flocks.length > 0
-                ? Math.round(
-                    totalBirds /
-                      flocks.length
-                  ).toLocaleString()
-                : "0"}
-            </p>
+          <div
+            className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5
+              shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]
+              transition-all duration-200
+              hover:-translate-y-0.5 hover:border-blue-200
+              hover:shadow-[5px_7px_0_rgba(37,99,235,0.13),0_12px_28px_rgba(15,23,42,0.10)]"
+          >
+            <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
+
+            <div className="flex items-start justify-between gap-3 pt-1">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <Package
+                    className="text-purple-600"
+                    size={17}
+                  />
+
+                  <p className="text-sm font-medium text-slate-500">
+                    Avg. Flock Size
+                  </p>
+                </div>
+
+                <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+                  {flocks.length > 0
+                    ? Math.round(
+                        totalBirds /
+                          flocks.length
+                      ).toLocaleString()
+                    : "0"}
+                </div>
+
+                <div className="mt-1 text-xs text-slate-400">
+                  Average birds per flock
+                </div>
+              </div>
+
+              <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-purple-500 ring-4 ring-purple-100" />
+            </div>
           </div>
         </div>
-
         {/* Search & Filters */}
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex flex-col gap-4">

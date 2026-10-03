@@ -16,14 +16,7 @@ import {
 
 import { getFarmFlocks } from "@/lib/flocks";
 
-import {
-  ShoppingCart,
-  TrendingUp,
-  ClipboardList,
-} from "lucide-react";
-
 import AppShell from "@/components/layout/app-shell";
-import OperationsKpiCard from "@/components/operations/operations-kpi-card";
 import OperationsToolbar from "@/components/operations/operations-toolbar";
 import OperationsPagination from "@/components/operations/operations-pagination";
 
@@ -44,12 +37,12 @@ export default function SalesPage() {
   const farm = data?.farm;
   const farmId = farm?.id;
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
   // Load all existing flocks for this farm.
   //
   // This is intentionally dynamic. When a new flock is created, it will
   // automatically become available in the Sales form without any code change.
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
   const [flocks, setFlocks] = useState<any[]>([]);
 
   useEffect(() => {
@@ -71,9 +64,9 @@ export default function SalesPage() {
     loadFlocks();
   }, [farmId]);
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
   // Sales records
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
   const {
     records,
     refresh,
@@ -84,26 +77,26 @@ export default function SalesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
   // Date range filter
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
   const [dateRangeSelection, setDateRangeSelection] =
     useState<DateRangeSelection>(
       getDefaultDateRangeSelection()
     );
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
   // Edit modal
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
   const [isEditModalOpen, setIsEditModalOpen] =
     useState(false);
 
   const [editingRecord, setEditingRecord] =
     useState<any | null>(null);
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
   // Filter records by selected date range
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
   const dateFilteredRecords = useMemo(() => {
     const { start, end } =
       dateRangeSelection.range;
@@ -125,9 +118,9 @@ export default function SalesPage() {
     dateRangeSelection,
   ]);
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
   // KPI values use the selected date range
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
   const kpiValues = useMemo(() => {
     const totalSales =
       dateFilteredRecords.reduce(
@@ -155,9 +148,9 @@ export default function SalesPage() {
     };
   }, [dateFilteredRecords]);
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
   // Search within the selected date range
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
   const filteredRecords = useMemo(() => {
     if (!searchQuery.trim()) {
       return dateFilteredRecords;
@@ -188,9 +181,9 @@ export default function SalesPage() {
     searchQuery,
   ]);
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
   // Pagination
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
   const totalItems =
     filteredRecords.length;
 
@@ -218,9 +211,9 @@ export default function SalesPage() {
     dateRangeSelection,
   ]);
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
   // Edit governance
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
   function handleEditRecord(
     record: any
   ) {
@@ -250,48 +243,86 @@ export default function SalesPage() {
     setEditingRecord(null);
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
   // KPI cards
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
   const kpiCards = (
     <>
-      <OperationsKpiCard
-        label="Total Sales"
-        value={kpiValues.totalSales}
-        sublabel="units"
-        icon={
-          <ShoppingCart size={20} />
-        }
-        valueColor="blue"
-        iconBg="blue"
-      />
+      <div className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
+        <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
 
-      <OperationsKpiCard
-        label="Revenue"
-        value={kpiValues.totalRevenue}
-        currency={farm?.currency}
-        icon={
-          <TrendingUp size={20} />
-        }
-        valueColor="green"
-        iconBg="green"
-      />
+        <div className="flex items-start justify-between gap-3 pt-1">
+          <div className="min-w-0">
+            <div className="text-sm font-medium text-slate-500">
+              Total Sales
+            </div>
 
-      <OperationsKpiCard
-        label="Records"
-        value={kpiValues.totalRecords}
-        icon={
-          <ClipboardList size={20} />
-        }
-        valueColor="blue"
-        iconBg="blue"
-      />
+            <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+              {kpiValues.totalSales.toLocaleString()}
+            </div>
+
+            <div className="mt-1 text-xs text-slate-400">
+              Units sold in selected period
+            </div>
+          </div>
+
+          <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-blue-600 ring-4 ring-blue-100" />
+        </div>
+      </div>
+
+      <div className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
+        <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
+
+        <div className="flex items-start justify-between gap-3 pt-1">
+          <div className="min-w-0">
+            <div className="text-sm font-medium text-slate-500">
+              Revenue
+            </div>
+
+            <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+              {new Intl.NumberFormat("en-NG", {
+                style: "currency",
+                currency: farm?.currency || "NGN",
+                maximumFractionDigits: 2,
+              }).format(kpiValues.totalRevenue)}
+            </div>
+
+            <div className="mt-1 text-xs text-slate-400">
+              Revenue in selected period
+            </div>
+          </div>
+
+          <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-emerald-500 ring-4 ring-emerald-100" />
+        </div>
+      </div>
+
+      <div className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
+        <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
+
+        <div className="flex items-start justify-between gap-3 pt-1">
+          <div className="min-w-0">
+            <div className="text-sm font-medium text-slate-500">
+              Records
+            </div>
+
+            <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+              {kpiValues.totalRecords.toLocaleString()}
+            </div>
+
+            <div className="mt-1 text-xs text-slate-400">
+              Sales records in selected period
+            </div>
+          </div>
+
+          <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-blue-600 ring-4 ring-blue-100" />
+        </div>
+      </div>
     </>
   );
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
   // Toolbar
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
   const toolbar = (
     <OperationsToolbar
       searchPlaceholder="Search sales records..."
@@ -300,9 +331,9 @@ export default function SalesPage() {
     />
   );
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
   // Pagination
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
   const pagination = (
     <OperationsPagination
       current={currentPage}
@@ -313,9 +344,9 @@ export default function SalesPage() {
     />
   );
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
   // Loading
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <AppShell email={user?.email}>
@@ -326,24 +357,27 @@ export default function SalesPage() {
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
   // Page
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
   return (
     <AppShell email={user?.email}>
       <div className="space-y-6">
 
         {/* Page Title */}
+
         <h1 className="text-2xl font-bold text-slate-900">
           Sales Management
         </h1>
 
         {/* KPI Cards */}
+
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {kpiCards}
         </div>
 
         {/* Search + Date Filter */}
+
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
 
           <div className="flex-1">
@@ -360,9 +394,11 @@ export default function SalesPage() {
         </div>
 
         {/* Main Content */}
+
         <div className="grid lg:grid-cols-12 gap-6 items-start">
 
           {/* Quick Entry */}
+
           <div className="lg:col-span-4 lg:order-last">
             <div className="lg:sticky lg:top-20 space-y-4">
 
@@ -376,6 +412,7 @@ export default function SalesPage() {
           </div>
 
           {/* Sales Records */}
+
           <div className="lg:col-span-8 lg:order-first">
 
             <SalesList
@@ -389,11 +426,13 @@ export default function SalesPage() {
         </div>
 
         {/* Pagination */}
+
         <div className="flex items-center justify-center pt-4">
           {pagination}
         </div>
 
         {/* Edit Modal */}
+
         {isEditModalOpen &&
           editingRecord && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">

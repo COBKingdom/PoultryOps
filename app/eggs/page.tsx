@@ -542,54 +542,101 @@ export default function EggsPage() {
         </div>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+<div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
 
-          <OperationsKpiCard
-            label="Eggs Collected"
-            value={kpiValues.eggsCollected}
-            sublabel="Selected period"
-            icon={<Egg size={20} />}
-            valueColor="amber"
-            iconBg="amber"
-          />
+  {/* Eggs Collected */}
+  <div className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
+    <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
 
-          <OperationsKpiCard
-            label="Records"
-            value={kpiValues.recordCount}
-            sublabel="Production records"
-            icon={<TrendingUp size={20} />}
-            valueColor="blue"
-            iconBg="blue"
-          />
-
-          <OperationsKpiCard
-            label="Good Eggs"
-            value={kpiValues.goodEggs}
-            sublabel="After cracked eggs"
-            icon={
-              <CheckCircle2
-                size={20}
-              />
-            }
-            valueColor="blue"
-            iconBg="blue"
-          />
-
-          <OperationsKpiCard
-            label="Cracked Eggs"
-            value={kpiValues.crackedEggs}
-            sublabel="Selected period"
-            icon={
-              <AlertCircle
-                size={20}
-              />
-            }
-            valueColor="amber"
-            iconBg="amber"
-          />
-
+    <div className="flex items-start justify-between gap-3 pt-1">
+      <div className="min-w-0">
+        <div className="text-sm font-medium text-slate-500">
+          Eggs Collected
         </div>
 
+        <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+          {kpiValues.eggsCollected}
+        </div>
+
+        <div className="mt-1 text-xs text-slate-400">
+          Selected period
+        </div>
+      </div>
+
+      <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-amber-500 ring-4 ring-amber-100" />
+    </div>
+  </div>
+
+  {/* Records */}
+  <div className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
+    <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
+
+    <div className="flex items-start justify-between gap-3 pt-1">
+      <div className="min-w-0">
+        <div className="text-sm font-medium text-slate-500">
+          Records
+        </div>
+
+        <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+          {kpiValues.recordCount}
+        </div>
+
+        <div className="mt-1 text-xs text-slate-400">
+          Production records
+        </div>
+      </div>
+
+      <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-blue-600 ring-4 ring-blue-100" />
+    </div>
+  </div>
+
+  {/* Good Eggs */}
+  <div className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
+    <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
+
+    <div className="flex items-start justify-between gap-3 pt-1">
+      <div className="min-w-0">
+        <div className="text-sm font-medium text-slate-500">
+          Good Eggs
+        </div>
+
+        <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+          {kpiValues.goodEggs}
+        </div>
+
+        <div className="mt-1 text-xs text-slate-400">
+          After cracked eggs
+        </div>
+      </div>
+
+      <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-emerald-500 ring-4 ring-emerald-100" />
+    </div>
+  </div>
+
+  {/* Cracked Eggs */}
+  <div className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
+    <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
+
+    <div className="flex items-start justify-between gap-3 pt-1">
+      <div className="min-w-0">
+        <div className="text-sm font-medium text-slate-500">
+          Cracked Eggs
+        </div>
+
+        <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+          {kpiValues.crackedEggs}
+        </div>
+
+        <div className="mt-1 text-xs text-slate-400">
+          Selected period
+        </div>
+      </div>
+
+      <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-amber-500 ring-4 ring-amber-100" />
+    </div>
+  </div>
+
+</div>
         {/* Search + Flock + Date Filters */}
         <div
           className="

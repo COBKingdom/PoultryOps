@@ -26,9 +26,6 @@ import {
 
 import {
   Activity,
-  Bird,
-  CheckCircle2,
-  Skull,
   RefreshCw,
 } from "lucide-react";
 
@@ -42,21 +39,19 @@ export default function IsolationPage() {
     retry: retryFarm,
   } = useCurrentFarm();
 
-  const farmId = farm?.id;
-
   const {
     flocks,
     loading: flocksLoading,
     error: flocksError,
     refresh: refreshFlocks,
-  } = useFlocks(farmId);
+  } = useFlocks(farm?.id);
 
   const {
     records,
     loading: isolationLoading,
     error: isolationError,
     refresh: refreshIsolation,
-  } = useIsolation(farmId);
+  } = useIsolation(farm?.id);
 
   const [searchQuery, setSearchQuery] =
     useState("");
@@ -68,6 +63,8 @@ export default function IsolationPage() {
     useState<DateRangeSelection>(
       getDefaultDateRangeSelection()
     );
+
+  const farmId = farm?.id;
 
   const isLoading =
     farmLoading ||
@@ -261,6 +258,7 @@ export default function IsolationPage() {
       alert(
         `Please enter a whole number between 1 and ${remaining}.`
       );
+
       return;
     }
 
@@ -328,6 +326,7 @@ export default function IsolationPage() {
       alert(
         `Please enter a whole number between 1 and ${remaining}.`
       );
+
       return;
     }
 
@@ -451,88 +450,96 @@ export default function IsolationPage() {
         {/* KPI Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <Bird
-                className="text-amber-600"
-                size={18}
-              />
+          {/* Currently Isolated */}
+          <div className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
+            <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
 
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                Currently Isolated
-              </p>
+            <div className="flex items-start justify-between gap-3 pt-1">
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-slate-500">
+                  Currently Isolated
+                </div>
+
+                <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+                  {kpiValues.currentlyIsolated.toLocaleString()}
+                </div>
+
+                <div className="mt-1 text-xs text-slate-400">
+                  Birds currently isolated
+                </div>
+              </div>
+
+              <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full ring-4 bg-amber-500 ring-amber-100" />
             </div>
-
-            <p className="text-2xl font-bold text-slate-900">
-              {kpiValues.currentlyIsolated.toLocaleString()}
-            </p>
-
-            <p className="text-xs text-slate-400 mt-1">
-              birds
-            </p>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <Activity
-                className="text-blue-600"
-                size={18}
-              />
+          {/* Active Cases */}
+          <div className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
+            <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
 
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                Active Cases
-              </p>
+            <div className="flex items-start justify-between gap-3 pt-1">
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-slate-500">
+                  Active Cases
+                </div>
+
+                <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+                  {kpiValues.activeCases.toLocaleString()}
+                </div>
+
+                <div className="mt-1 text-xs text-slate-400">
+                  Active isolation records
+                </div>
+              </div>
+
+              <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full ring-4 bg-blue-600 ring-blue-100" />
             </div>
-
-            <p className="text-2xl font-bold text-slate-900">
-              {kpiValues.activeCases.toLocaleString()}
-            </p>
-
-            <p className="text-xs text-slate-400 mt-1">
-              isolation records
-            </p>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <CheckCircle2
-                className="text-green-600"
-                size={18}
-              />
+          {/* Returned */}
+          <div className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
+            <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
 
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                Returned
-              </p>
+            <div className="flex items-start justify-between gap-3 pt-1">
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-slate-500">
+                  Returned
+                </div>
+
+                <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+                  {kpiValues.recoveredBirds.toLocaleString()}
+                </div>
+
+                <div className="mt-1 text-xs text-slate-400">
+                  Birds recovered
+                </div>
+              </div>
+
+              <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full ring-4 bg-emerald-500 ring-emerald-100" />
             </div>
-
-            <p className="text-2xl font-bold text-slate-900">
-              {kpiValues.recoveredBirds.toLocaleString()}
-            </p>
-
-            <p className="text-xs text-slate-400 mt-1">
-              birds recovered
-            </p>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <Skull
-                className="text-red-600"
-                size={18}
-              />
+          {/* Deaths */}
+          <div className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
+            <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
 
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                Deaths
-              </p>
+            <div className="flex items-start justify-between gap-3 pt-1">
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-slate-500">
+                  Deaths
+                </div>
+
+                <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+                  {kpiValues.deceasedBirds.toLocaleString()}
+                </div>
+
+                <div className="mt-1 text-xs text-slate-400">
+                  Birds lost in isolation
+                </div>
+              </div>
+
+              <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full ring-4 bg-red-500 ring-red-100" />
             </div>
-
-            <p className="text-2xl font-bold text-slate-900">
-              {kpiValues.deceasedBirds.toLocaleString()}
-            </p>
-
-            <p className="text-xs text-slate-400 mt-1">
-              birds lost in isolation
-            </p>
           </div>
 
         </div>

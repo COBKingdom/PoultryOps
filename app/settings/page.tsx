@@ -36,7 +36,8 @@ export default function SettingsPage() {
 
   const { data, loading: dashLoading } = useDashboard();
 
-  const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
+  const [subscription, setSubscription] =
+    useState<SubscriptionData | null>(null);
   const [subLoading, setSubLoading] = useState(true);
   const [teamMembers, setTeamMembers] = useState<number>(0);
   const [teamLoading, setTeamLoading] = useState(true);
@@ -46,6 +47,7 @@ export default function SettingsPage() {
     async function loadSubscription() {
       try {
         if (!profile?.farm_id) return;
+
         const data = await getSubscription(profile.farm_id);
         setSubscription(data);
       } catch (error) {
@@ -54,6 +56,7 @@ export default function SettingsPage() {
         setSubLoading(false);
       }
     }
+
     loadSubscription();
   }, [profile]);
 
@@ -61,15 +64,26 @@ export default function SettingsPage() {
   useEffect(() => {
     async function loadTeamMembers() {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const headers: HeadersInit = { "Content-Type": "application/json" };
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        const headers: HeadersInit = {
+          "Content-Type": "application/json",
+        };
+
         if (session?.access_token) {
           headers.Authorization = `Bearer ${session.access_token}`;
         }
+
         const response = await fetch("/api/team", { headers });
+
         if (!response.ok) return;
+
         const data = await response.json();
-        // Count all farm members including the owner — the plan limit is a total-user limit.
+
+        // Count all farm members including the owner —
+        // the plan limit is a total-user limit.
         setTeamMembers(data.members?.length || 0);
       } catch (error) {
         console.error("Error loading team members:", error);
@@ -77,6 +91,7 @@ export default function SettingsPage() {
         setTeamLoading(false);
       }
     }
+
     loadTeamMembers();
   }, []);
 
@@ -89,9 +104,13 @@ export default function SettingsPage() {
               <div className="h-8 w-48 bg-slate-200 rounded-lg" />
               <div className="h-4 w-72 bg-slate-200 rounded-lg" />
             </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-64 bg-slate-200 rounded-2xl animate-pulse" />
+                <div
+                  key={i}
+                  className="h-64 bg-slate-200 rounded-2xl animate-pulse"
+                />
               ))}
             </div>
           </div>
@@ -101,7 +120,9 @@ export default function SettingsPage() {
   }
 
   // ── Derived from the shared subscription service + PLANS (same as /settings/subscription) ──
-  const selectedPlanKey = (subscription?.selected_plan || "").toLowerCase() as
+  const selectedPlanKey = (
+    subscription?.selected_plan || ""
+  ).toLowerCase() as
     | "solo"
     | "team"
     | "business"
@@ -164,7 +185,9 @@ export default function SettingsPage() {
     }
   };
 
-  const statusLabel = subscriptionStatus.charAt(0).toUpperCase() + subscriptionStatus.slice(1);
+  const statusLabel =
+    subscriptionStatus.charAt(0).toUpperCase() +
+    subscriptionStatus.slice(1);
 
   return (
     <OwnerOnly>
@@ -175,6 +198,7 @@ export default function SettingsPage() {
             <h1 className="text-3xl font-bold tracking-tight text-slate-900">
               Settings
             </h1>
+
             <p className="mt-1.5 text-base text-slate-500">
               Manage your farm, team and PoultryOps account.
             </p>
@@ -183,12 +207,31 @@ export default function SettingsPage() {
           {/* Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
             {/* CARD 1 — SUBSCRIPTION */}
-            <Link href="/settings/subscription" className="group block">
-              <div className="h-full flex flex-col bg-white rounded-xl border border-slate-200/80 p-6 shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-200">
+            <Link
+              href="/settings/subscription"
+              className="group block"
+            >
+              <div
+                className="
+                  relative h-full flex flex-col overflow-hidden
+                  rounded-xl
+                  border border-blue-100
+                  bg-white
+                  p-6
+                  shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]
+                  transition-all duration-200
+                  hover:-translate-y-0.5
+                  hover:border-blue-200
+                  hover:shadow-[5px_7px_0_rgba(37,99,235,0.13),0_12px_28px_rgba(15,23,42,0.10)]
+                "
+              >
+                <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
+
                 <div className="flex items-start justify-between gap-3">
-                  <div className="w-11 h-11 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+                  <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
                     <CreditCard className="w-5 h-5" />
                   </div>
+
                   {!subLoading && (
                     <span
                       className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${statusBadgeClass()} capitalize`}
@@ -203,6 +246,7 @@ export default function SettingsPage() {
                   <h2 className="text-xl font-bold text-slate-900">
                     Subscription
                   </h2>
+
                   <p className="mt-1 text-sm text-slate-500 leading-relaxed">
                     Manage your plan, billing and active limits.
                   </p>
@@ -210,21 +254,38 @@ export default function SettingsPage() {
 
                 <div className="mt-5 pt-4 border-t border-slate-100 space-y-2.5 text-sm">
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Current Plan</span>
+                    <span className="text-slate-500">
+                      Current Plan
+                    </span>
+
                     <span className="font-semibold text-slate-900">
                       {subLoading ? "—" : planLabel}
                     </span>
                   </div>
+
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Status</span>
+                    <span className="text-slate-500">
+                      Status
+                    </span>
+
                     <span className="font-semibold text-slate-900 capitalize">
                       {subLoading ? "—" : statusLabel}
                     </span>
                   </div>
+
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500">User Limit</span>
+                    <span className="text-slate-500">
+                      User Limit
+                    </span>
+
                     <span className="font-semibold text-slate-900">
-                      {subLoading ? "—" : `${allowedUsers} ${allowedUsers === 1 ? "User" : "Users"}`}
+                      {subLoading
+                        ? "—"
+                        : `${allowedUsers} ${
+                            allowedUsers === 1
+                              ? "User"
+                              : "Users"
+                          }`}
                     </span>
                   </div>
                 </div>
@@ -232,6 +293,7 @@ export default function SettingsPage() {
                 <div className="mt-auto pt-5">
                   <span className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 group-hover:text-blue-700 transition-colors">
                     Manage Subscription
+
                     <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
                   </span>
                 </div>
@@ -240,9 +302,24 @@ export default function SettingsPage() {
 
             {/* CARD 2 — TEAM MANAGEMENT */}
             <Link href="/team" className="group block">
-              <div className="h-full flex flex-col bg-white rounded-xl border border-slate-200/80 p-6 shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-200">
+              <div
+                className="
+                  relative h-full flex flex-col overflow-hidden
+                  rounded-xl
+                  border border-blue-100
+                  bg-white
+                  p-6
+                  shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]
+                  transition-all duration-200
+                  hover:-translate-y-0.5
+                  hover:border-blue-200
+                  hover:shadow-[5px_7px_0_rgba(37,99,235,0.13),0_12px_28px_rgba(15,23,42,0.10)]
+                "
+              >
+                <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
+
                 <div className="flex items-start justify-between gap-3">
-                  <div className="w-11 h-11 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
+                  <div className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
                     <Users className="w-5 h-5" />
                   </div>
                 </div>
@@ -251,6 +328,7 @@ export default function SettingsPage() {
                   <h2 className="text-xl font-bold text-slate-900">
                     Team Management
                   </h2>
+
                   <p className="mt-1 text-sm text-slate-500 leading-relaxed">
                     Manage farm users, access and permissions.
                   </p>
@@ -258,15 +336,34 @@ export default function SettingsPage() {
 
                 <div className="mt-5 pt-4 border-t border-slate-100 space-y-2.5 text-sm">
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Team Members</span>
+                    <span className="text-slate-500">
+                      Team Members
+                    </span>
+
                     <span className="font-semibold text-slate-900">
-                      {teamLoading ? "—" : `${teamMembers} Member${teamMembers !== 1 ? "s" : ""}`}
+                      {teamLoading
+                        ? "—"
+                        : `${teamMembers} Member${
+                            teamMembers !== 1
+                              ? "s"
+                              : ""
+                          }`}
                     </span>
                   </div>
+
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Max Allowed</span>
+                    <span className="text-slate-500">
+                      Max Allowed
+                    </span>
+
                     <span className="font-semibold text-slate-900">
-                      {subLoading ? "—" : `${allowedUsers} User${allowedUsers !== 1 ? "s" : ""}`}
+                      {subLoading
+                        ? "—"
+                        : `${allowedUsers} User${
+                            allowedUsers !== 1
+                              ? "s"
+                              : ""
+                          }`}
                     </span>
                   </div>
                 </div>
@@ -274,6 +371,7 @@ export default function SettingsPage() {
                 <div className="mt-auto pt-5">
                   <span className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 group-hover:text-blue-700 transition-colors">
                     Manage Team
+
                     <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
                   </span>
                 </div>
@@ -281,12 +379,31 @@ export default function SettingsPage() {
             </Link>
 
             {/* CARD 3 — FARM SETTINGS */}
-            <Link href="/settings/farm" className="group block">
-              <div className="h-full flex flex-col bg-white rounded-xl border border-slate-200/80 p-6 shadow-sm hover:shadow-md hover:border-slate-300 transition-all duration-200">
+            <Link
+              href="/settings/farm"
+              className="group block"
+            >
+              <div
+                className="
+                  relative h-full flex flex-col overflow-hidden
+                  rounded-xl
+                  border border-blue-100
+                  bg-white
+                  p-6
+                  shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]
+                  transition-all duration-200
+                  hover:-translate-y-0.5
+                  hover:border-blue-200
+                  hover:shadow-[5px_7px_0_rgba(37,99,235,0.13),0_12px_28px_rgba(15,23,42,0.10)]
+                "
+              >
+                <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
+
                 <div className="flex items-start justify-between gap-3">
-                  <div className="w-11 h-11 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                  <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
                     <Building2 className="w-5 h-5" />
                   </div>
+
                   {farm?.currency && (
                     <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
                       {farm.currency}
@@ -298,6 +415,7 @@ export default function SettingsPage() {
                   <h2 className="text-xl font-bold text-slate-900">
                     Farm Settings
                   </h2>
+
                   <p className="mt-1 text-sm text-slate-500 leading-relaxed">
                     Manage your farm information and preferences.
                   </p>
@@ -305,7 +423,10 @@ export default function SettingsPage() {
 
                 <div className="mt-5 pt-4 border-t border-slate-100 space-y-2.5 text-sm">
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Farm Name</span>
+                    <span className="text-slate-500">
+                      Farm Name
+                    </span>
+
                     <span
                       className="font-semibold text-slate-900 truncate max-w-[140px]"
                       title={farm?.name || undefined}
@@ -313,14 +434,22 @@ export default function SettingsPage() {
                       {farm?.name || "—"}
                     </span>
                   </div>
+
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Farm Type</span>
+                    <span className="text-slate-500">
+                      Farm Type
+                    </span>
+
                     <span className="font-semibold text-slate-900 capitalize">
                       {farm?.farm_type || "Poultry"}
                     </span>
                   </div>
+
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-500">Currency</span>
+                    <span className="text-slate-500">
+                      Currency
+                    </span>
+
                     <span className="font-semibold text-slate-900">
                       {farm?.currency || "—"}
                     </span>
@@ -330,6 +459,7 @@ export default function SettingsPage() {
                 <div className="mt-auto pt-5">
                   <span className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 group-hover:text-blue-700 transition-colors">
                     Manage Farm
+
                     <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
                   </span>
                 </div>
