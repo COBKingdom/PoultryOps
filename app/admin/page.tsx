@@ -60,6 +60,36 @@ type OverviewResponse = {
   error?: string;
 };
 
+type DemoVisitor = {
+  id: string;
+  full_name: string;
+  phone: string;
+  first_access_at: string;
+  last_access_at: string;
+  access_count: number;
+};
+
+type DemoVisitorsResponse = {
+  success: boolean;
+  visitors: DemoVisitor[];
+  summary: {
+    totalVisitors: number;
+    activeToday: number;
+    totalVisits: number;
+  };
+  error?: string;
+};
+
+type DemoDateFilter =
+  | "all"
+  | "today"
+  | "7days"
+  | "30days";
+
+type DemoSortOrder =
+  | "newest"
+  | "oldest";
+
 function formatDate(value: string | null | undefined) {
   if (!value) return "—";
 
@@ -233,6 +263,28 @@ export default function AdminOverviewPage() {
   const [statusFilter, setStatusFilter] =
     useState("all");
 
+  const [demoVisitors, setDemoVisitors] =
+    useState<DemoVisitor[]>([]);
+
+  const [demoSummary, setDemoSummary] =
+    useState({
+      totalVisitors: 0,
+      activeToday: 0,
+      totalVisits: 0,
+    });
+
+  const [demoLoading, setDemoLoading] =
+    useState(true);
+
+  const [demoError, setDemoError] =
+    useState<string | null>(null);
+
+  const [demoDateFilter, setDemoDateFilter] =
+    useState<DemoDateFilter>("all");
+
+  const [demoSortOrder, setDemoSortOrder] =
+    useState<DemoSortOrder>("newest");
+
   async function loadOverview() {
     try {
       setLoading(true);
@@ -289,8 +341,75 @@ export default function AdminOverviewPage() {
     }
   }
 
+  async function loadDemoVisitors() {
+    try {
+      setDemoLoading(true);
+      setDemoError(null);
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        setDemoError(
+          "Your session has expired. Please sign in again."
+        );
+        return;
+      }
+
+      const response = await fetch(
+        "/api/admin/demo-visitors",
+        {
+          headers: {
+            Authorization:
+              `Bearer ${session.access_token}`,
+          },
+          cache: "no-store",
+        }
+      );
+
+      const result: DemoVisitorsResponse =
+        await response.json();
+
+      if (
+        !response.ok ||
+        !result.success
+      ) {
+        setDemoError(
+          result.error ||
+            "Unable to load Demo Activity."
+        );
+        return;
+      }
+
+      setDemoVisitors(
+        result.visitors ?? []
+      );
+
+      setDemoSummary(
+        result.summary ?? {
+          totalVisitors: 0,
+          activeToday: 0,
+          totalVisits: 0,
+        }
+      );
+    } catch (err) {
+      console.error(
+        "Demo Activity loading error:",
+        err
+      );
+
+      setDemoError(
+        "Unable to load Demo Activity."
+      );
+    } finally {
+      setDemoLoading(false);
+    }
+  }
+
   useEffect(() => {
     loadOverview();
+    loadDemoVisitors();
   }, []);
 
   const filteredCustomers =
@@ -336,6 +455,62 @@ export default function AdminOverviewPage() {
       data?.customers,
       search,
       statusFilter,
+    ]);
+
+  const filteredDemoVisitors =
+    useMemo(() => {
+      let visitors = [
+        ...demoVisitors,
+      ];
+
+      const now = new Date();
+
+      if (demoDateFilter !== "all") {
+        const start = new Date(now);
+
+        if (demoDateFilter === "today") {
+          start.setHours(0, 0, 0, 0);
+        }
+
+        if (demoDateFilter === "7days") {
+          start.setDate(
+            start.getDate() - 7
+          );
+        }
+
+        if (demoDateFilter === "30days") {
+          start.setDate(
+            start.getDate() - 30
+          );
+        }
+
+        visitors = visitors.filter(
+          (visitor) =>
+            new Date(
+              visitor.last_access_at
+            ) >= start
+        );
+      }
+
+      visitors.sort((a, b) => {
+        const aTime = new Date(
+          a.last_access_at
+        ).getTime();
+
+        const bTime = new Date(
+          b.last_access_at
+        ).getTime();
+
+        return demoSortOrder === "newest"
+          ? bTime - aTime
+          : aTime - bTime;
+      });
+
+      return visitors;
+    }, [
+      demoVisitors,
+      demoDateFilter,
+      demoSortOrder,
     ]);
 
   const summary = data?.summary;
@@ -406,7 +581,7 @@ export default function AdminOverviewPage() {
           {/* Header */}
           <header className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-center">
             <div>
-              <div className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+              <div className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-blue-600">
                 PoultryOps
               </div>
 
@@ -421,8 +596,11 @@ export default function AdminOverviewPage() {
             </div>
 
             <button
-              onClick={loadOverview}
-              className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+              onClick={() => {
+                loadOverview();
+                loadDemoVisitors();
+              }}
+              className="inline-flex items-center justify-center rounded-lg border border-blue-200 bg-white px-4 py-2.5 text-sm font-semibold text-blue-700 shadow-[0_2px_10px_rgba(37,99,235,0.08)] transition hover:border-blue-300 hover:bg-blue-50 hover:shadow-[0_5px_16px_rgba(37,99,235,0.14)]"
             >
               Refresh data
             </button>
@@ -490,18 +668,26 @@ export default function AdminOverviewPage() {
               }
             />
 
+            {/* Demo Activity replaces Expiring Trials */}
             <KpiCard
-              label="Expiring Trials"
+              label="Demo Activity"
               value={
-                summary?.expiringTrials ?? 0
+                demoLoading
+                  ? "—"
+                  : demoSummary.totalVisitors
               }
-              detail="Needs attention"
-              accent="amber"
-              onClick={() =>
-                router.push(
-                  "/admin/expiring"
-                )
-              }
+              detail="Demo visitors"
+              accent="blue"
+              onClick={() => {
+                document
+                  .getElementById(
+                    "demo-activity"
+                  )
+                  ?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                  });
+              }}
             />
 
             <KpiCard
@@ -553,7 +739,7 @@ export default function AdminOverviewPage() {
             {/* Customers */}
             <section
               id="customer-overview"
-              className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+              className="overflow-hidden rounded-xl border border-blue-100 bg-white shadow-[0_3px_14px_rgba(37,99,235,0.06)]"
             >
               <div className="border-b border-slate-200 p-5">
                 <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
@@ -577,7 +763,7 @@ export default function AdminOverviewPage() {
                         )
                       }
                       placeholder="Search customers..."
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200 sm:w-56"
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:w-56"
                     />
 
                     <select
@@ -587,7 +773,7 @@ export default function AdminOverviewPage() {
                           event.target.value
                         )
                       }
-                      className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                      className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                     >
                       <option value="all">
                         All statuses
@@ -655,7 +841,7 @@ export default function AdminOverviewPage() {
                               `/admin/customers/${customer.farm_id}`
                             )
                           }
-                          className="cursor-pointer hover:bg-slate-50"
+                          className="cursor-pointer hover:bg-blue-50/40"
                           title={`Open ${
                             customer.farm_name ||
                             "customer"
@@ -751,7 +937,7 @@ export default function AdminOverviewPage() {
             </section>
 
             {/* Activity */}
-            <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
+            <section className="rounded-xl border border-blue-100 bg-white shadow-[0_3px_14px_rgba(37,99,235,0.06)]">
               <div className="border-b border-slate-200 p-5">
                 <h2 className="text-lg font-bold text-slate-900">
                   Recent Activity
@@ -771,7 +957,7 @@ export default function AdminOverviewPage() {
                         className="p-4"
                       >
                         <div className="flex gap-3">
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-700">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
                             {activityIcon(
                               activity.type
                             )}
@@ -828,8 +1014,250 @@ export default function AdminOverviewPage() {
             </section>
           </div>
 
+          {/* ============================================================
+              DEMO ACTIVITY
+              ============================================================ */}
+          <section
+            id="demo-activity"
+            className="mt-8 scroll-mt-6"
+          >
+            <div className="mb-4 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="h-2.5 w-2.5 rounded-full bg-blue-600 shadow-[0_0_0_4px_rgba(37,99,235,0.10)]" />
+
+                  <h2 className="text-lg font-bold text-slate-900">
+                    Demo Activity
+                  </h2>
+                </div>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Visitors using the PoultryOps Demo.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={loadDemoVisitors}
+                disabled={demoLoading}
+                className="inline-flex items-center justify-center rounded-lg border border-blue-200 bg-white px-4 py-2.5 text-sm font-semibold text-blue-700 shadow-[0_2px_10px_rgba(37,99,235,0.08)] transition hover:border-blue-300 hover:bg-blue-50 hover:shadow-[0_5px_16px_rgba(37,99,235,0.14)] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {demoLoading
+                  ? "Refreshing..."
+                  : "Refresh"}
+              </button>
+            </div>
+
+            {demoError ? (
+              <div className="rounded-xl border border-red-200 bg-white p-5 text-sm text-red-700 shadow-sm">
+                {demoError}
+              </div>
+            ) : (
+              <>
+                {/* Demo summary */}
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <KpiCard
+                    label="Total Visitors"
+                    value={
+                      demoLoading
+                        ? "—"
+                        : demoSummary.totalVisitors
+                    }
+                    detail="People who entered the demo"
+                    accent="blue"
+                  />
+
+                  <KpiCard
+                    label="Active Today"
+                    value={
+                      demoLoading
+                        ? "—"
+                        : demoSummary.activeToday
+                    }
+                    detail="Visitors active today"
+                    accent="green"
+                  />
+
+                  <KpiCard
+                    label="Total Visits"
+                    value={
+                      demoLoading
+                        ? "—"
+                        : demoSummary.totalVisits
+                    }
+                    detail="Recorded demo accesses"
+                    accent="slate"
+                  />
+                </div>
+
+                {/* Demo filters */}
+                <div className="mt-6 flex flex-col justify-between gap-4 rounded-xl border border-blue-100 bg-white p-4 shadow-[0_3px_14px_rgba(37,99,235,0.06)] sm:flex-row sm:items-center">
+                  <div>
+                    <div className="text-sm font-semibold text-slate-800">
+                      Filter Demo visits
+                    </div>
+
+                    <div className="mt-0.5 text-xs text-slate-500">
+                      Filter by recent activity and sort by last visit.
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <select
+                      value={demoDateFilter}
+                      onChange={(event) =>
+                        setDemoDateFilter(
+                          event.target
+                            .value as DemoDateFilter
+                        )
+                      }
+                      className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    >
+                      <option value="all">
+                        All Visits
+                      </option>
+
+                      <option value="today">
+                        Today
+                      </option>
+
+                      <option value="7days">
+                        Last 7 Days
+                      </option>
+
+                      <option value="30days">
+                        Last 30 Days
+                      </option>
+                    </select>
+
+                    <select
+                      value={demoSortOrder}
+                      onChange={(event) =>
+                        setDemoSortOrder(
+                          event.target
+                            .value as DemoSortOrder
+                        )
+                      }
+                      className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    >
+                      <option value="newest">
+                        Last Visit — Newest First
+                      </option>
+
+                      <option value="oldest">
+                        Last Visit — Oldest First
+                      </option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Demo visitors table */}
+                <div className="mt-6 overflow-hidden rounded-xl border border-blue-100 bg-white shadow-[0_4px_16px_rgba(37,99,235,0.07)]">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-slate-200">
+                      <thead className="bg-blue-50/60">
+                        <tr>
+                          <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-blue-700">
+                            Visitor
+                          </th>
+
+                          <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-blue-700">
+                            Phone
+                          </th>
+
+                          <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-blue-700">
+                            First Visit
+                          </th>
+
+                          <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-blue-700">
+                            Last Visit
+                          </th>
+
+                          <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-blue-700">
+                            Visits
+                          </th>
+                        </tr>
+                      </thead>
+
+                      <tbody className="divide-y divide-slate-100 bg-white">
+                        {demoLoading ? (
+                          <tr>
+                            <td
+                              colSpan={5}
+                              className="px-5 py-10 text-center text-sm text-slate-500"
+                            >
+                              Loading Demo Activity...
+                            </td>
+                          </tr>
+                        ) : filteredDemoVisitors.length ===
+                          0 ? (
+                          <tr>
+                            <td
+                              colSpan={5}
+                              className="px-5 py-10 text-center text-sm text-slate-500"
+                            >
+                              No Demo visits match this filter.
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredDemoVisitors.map(
+                            (visitor) => (
+                              <tr
+                                key={visitor.id}
+                                className="transition hover:bg-blue-50/40"
+                              >
+                                <td className="whitespace-nowrap px-5 py-4">
+                                  <div className="font-semibold text-slate-900">
+                                    {visitor.full_name}
+                                  </div>
+                                </td>
+
+                                <td className="whitespace-nowrap px-5 py-4 text-sm text-slate-600">
+                                  {visitor.phone}
+                                </td>
+
+                                <td className="whitespace-nowrap px-5 py-4 text-sm text-slate-600">
+                                  {formatDateTime(
+                                    visitor.first_access_at
+                                  )}
+                                </td>
+
+                                <td className="whitespace-nowrap px-5 py-4 text-sm font-medium text-slate-700">
+                                  {formatDateTime(
+                                    visitor.last_access_at
+                                  )}
+                                </td>
+
+                                <td className="whitespace-nowrap px-5 py-4">
+                                  <span className="inline-flex min-w-8 items-center justify-center rounded-full bg-blue-50 px-2.5 py-1 text-sm font-semibold text-blue-700">
+                                    {visitor.access_count}
+                                  </span>
+                                </td>
+                              </tr>
+                            )
+                          )
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {!demoLoading &&
+                    filteredDemoVisitors.length > 0 && (
+                      <div className="border-t border-blue-100 bg-slate-50 px-5 py-3 text-xs text-slate-500">
+                        Showing{" "}
+                        {filteredDemoVisitors.length}{" "}
+                        of{" "}
+                        {demoVisitors.length}{" "}
+                        Demo visitors
+                      </div>
+                    )}
+                </div>
+              </>
+            )}
+          </section>
+
           {/* System note */}
-          <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="mt-6 rounded-xl border border-blue-100 bg-white p-4 shadow-[0_3px_12px_rgba(37,99,235,0.05)]">
             <div className="flex items-start gap-3">
               <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
                 <svg
@@ -883,12 +1311,34 @@ function KpiCard({
   onClick?: () => void;
 }) {
   const accents = {
-    slate: "bg-slate-100 text-slate-700",
-    blue: "bg-blue-50 text-blue-700",
-    amber: "bg-amber-50 text-amber-700",
-    red: "bg-red-50 text-red-700",
-    green: "bg-emerald-50 text-emerald-700",
+    slate: {
+      dot: "bg-slate-400",
+      label: "text-slate-600",
+    },
+
+    blue: {
+      dot: "bg-blue-600",
+      label: "text-blue-700",
+    },
+
+    amber: {
+      dot: "bg-amber-500",
+      label: "text-amber-700",
+    },
+
+    red: {
+      dot: "bg-red-500",
+      label: "text-red-700",
+    },
+
+    green: {
+      dot: "bg-emerald-500",
+      label: "text-emerald-700",
+    },
   };
+
+  const currentAccent =
+    accents[accent];
 
   return (
     <div
@@ -908,15 +1358,20 @@ function KpiCard({
             }
           : undefined
       }
-      className={`rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition ${
+      className={`group relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[0_3px_14px_rgba(37,99,235,0.08)] transition-all duration-200 ${
         onClick
-          ? "cursor-pointer hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-slate-300"
+          ? "cursor-pointer hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-[0_8px_24px_rgba(37,99,235,0.16)] focus:outline-none focus:ring-2 focus:ring-blue-300"
           : ""
       }`}
     >
+      {/* subtle blue top accent */}
+      <div className="absolute inset-x-0 top-0 h-0.5 bg-blue-500 opacity-60 transition-opacity group-hover:opacity-100" />
+
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-sm font-medium text-slate-500">
+          <div
+            className={`text-sm font-medium ${currentAccent.label}`}
+          >
             {label}
           </div>
 
@@ -930,7 +1385,7 @@ function KpiCard({
         </div>
 
         <div
-          className={`h-3 w-3 rounded-full ${accents[accent]}`}
+          className={`h-3 w-3 rounded-full ${currentAccent.dot} shadow-[0_0_0_4px_rgba(37,99,235,0.08)]`}
         />
       </div>
     </div>
