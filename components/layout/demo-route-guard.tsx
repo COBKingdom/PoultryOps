@@ -1,18 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import {
+  useEffect,
+  useState,
+} from "react";
 
-import { useAuth } from "@/contexts/AuthContext";
-import { useCurrentFarm } from "@/hooks/useCurrentFarm";
+import {
+  usePathname,
+  useRouter,
+} from "next/navigation";
 
-const DEMO_BLOCKED_PREFIXES = [
-  "/settings",
-  "/team",
-  "/migration",
-  "/admin",
-  "/setup",
-];
+import { usePermissions } from "@/lib/permissions";
 
 const DEMO_ACTION_WORDS = [
   "add",
@@ -32,37 +30,98 @@ const DEMO_ACTION_WORDS = [
   "restore",
 ];
 
-function isBlockedDemoRoute(pathname: string) {
-  return DEMO_BLOCKED_PREFIXES.some(
-    (prefix) =>
-      pathname === prefix ||
-      pathname.startsWith(`${prefix}/`)
+const DEMO_RESTRICTED_ROUTES = [
+  "/settings",
+  "/team",
+  "/migration",
+  "/admin",
+  "/setup",
+];
+
+/*
+ * These routes must NEVER be affected by Demo Mode.
+ *
+ * This is especially important for /login because the application
+ * layout may remain mounted while authentication is changing.
+ */
+const PUBLIC_ROUTES = [
+  "/",
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+  "/auth/callback",
+];
+
+function isPublicRoute(
+  pathname: string
+) {
+  return PUBLIC_ROUTES.some(
+    (route) =>
+      pathname === route ||
+      pathname.startsWith(`${route}/`)
   );
 }
 
-function looksLikeWriteAction(element: HTMLElement) {
-  const button = element.closest(
-    "button, input[type='submit'], input[type='button']"
-  ) as HTMLElement | null;
-
-  if (!button) {
-    return false;
-  }
-
-  const text = [
-    button.textContent || "",
-    button.getAttribute("aria-label") || "",
-    button.getAttribute("title") || "",
-    button.getAttribute("name") || "",
-    button.getAttribute("value") || "",
+function containsDemoActionText(
+  element: HTMLElement
+) {
+  const values = [
+    element.textContent || "",
+    element.getAttribute("aria-label") || "",
+    element.getAttribute("title") || "",
+    element.getAttribute("name") || "",
+    element.getAttribute("value") || "",
   ]
     .join(" ")
-    .trim()
     .toLowerCase();
 
-  return DEMO_ACTION_WORDS.some((word) =>
-    text.includes(word)
+  return DEMO_ACTION_WORDS.some(
+    (word) =>
+      new RegExp(
+        `\\b${word}\\b`,
+        "i"
+      ).test(values)
   );
+}
+
+function isWriteElement(
+  element: HTMLElement
+) {
+  const button =
+    element.closest(
+      "button"
+    ) as HTMLButtonElement | null;
+
+  if (button) {
+    return containsDemoActionText(
+      button
+    );
+  }
+
+  const input =
+    element.closest(
+      "input"
+    ) as HTMLInputElement | null;
+
+  if (input) {
+    const type =
+      (
+        input.getAttribute("type") ||
+        ""
+      ).toLowerCase();
+
+    if (
+      type === "submit" ||
+      type === "button"
+    ) {
+      return containsDemoActionText(
+        input
+      );
+    }
+  }
+
+  return false;
 }
 
 export default function DemoRouteGuard({
@@ -70,61 +129,117 @@ export default function DemoRouteGuard({
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
   const pathname = usePathname();
+  const router = useRouter();
 
-  const { user } = useAuth();
-  const { farm, loading } = useCurrentFarm();
+  const {
+    isDemoMode,
+    loading: permissionsLoading,
+  } = usePermissions();
 
-  const [showReadOnlyModal, setShowReadOnlyModal] =
+  const [showModal, setShowModal] =
     useState(false);
 
-  const isDemoMode =
-    Boolean(user) &&
-    !loading &&
-    farm?.farm_code === "DEMO-001";
+  /*
+   * ============================================================
+   * PUBLIC / AUTHENTICATION ROUTES
+   * ============================================================
+   *
+   * Demo Mode must NEVER interfere with these routes.
+   *
+   * This prevents the Demo Guard from appearing on the login
+   * screen while authentication is being established or changed.
+   */
+  const onPublicRoute =
+    isPublicRoute(pathname);
 
   /*
-   * Demo route protection.
-   *
-   * This only activates after an authenticated user
-   * has been identified as the Demo farm.
+   * If navigation reaches a public route, immediately close any
+   * Demo modal that may have been open.
    */
   useEffect(() => {
-    if (
-      isDemoMode &&
-      isBlockedDemoRoute(pathname)
-    ) {
-      router.replace("/dashboard");
+    if (onPublicRoute) {
+      setShowModal(false);
+    }
+  }, [onPublicRoute]);
+
+  /*
+   * ============================================================
+   * DEMO MODE
+   * ============================================================
+   *
+   * We deliberately use the existing permissions system rather
+   * than querying the current farm again.
+   *
+   * AppShell already uses this same source of truth.
+   */
+  const demoActive =
+    !permissionsLoading &&
+    isDemoMode &&
+    !onPublicRoute;
+
+  /*
+   * ============================================================
+   * DEMO RESTRICTED ROUTES
+   * ============================================================
+   */
+  useEffect(() => {
+    if (!demoActive) {
+      return;
+    }
+
+    const isRestrictedRoute =
+      DEMO_RESTRICTED_ROUTES.some(
+        (route) =>
+          pathname === route ||
+          pathname.startsWith(
+            `${route}/`
+          )
+      );
+
+    if (isRestrictedRoute) {
+      setShowModal(false);
+
+      router.replace(
+        "/dashboard"
+      );
     }
   }, [
-    isDemoMode,
+    demoActive,
     pathname,
     router,
   ]);
 
   /*
-   * Demo write protection.
+   * ============================================================
+   * DEMO WRITE PROTECTION
+   * ============================================================
    *
-   * This only runs while DEMO-001 is active.
-   * Login, registration and normal farms are untouched.
+   * These listeners are installed ONLY when:
+   *
+   * 1. permissions have finished loading
+   * 2. the current user is actually Demo
+   * 3. the current route is not public/authentication
+   *
+   * Normal subscribers therefore have no Demo interception.
    */
   useEffect(() => {
-    if (!isDemoMode) {
+    if (!demoActive) {
       return;
     }
 
-    const handleDemoClick = (event: MouseEvent) => {
-      const target = event.target;
+    const handleClick = (
+      event: MouseEvent
+    ) => {
+      const target =
+        event.target as HTMLElement | null;
 
-      if (!(target instanceof HTMLElement)) {
+      if (!target) {
         return;
       }
 
       /*
-       * Allow interaction with our Demo Mode modal.
-       * Otherwise the "Create Your Free Account"
-       * button would itself be intercepted.
+       * Never intercept anything inside our own modal.
        */
       if (
         target.closest(
@@ -134,24 +249,28 @@ export default function DemoRouteGuard({
         return;
       }
 
-      if (looksLikeWriteAction(target)) {
+      if (
+        isWriteElement(target)
+      ) {
         event.preventDefault();
         event.stopPropagation();
-        event.stopImmediatePropagation();
 
-        setShowReadOnlyModal(true);
+        setShowModal(true);
       }
     };
 
-    const handleDemoSubmit = (event: SubmitEvent) => {
-      const target = event.target;
+    const handleSubmit = (
+      event: SubmitEvent
+    ) => {
+      const target =
+        event.target as HTMLElement | null;
 
-      if (!(target instanceof HTMLFormElement)) {
+      if (!target) {
         return;
       }
 
       /*
-       * Never intercept forms inside the Demo modal.
+       * Never intercept our own Demo modal.
        */
       if (
         target.closest(
@@ -163,118 +282,124 @@ export default function DemoRouteGuard({
 
       event.preventDefault();
       event.stopPropagation();
-      event.stopImmediatePropagation();
 
-      setShowReadOnlyModal(true);
+      setShowModal(true);
     };
 
     document.addEventListener(
       "click",
-      handleDemoClick,
+      handleClick,
       true
     );
 
     document.addEventListener(
       "submit",
-      handleDemoSubmit,
+      handleSubmit,
       true
     );
 
     return () => {
       document.removeEventListener(
         "click",
-        handleDemoClick,
+        handleClick,
         true
       );
 
       document.removeEventListener(
         "submit",
-        handleDemoSubmit,
+        handleSubmit,
         true
       );
     };
-  }, [isDemoMode]);
+  }, [demoActive]);
+
+  /*
+   * ============================================================
+   * RENDER
+   * ============================================================
+   */
 
   return (
     <>
       {children}
 
-      {isDemoMode && showReadOnlyModal && (
-        <div
-          data-demo-readonly-modal
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm px-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="demo-readonly-title"
-        >
-          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
-            {/* Demo header */}
-            <div className="bg-amber-500 px-6 py-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-xl">
-                  👀
-                </div>
-
-                <div>
-                  <div className="text-xs font-bold uppercase tracking-widest text-amber-950">
-                    PoultryOps
+      {demoActive &&
+        showModal && (
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/60 px-4 backdrop-blur-[2px]"
+            onClick={() =>
+              setShowModal(false)
+            }
+            data-demo-readonly-modal
+          >
+            <div
+              className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl"
+              onClick={(event) =>
+                event.stopPropagation()
+              }
+              data-demo-readonly-modal
+            >
+              {/* DEMO MODAL HEADER */}
+              <div className="bg-gradient-to-br from-amber-500 to-orange-500 px-6 py-5 text-white">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/20 text-2xl">
+                    👀
                   </div>
 
-                  <h2
-                    id="demo-readonly-title"
-                    className="text-xl font-extrabold text-white"
-                  >
-                    Demo Mode
-                  </h2>
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-[0.16em]">
+                      PoultryOps
+                    </div>
+
+                    <div className="text-2xl font-bold">
+                      Demo Mode
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Message */}
-            <div className="px-6 py-6">
-              <p className="text-base font-semibold leading-6 text-slate-900">
-                You're exploring sample PoultryOps data.
-              </p>
+              {/* DEMO MODAL BODY */}
+              <div className="px-6 py-6">
+                <h2 className="text-base font-bold text-slate-900">
+                  You're exploring sample PoultryOps data.
+                </h2>
 
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Demo Mode is read-only, so changes
-                cannot be saved.
-              </p>
-
-              <div className="mt-5 rounded-xl border border-blue-100 bg-blue-50 p-4">
-                <p className="text-sm font-bold text-slate-900">
-                  Want your own PoultryOps farm?
+                <p className="mt-3 text-sm leading-6 text-slate-600">
+                  Demo Mode is read-only, so changes cannot be saved.
                 </p>
 
-                <p className="mt-1 text-sm leading-5 text-slate-600">
-                  It's free to get started. Create
-                  your own account and start managing
-                  your real farm data.
-                </p>
+                <div className="mt-5 rounded-xl border border-blue-200 bg-blue-50 px-4 py-4">
+                  <div className="text-sm font-bold text-slate-900">
+                    Want your own PoultryOps farm?
+                  </div>
+
+                  <p className="mt-1 text-sm leading-5 text-slate-600">
+                    It's free to get started. Create your own account and start managing your real farm data.
+                  </p>
+                </div>
+
+                <a
+                  href="https://poultry.trueops.app/register"
+                  className="mt-6 flex h-12 items-center justify-center rounded-xl bg-blue-600 px-5 text-sm font-bold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 hover:shadow-blue-600/30"
+                  data-demo-readonly-modal
+                >
+                  Create Your Free Account
+                </a>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowModal(false)
+                  }
+                  className="mt-4 w-full py-2 text-sm font-semibold text-slate-500 transition hover:text-slate-800"
+                  data-demo-readonly-modal
+                >
+                  Continue Exploring
+                </button>
               </div>
-
-              {/* CTA */}
-              <a
-                href="https://poultry.trueops.app/register"
-                className="mt-6 flex w-full items-center justify-center rounded-xl bg-blue-600 px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 active:scale-[0.98]"
-              >
-                Create Your Free Account
-              </a>
-
-              {/* Continue */}
-              <button
-                type="button"
-                onClick={() =>
-                  setShowReadOnlyModal(false)
-                }
-                className="mt-3 w-full rounded-xl px-5 py-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
-              >
-                Continue Exploring
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
     </>
   );
 }
