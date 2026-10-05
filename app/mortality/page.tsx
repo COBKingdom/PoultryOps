@@ -21,10 +21,13 @@ import {
 } from "@/lib/date-ranges";
 
 import {
+  AlertTriangle,
   ChevronDown,
+  HeartPulse,
 } from "lucide-react";
 
 import AppShell from "@/components/layout/app-shell";
+
 import OperationsToolbar from "@/components/operations/operations-toolbar";
 import OperationsPagination from "@/components/operations/operations-pagination";
 
@@ -63,43 +66,65 @@ export default function MortalityPage() {
 
   const pageSize = 10;
 
-  const [dateRangeSelection, setDateRangeSelection] =
+  const [
+    dateRangeSelection,
+    setDateRangeSelection,
+  ] =
     useState<DateRangeSelection>(
       getDefaultDateRangeSelection()
     );
 
-  const [isEditModalOpen, setIsEditModalOpen] =
-    useState(false);
+  const [
+    isEditModalOpen,
+    setIsEditModalOpen,
+  ] = useState(false);
 
-  const [editingRecord, setEditingRecord] =
+  const [
+    editingRecord,
+    setEditingRecord,
+  ] =
     useState<any | null>(null);
 
-  /*
-   * Load farm flocks.
-   */
+  // ============================================================
+  // LOAD FARM FLOCKS
+  // ============================================================
+
   useEffect(() => {
-    async function load() {
-      if (!farmId) return;
+    async function loadFlocks() {
+      if (!farmId) {
+        setFlocks([]);
+        return;
+      }
 
-      const result =
-        await getFarmFlocks(farmId);
+      try {
+        const result =
+          await getFarmFlocks(farmId);
 
-      setFlocks(result);
+        setFlocks(result || []);
+      } catch (error) {
+        console.error(
+          "Failed to load farm flocks:",
+          error
+        );
+
+        setFlocks([]);
+      }
     }
 
-    load();
+    loadFlocks();
   }, [farmId]);
 
-  /*
-   * Filter mortality by date range
-   * and selected flock.
-   */
+  // ============================================================
+  // DATE + FLOCK FILTER
+  // ============================================================
+
   const dateAndFlockFilteredRecords =
     useMemo(() => {
       const {
         start,
         end,
-      } = dateRangeSelection.range;
+      } =
+        dateRangeSelection.range;
 
       return records.filter((record) => {
         const mortalityDate =
@@ -129,63 +154,194 @@ export default function MortalityPage() {
       selectedFlockId,
     ]);
 
-  /*
-   * Compute KPI values after both
-   * date and flock filters.
-   */
+  // ============================================================
+  // OPERATIONAL KPI VALUES
+  // ============================================================
+
   const kpiValues = useMemo(() => {
     const selectedPeriodMortality =
       dateAndFlockFilteredRecords.reduce(
         (sum, record) =>
           sum +
-          Number(record.quantity || 0),
+          Number(
+            record.quantity || 0
+          ),
         0
       );
 
     const recordCount =
       dateAndFlockFilteredRecords.length;
 
+    const selectedFlocks =
+      selectedFlockId
+        ? flocks.filter(
+            (flock) =>
+              flock.id ===
+              selectedFlockId
+          )
+        : flocks;
+
+    const startingBirds =
+      selectedFlocks.reduce(
+        (sum, flock) =>
+          sum +
+          Number(
+            flock.quantity || 0
+          ),
+        0
+      );
+
+    const mortalityRate =
+      startingBirds > 0
+        ? (
+            selectedPeriodMortality /
+            startingBirds
+          ) * 100
+        : 0;
+
+    let mortalityStatus:
+      | "normal"
+      | "watch"
+      | "critical";
+
+    if (mortalityRate >= 10) {
+      mortalityStatus =
+        "critical";
+    } else if (
+      mortalityRate >= 5
+    ) {
+      mortalityStatus =
+        "watch";
+    } else {
+      mortalityStatus =
+        "normal";
+    }
+
     return {
       selectedPeriodMortality,
       recordCount,
+      startingBirds,
+      mortalityRate,
+      mortalityStatus,
     };
   }, [
     dateAndFlockFilteredRecords,
+    flocks,
+    selectedFlockId,
   ]);
 
-  /*
-   * Apply search after date and flock filters.
-   */
-  const filteredRecords = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return dateAndFlockFilteredRecords;
-    }
+  // ============================================================
+  // MORTALITY STATUS
+  // ============================================================
 
-    const query =
-      searchQuery.toLowerCase();
+  const mortalityStatusConfig =
+    useMemo(() => {
+      if (
+        kpiValues.mortalityStatus ===
+        "critical"
+      ) {
+        return {
+          label: "Critical",
+          description:
+            "Mortality is at or above the 10% threshold.",
+          valueClass:
+            "text-red-600",
+          dotClass:
+            "bg-red-500 ring-red-100",
+          bannerClass:
+            "border-red-200 bg-red-50",
+          bannerIconClass:
+            "text-red-600",
+          bannerTitleClass:
+            "text-red-900",
+          bannerTextClass:
+            "text-red-700",
+        };
+      }
 
-    return dateAndFlockFilteredRecords.filter(
-      (record) =>
-        record.flocks?.flock_name
-          ?.toLowerCase()
-          .includes(query) ||
-        record.mortality_date
-          ?.toLowerCase()
-          .includes(query) ||
-        String(record.quantity)
-          .includes(query) ||
-        record.reason
-          ?.toLowerCase()
-          .includes(query)
-    );
-  }, [
-    dateAndFlockFilteredRecords,
-    searchQuery,
-  ]);
+      if (
+        kpiValues.mortalityStatus ===
+        "watch"
+      ) {
+        return {
+          label: "Watch",
+          description:
+            "Mortality is elevated and should be monitored.",
+          valueClass:
+            "text-amber-600",
+          dotClass:
+            "bg-amber-500 ring-amber-100",
+          bannerClass:
+            "border-amber-200 bg-amber-50",
+          bannerIconClass:
+            "text-amber-600",
+          bannerTitleClass:
+            "text-amber-900",
+          bannerTextClass:
+            "text-amber-700",
+        };
+      }
 
-  /*
-   * Pagination.
-   */
+      return {
+        label: "Normal",
+        description:
+          "Mortality is currently below the watch threshold.",
+        valueClass:
+          "text-green-600",
+        dotClass:
+          "bg-emerald-500 ring-emerald-100",
+        bannerClass:
+          "border-green-200 bg-green-50",
+        bannerIconClass:
+          "text-green-600",
+        bannerTitleClass:
+          "text-green-900",
+        bannerTextClass:
+          "text-green-700",
+      };
+    }, [
+      kpiValues.mortalityStatus,
+    ]);
+
+  // ============================================================
+  // SEARCH
+  // ============================================================
+
+  const filteredRecords =
+    useMemo(() => {
+      if (!searchQuery.trim()) {
+        return dateAndFlockFilteredRecords;
+      }
+
+      const query =
+        searchQuery
+          .toLowerCase()
+          .trim();
+
+      return dateAndFlockFilteredRecords.filter(
+        (record) =>
+          record.flocks?.flock_name
+            ?.toLowerCase()
+            .includes(query) ||
+          record.mortality_date
+            ?.toLowerCase()
+            .includes(query) ||
+          String(
+            record.quantity
+          ).includes(query) ||
+          record.reason
+            ?.toLowerCase()
+            .includes(query)
+      );
+    }, [
+      dateAndFlockFilteredRecords,
+      searchQuery,
+    ]);
+
+  // ============================================================
+  // PAGINATION
+  // ============================================================
+
   const totalItems =
     filteredRecords.length;
 
@@ -204,10 +360,10 @@ export default function MortalityPage() {
       startIndex + pageSize
     );
 
-  /*
-   * Reset pagination whenever
-   * search, flock, or date range changes.
-   */
+  // ============================================================
+  // RESET PAGINATION
+  // ============================================================
+
   useEffect(() => {
     setCurrentPage(1);
   }, [
@@ -216,19 +372,27 @@ export default function MortalityPage() {
     dateRangeSelection,
   ]);
 
+  // ============================================================
+  // EDIT GOVERNANCE
+  // ============================================================
+
   function handleEditRecord(
     record: any
   ) {
     const governanceResult =
       canEdit(
         {
-          id: user?.id || "",
-          role: profile?.role || "",
+          id:
+            user?.id || "",
+          role:
+            profile?.role || "",
         },
         record
       );
 
-    if (!governanceResult.allowed) {
+    if (
+      !governanceResult.allowed
+    ) {
       alert(
         governanceResult.reason ||
           "You cannot edit this record at this time."
@@ -246,37 +410,31 @@ export default function MortalityPage() {
     setEditingRecord(null);
   }
 
+  // ============================================================
+  // OPERATIONAL KPI CARDS
+  //
+  // Uses the same blue top-line + shadow treatment used
+  // by the other upgraded operational modules.
+  // ============================================================
+
   const kpiCards = (
     <>
-      {/* Mortality KPI */}
-      <div
-        className="
-          relative
-          overflow-hidden
-          rounded-xl
-          border
-          border-blue-100
-          bg-white
-          p-5
-          shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]
-          transition-all
-          duration-200
-        "
-      >
+      {/* Birds Lost */}
+      <div className="relative min-w-0 overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
         <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
 
         <div className="flex items-start justify-between gap-3 pt-1">
           <div className="min-w-0">
             <div className="text-sm font-medium text-slate-500">
-              Mortality
+              Birds Lost
             </div>
 
-            <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
-              {kpiValues.selectedPeriodMortality}
+            <div className="mt-2 text-3xl font-bold tracking-tight text-red-600">
+              {kpiValues.selectedPeriodMortality.toLocaleString()}
             </div>
 
             <div className="mt-1 text-xs text-slate-400">
-              Birds lost in selected period
+              Selected period
             </div>
           </div>
 
@@ -284,21 +442,45 @@ export default function MortalityPage() {
         </div>
       </div>
 
-      {/* Records KPI */}
-      <div
-        className="
-          relative
-          overflow-hidden
-          rounded-xl
-          border
-          border-blue-100
-          bg-white
-          p-5
-          shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]
-          transition-all
-          duration-200
-        "
-      >
+      {/* Mortality Rate */}
+      <div className="relative min-w-0 overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
+        <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
+
+        <div className="flex items-start justify-between gap-3 pt-1">
+          <div className="min-w-0">
+            <div className="text-sm font-medium text-slate-500">
+              Mortality Rate
+            </div>
+
+            <div className="mt-2 flex items-baseline font-bold tracking-tight">
+              <span
+                className={`text-3xl ${mortalityStatusConfig.valueClass}`}
+              >
+                {kpiValues.mortalityRate.toFixed(
+                  2
+                )}
+              </span>
+
+              <span
+                className={`ml-1 text-2xl ${mortalityStatusConfig.valueClass}`}
+              >
+                %
+              </span>
+            </div>
+
+            <div className="mt-1 text-xs text-slate-400">
+              {mortalityStatusConfig.label}
+            </div>
+          </div>
+
+          <div
+            className={`mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full ring-4 ${mortalityStatusConfig.dotClass}`}
+          />
+        </div>
+      </div>
+
+      {/* Records */}
+      <div className="relative min-w-0 overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
         <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
 
         <div className="flex items-start justify-between gap-3 pt-1">
@@ -308,27 +490,62 @@ export default function MortalityPage() {
             </div>
 
             <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
-              {kpiValues.recordCount}
+              {kpiValues.recordCount.toLocaleString()}
             </div>
 
             <div className="mt-1 text-xs text-slate-400">
-              Mortality records
+              Selected period
             </div>
           </div>
 
           <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-blue-600 ring-4 ring-blue-100" />
         </div>
       </div>
+
+      {/* Starting Birds */}
+      <div className="relative min-w-0 overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
+        <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
+
+        <div className="flex items-start justify-between gap-3 pt-1">
+          <div className="min-w-0">
+            <div className="text-sm font-medium text-slate-500">
+              Starting Birds
+            </div>
+
+            <div className="mt-2 text-3xl font-bold tracking-tight text-green-600">
+              {kpiValues.startingBirds.toLocaleString()}
+            </div>
+
+            <div className="mt-1 text-xs text-slate-400">
+              {selectedFlockId
+                ? "Selected flock"
+                : "All flocks"}
+            </div>
+          </div>
+
+          <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-emerald-500 ring-4 ring-emerald-100" />
+        </div>
+      </div>
     </>
   );
+
+  // ============================================================
+  // TOOLBAR / FILTERS
+  // ============================================================
 
   const toolbar = (
     <OperationsToolbar
       searchPlaceholder="Search mortality records..."
       searchValue={searchQuery}
-      onSearchChange={setSearchQuery}
+      onSearchChange={
+        setSearchQuery
+      }
     />
   );
+
+  // ============================================================
+  // PAGINATION
+  // ============================================================
 
   const pagination = (
     <OperationsPagination
@@ -336,9 +553,15 @@ export default function MortalityPage() {
       total={totalPages}
       pageSize={pageSize}
       totalItems={totalItems}
-      onPageChange={setCurrentPage}
+      onPageChange={
+        setCurrentPage
+      }
     />
   );
+
+  // ============================================================
+  // LOADING
+  // ============================================================
 
   if (loading) {
     return (
@@ -352,6 +575,10 @@ export default function MortalityPage() {
     );
   }
 
+  // ============================================================
+  // PAGE
+  // ============================================================
+
   return (
     <AppShell
       email={user?.email}
@@ -363,12 +590,101 @@ export default function MortalityPage() {
           Mortality Management
         </h1>
 
-        {/* KPI Cards */}
+        {/* ======================================================
+            OPERATIONAL KPI CARDS
+            ====================================================== */}
+
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {kpiCards}
         </div>
 
-        {/* Search + Flock Filter + Date Filter */}
+        {/* ======================================================
+            MORTALITY STATUS / WARNING
+            ====================================================== */}
+
+        <div
+          className={`
+            flex
+            items-start
+            gap-3
+            rounded-2xl
+            border
+            px-4
+            py-4
+            ${mortalityStatusConfig.bannerClass}
+          `}
+        >
+          <div
+            className={`
+              mt-0.5
+              flex
+              h-9
+              w-9
+              shrink-0
+              items-center
+              justify-center
+              rounded-full
+              bg-white
+              ${mortalityStatusConfig.bannerIconClass}
+            `}
+          >
+            {kpiValues.mortalityStatus ===
+            "critical" ? (
+              <AlertTriangle
+                size={19}
+              />
+            ) : (
+              <HeartPulse
+                size={19}
+              />
+            )}
+          </div>
+
+          <div className="min-w-0">
+            <p
+              className={`
+                font-bold
+                ${mortalityStatusConfig.bannerTitleClass}
+              `}
+            >
+              Mortality Status:{" "}
+              {
+                mortalityStatusConfig.label
+              }
+            </p>
+
+            <p
+              className={`
+                mt-0.5
+                text-sm
+                ${mortalityStatusConfig.bannerTextClass}
+              `}
+            >
+              {
+                mortalityStatusConfig.description
+              }
+            </p>
+
+            {kpiValues.mortalityStatus ===
+              "critical" && (
+              <p
+                className={`
+                  mt-1
+                  text-sm
+                  font-semibold
+                  ${mortalityStatusConfig.bannerTextClass}
+                `}
+              >
+                Immediate investigation is recommended.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* ======================================================
+            FILTERS
+            ====================================================== */}
+
         <div className="flex flex-col lg:flex-row lg:items-center gap-3">
 
           <div className="flex-1">
@@ -389,22 +705,20 @@ export default function MortalityPage() {
                 w-full
                 lg:w-64
                 h-[50px]
-                rounded-2xl
+                rounded-xl
                 border
                 border-slate-200
                 bg-white
-                pl-4
+                px-4
                 pr-10
                 text-sm
-                font-medium
                 text-slate-700
                 shadow-sm
-                outline-none
-                transition
-                focus:border-blue-400
+                focus:outline-none
                 focus:ring-2
-                focus:ring-blue-100
+                focus:ring-blue-500
               "
+              aria-label="Filter mortality records by flock"
             >
               <option value="">
                 All Flocks
@@ -433,28 +747,34 @@ export default function MortalityPage() {
             />
           </div>
 
+          {/* Date Filter */}
           <div className="flex-shrink-0">
             <ReportFilter
-              value={dateRangeSelection}
-              onChange={setDateRangeSelection}
+              value={
+                dateRangeSelection
+              }
+              onChange={
+                setDateRangeSelection
+              }
             />
           </div>
-
         </div>
 
         {/* Active Flock Indicator */}
         {selectedFlockId && (
-          <div className="
-            flex
-            items-center
-            justify-between
-            rounded-2xl
-            border
-            border-blue-100
-            bg-blue-50
-            px-4
-            py-3
-          ">
+          <div
+            className="
+              flex
+              items-center
+              justify-between
+              rounded-xl
+              border
+              border-blue-100
+              bg-blue-50
+              px-4
+              py-3
+            "
+          >
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-blue-500">
                 Viewing Flock
@@ -489,12 +809,14 @@ export default function MortalityPage() {
           </div>
         )}
 
-        {/* Main Content */}
+        {/* ======================================================
+            MAIN CONTENT
+            ====================================================== */}
+
         <div className="grid lg:grid-cols-12 gap-6 items-start">
 
           {/* Quick Entry */}
           <div className="lg:col-span-4 lg:order-last">
-
             <div className="lg:sticky lg:top-20 space-y-4">
 
               <AddMortalityForm
@@ -504,29 +826,37 @@ export default function MortalityPage() {
               />
 
             </div>
-
           </div>
 
-          {/* Records List */}
+          {/* Mortality Records */}
           <div className="lg:col-span-8 lg:order-first">
 
             <MortalityList
-              records={paginatedRecords}
-              onEdit={handleEditRecord}
+              records={
+                paginatedRecords
+              }
+              onEdit={
+                handleEditRecord
+              }
             />
 
           </div>
-
         </div>
 
-        {/* Pagination */}
+        {/* ======================================================
+            PAGINATION
+            ====================================================== */}
+
         {pagination && (
           <div className="flex items-center justify-center pt-4">
             {pagination}
           </div>
         )}
 
-        {/* Edit Modal */}
+        {/* ======================================================
+            EDIT MODAL
+            ====================================================== */}
+
         {isEditModalOpen &&
           editingRecord && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -534,7 +864,9 @@ export default function MortalityPage() {
               <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
 
                 <EditMortalityForm
-                  record={editingRecord}
+                  record={
+                    editingRecord
+                  }
                   flocks={flocks}
                   onClose={
                     handleCloseEditModal
