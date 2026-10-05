@@ -26,7 +26,11 @@ import {
 
 import {
   Activity,
+  Bird,
+  CheckCircle2,
+  Skull,
   RefreshCw,
+  ChevronDown,
 } from "lucide-react";
 
 export default function IsolationPage() {
@@ -39,32 +43,37 @@ export default function IsolationPage() {
     retry: retryFarm,
   } = useCurrentFarm();
 
+  const farmId = farm?.id;
+
   const {
     flocks,
     loading: flocksLoading,
     error: flocksError,
     refresh: refreshFlocks,
-  } = useFlocks(farm?.id);
+  } = useFlocks(farmId);
 
   const {
     records,
     loading: isolationLoading,
     error: isolationError,
     refresh: refreshIsolation,
-  } = useIsolation(farm?.id);
+  } = useIsolation(farmId);
 
   const [searchQuery, setSearchQuery] =
+    useState("");
+
+  const [selectedFlockId, setSelectedFlockId] =
     useState("");
 
   const [actionLoading, setActionLoading] =
     useState(false);
 
-  const [dateRangeSelection, setDateRangeSelection] =
-    useState<DateRangeSelection>(
-      getDefaultDateRangeSelection()
-    );
-
-  const farmId = farm?.id;
+  const [
+    dateRangeSelection,
+    setDateRangeSelection,
+  ] = useState<DateRangeSelection>(
+    getDefaultDateRangeSelection()
+  );
 
   const isLoading =
     farmLoading ||
@@ -72,13 +81,18 @@ export default function IsolationPage() {
     isolationLoading;
 
   /*
-   * Filter records by the selected date range.
+   * =========================================================
+   * DATE FILTER
+   * =========================================================
    *
-   * Isolation uses isolation_date as its date column.
+   * Isolation uses isolation_date.
    */
+
   const dateFilteredRecords = useMemo(() => {
-    const { start, end } =
-      dateRangeSelection.range;
+    const {
+      start,
+      end,
+    } = dateRangeSelection.range;
 
     return records.filter((record) => {
       const isolationDate =
@@ -93,15 +107,48 @@ export default function IsolationPage() {
         isolationDate <= end
       );
     });
-  }, [records, dateRangeSelection]);
+  }, [
+    records,
+    dateRangeSelection,
+  ]);
 
   /*
-   * KPI values are calculated from
-   * the selected date range.
+   * =========================================================
+   * FLOCK FILTER
+   * =========================================================
+   *
+   * All Flocks is represented by an empty selectedFlockId.
    */
+
+  const flockFilteredRecords =
+    useMemo(() => {
+      if (!selectedFlockId) {
+        return dateFilteredRecords;
+      }
+
+      return dateFilteredRecords.filter(
+        (record) =>
+          record.flock_id ===
+          selectedFlockId
+      );
+    }, [
+      dateFilteredRecords,
+      selectedFlockId,
+    ]);
+
+  /*
+   * =========================================================
+   * KPI VALUES
+   * =========================================================
+   *
+   * These calculations are unchanged from the existing
+   * Isolation implementation. The only difference is that
+   * they now operate on the selected flock when one is chosen.
+   */
+
   const kpiValues = useMemo(() => {
     const activeRecords =
-      dateFilteredRecords.filter(
+      flockFilteredRecords.filter(
         (record) =>
           record.status === "active"
       );
@@ -112,12 +159,16 @@ export default function IsolationPage() {
           sum +
           Math.max(
             0,
-            Number(record.quantity || 0) -
+            Number(
+              record.quantity || 0
+            ) -
               Number(
-                record.returned_quantity || 0
+                record.returned_quantity ||
+                  0
               ) -
               Number(
-                record.deceased_quantity || 0
+                record.deceased_quantity ||
+                  0
               )
           ),
         0
@@ -127,21 +178,23 @@ export default function IsolationPage() {
       activeRecords.length;
 
     const recoveredBirds =
-      dateFilteredRecords.reduce(
+      flockFilteredRecords.reduce(
         (sum, record) =>
           sum +
           Number(
-            record.returned_quantity || 0
+            record.returned_quantity ||
+              0
           ),
         0
       );
 
     const deceasedBirds =
-      dateFilteredRecords.reduce(
+      flockFilteredRecords.reduce(
         (sum, record) =>
           sum +
           Number(
-            record.deceased_quantity || 0
+            record.deceased_quantity ||
+              0
           ),
         0
       );
@@ -152,20 +205,29 @@ export default function IsolationPage() {
       recoveredBirds,
       deceasedBirds,
     };
-  }, [dateFilteredRecords]);
+  }, [
+    flockFilteredRecords,
+  ]);
 
   /*
-   * Apply search after the date filter.
+   * =========================================================
+   * SEARCH FILTER
+   * =========================================================
+   *
+   * Search is deliberately applied after date + flock filters.
    */
+
   const filteredRecords = useMemo(() => {
     if (!searchQuery.trim()) {
-      return dateFilteredRecords;
+      return flockFilteredRecords;
     }
 
     const query =
-      searchQuery.toLowerCase();
+      searchQuery
+        .toLowerCase()
+        .trim();
 
-    return dateFilteredRecords.filter(
+    return flockFilteredRecords.filter(
       (record) => {
         const flockName =
           record.flocks
@@ -194,19 +256,31 @@ export default function IsolationPage() {
       }
     );
   }, [
-    dateFilteredRecords,
+    flockFilteredRecords,
     searchQuery,
   ]);
 
   /*
-   * Reset search-related state when
-   * the date range changes.
+   * =========================================================
+   * RESET SEARCH-RELATED DISPLAY
+   * =========================================================
+   *
+   * We intentionally keep the search term intact.
+   * Records recalculate automatically when the filters change.
    */
+
   useEffect(() => {
-    // Keep the user's search term intact.
-    // The displayed records automatically
-    // recalculate from the new date range.
-  }, [dateRangeSelection]);
+    // No additional state reset required.
+  }, [
+    dateRangeSelection,
+    selectedFlockId,
+  ]);
+
+  /*
+   * =========================================================
+   * REFRESH
+   * =========================================================
+   */
 
   async function refreshAll() {
     await Promise.all([
@@ -215,18 +289,28 @@ export default function IsolationPage() {
     ]);
   }
 
+  /*
+   * =========================================================
+   * RECOVER BIRDS
+   * =========================================================
+   */
+
   async function handleRecover(
     record: any
   ) {
     const remaining =
       Math.max(
         0,
-        Number(record.quantity || 0) -
+        Number(
+          record.quantity || 0
+        ) -
           Number(
-            record.returned_quantity || 0
+            record.returned_quantity ||
+              0
           ) -
           Number(
-            record.deceased_quantity || 0
+            record.deceased_quantity ||
+              0
           )
       );
 
@@ -286,18 +370,28 @@ export default function IsolationPage() {
     }
   }
 
+  /*
+   * =========================================================
+   * RECORD ISOLATION DEATH
+   * =========================================================
+   */
+
   async function handleDeath(
     record: any
   ) {
     const remaining =
       Math.max(
         0,
-        Number(record.quantity || 0) -
+        Number(
+          record.quantity || 0
+        ) -
           Number(
-            record.returned_quantity || 0
+            record.returned_quantity ||
+              0
           ) -
           Number(
-            record.deceased_quantity || 0
+            record.deceased_quantity ||
+              0
           )
       );
 
@@ -354,10 +448,19 @@ export default function IsolationPage() {
     }
   }
 
+  /*
+   * =========================================================
+   * LOADING STATE
+   * =========================================================
+   */
+
   if (isLoading) {
     return (
-      <AppShell email={user?.email}>
+      <AppShell
+        email={user?.email}
+      >
         <div className="space-y-6">
+
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <div className="h-10 w-48 bg-slate-200 rounded-lg animate-pulse mb-2" />
@@ -370,9 +473,12 @@ export default function IsolationPage() {
               (item) => (
                 <div
                   key={item}
-                  className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm"
+                  className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]"
                 >
+                  <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
+
                   <div className="h-5 w-24 bg-slate-200 rounded animate-pulse mb-3" />
+
                   <div className="h-8 w-16 bg-slate-200 rounded animate-pulse" />
                 </div>
               )
@@ -382,10 +488,17 @@ export default function IsolationPage() {
           <div className="h-16 bg-white rounded-2xl border border-slate-200 animate-pulse" />
 
           <div className="h-96 bg-white rounded-3xl border border-slate-200 animate-pulse" />
+
         </div>
       </AppShell>
     );
   }
+
+  /*
+   * =========================================================
+   * ERROR STATE
+   * =========================================================
+   */
 
   if (
     farmError ||
@@ -393,9 +506,13 @@ export default function IsolationPage() {
     isolationError
   ) {
     return (
-      <AppShell email={user?.email}>
+      <AppShell
+        email={user?.email}
+      >
         <div className="flex items-center justify-center h-96">
+
           <div className="text-center max-w-md">
+
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
               <Activity
                 className="text-red-600"
@@ -424,17 +541,30 @@ export default function IsolationPage() {
               <RefreshCw size={20} />
               Try Again
             </button>
+
           </div>
+
         </div>
       </AppShell>
     );
   }
 
+  /*
+   * =========================================================
+   * PAGE
+   * =========================================================
+   */
+
   return (
-    <AppShell email={user?.email}>
+    <AppShell
+      email={user?.email}
+    >
       <div className="space-y-6">
 
-        {/* Header */}
+        {/* =====================================================
+            PAGE HEADER
+            ===================================================== */}
+
         <div>
           <h1 className="text-4xl font-bold text-slate-900">
             Isolation
@@ -447,15 +577,23 @@ export default function IsolationPage() {
           </p>
         </div>
 
-        {/* KPI Cards */}
+        {/* =====================================================
+            OPERATIONAL KPI CARDS
+            Same visual treatment as Feed / Sales / Expenses
+            ===================================================== */}
+
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 
           {/* Currently Isolated */}
+
           <div className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
+
             <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
 
             <div className="flex items-start justify-between gap-3 pt-1">
+
               <div className="min-w-0">
+
                 <div className="text-sm font-medium text-slate-500">
                   Currently Isolated
                 </div>
@@ -467,18 +605,24 @@ export default function IsolationPage() {
                 <div className="mt-1 text-xs text-slate-400">
                   Birds currently isolated
                 </div>
+
               </div>
 
-              <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full ring-4 bg-amber-500 ring-amber-100" />
+              <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-amber-500 ring-4 ring-amber-100" />
+
             </div>
           </div>
 
           {/* Active Cases */}
+
           <div className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
+
             <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
 
             <div className="flex items-start justify-between gap-3 pt-1">
+
               <div className="min-w-0">
+
                 <div className="text-sm font-medium text-slate-500">
                   Active Cases
                 </div>
@@ -490,18 +634,24 @@ export default function IsolationPage() {
                 <div className="mt-1 text-xs text-slate-400">
                   Active isolation records
                 </div>
+
               </div>
 
-              <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full ring-4 bg-blue-600 ring-blue-100" />
+              <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-blue-600 ring-4 ring-blue-100" />
+
             </div>
           </div>
 
           {/* Returned */}
+
           <div className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
+
             <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
 
             <div className="flex items-start justify-between gap-3 pt-1">
+
               <div className="min-w-0">
+
                 <div className="text-sm font-medium text-slate-500">
                   Returned
                 </div>
@@ -513,42 +663,57 @@ export default function IsolationPage() {
                 <div className="mt-1 text-xs text-slate-400">
                   Birds recovered
                 </div>
+
               </div>
 
-              <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full ring-4 bg-emerald-500 ring-emerald-100" />
+              <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-emerald-500 ring-4 ring-emerald-100" />
+
             </div>
           </div>
 
           {/* Deaths */}
+
           <div className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
+
             <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
 
             <div className="flex items-start justify-between gap-3 pt-1">
+
               <div className="min-w-0">
+
                 <div className="text-sm font-medium text-slate-500">
                   Deaths
                 </div>
 
-                <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+                <div className="mt-2 text-3xl font-bold tracking-tight text-red-600">
                   {kpiValues.deceasedBirds.toLocaleString()}
                 </div>
 
                 <div className="mt-1 text-xs text-slate-400">
                   Birds lost in isolation
                 </div>
+
               </div>
 
-              <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full ring-4 bg-red-500 ring-red-100" />
+              <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-red-500 ring-4 ring-red-100" />
+
             </div>
           </div>
 
         </div>
 
-        {/* Search + Date Filter */}
+        {/* =====================================================
+            SEARCH + FLOCK + DATE FILTER
+            ===================================================== */}
+
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
 
+          {/* Search */}
+
           <div className="flex-1">
+
             <div className="bg-white rounded-2xl border border-slate-200 p-3 shadow-sm">
+
               <input
                 type="text"
                 value={searchQuery}
@@ -560,53 +725,191 @@ export default function IsolationPage() {
                 placeholder="Search flock, reason or status..."
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors"
               />
+
             </div>
+
           </div>
 
-          <div className="flex-shrink-0">
-            <ReportFilter
-              value={dateRangeSelection}
-              onChange={
-                setDateRangeSelection
-              }
-            />
+          {/* Flock + Date */}
+
+          <div className="flex flex-col sm:flex-row gap-3">
+
+            {/* Flock Filter */}
+
+            <div className="relative flex-shrink-0">
+
+              <select
+                value={selectedFlockId}
+                onChange={(e) =>
+                  setSelectedFlockId(
+                    e.target.value
+                  )
+                }
+                className="
+                  appearance-none
+                  w-full
+                  sm:w-56
+                  border
+                  border-slate-200
+                  bg-white
+                  rounded-xl
+                  px-4
+                  py-3
+                  pr-10
+                  text-sm
+                  text-slate-700
+                  shadow-sm
+                  focus:outline-none
+                  focus:ring-2
+                  focus:ring-blue-500
+                "
+                aria-label="Filter isolation records by flock"
+              >
+
+                <option value="">
+                  All Flocks
+                </option>
+
+                {flocks.map(
+                  (flock) => (
+                    <option
+                      key={flock.id}
+                      value={flock.id}
+                    >
+                      {flock.flock_name}
+                    </option>
+                  )
+                )}
+
+              </select>
+
+              <ChevronDown
+                size={18}
+                className="
+                  pointer-events-none
+                  absolute
+                  right-4
+                  top-1/2
+                  -translate-y-1/2
+                  text-slate-400
+                "
+              />
+
+            </div>
+
+            {/* Date Filter */}
+
+            <div className="flex-shrink-0">
+
+              <ReportFilter
+                value={
+                  dateRangeSelection
+                }
+                onChange={
+                  setDateRangeSelection
+                }
+              />
+
+            </div>
+
           </div>
 
         </div>
 
-        {/* Record Isolation */}
-        <AddIsolationForm
-          farmId={farmId!}
-          flocks={flocks}
-          onSaved={refreshAll}
-        />
+        {/* =====================================================
+            SELECTED FLOCK INDICATOR
+            ===================================================== */}
 
-        {/* Isolation Records */}
-        <div>
-          <div className="mb-4">
-            <h2 className="text-2xl font-bold text-slate-900">
-              Isolation Records
-            </h2>
+        {selectedFlockId && (
+          <div className="flex items-center gap-2">
 
-            <p className="text-slate-500 mt-1">
-              Track birds currently isolated
-              and their eventual outcome.
-            </p>
+            <span className="text-sm text-slate-500">
+              Showing isolation records for:
+            </span>
+
+            <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">
+
+              {
+                flocks.find(
+                  (flock) =>
+                    flock.id ===
+                    selectedFlockId
+                )?.flock_name ||
+                  "Selected Flock"
+              }
+
+            </span>
+
+            <button
+              type="button"
+              onClick={() =>
+                setSelectedFlockId("")
+              }
+              className="text-sm font-medium text-slate-500 hover:text-slate-900"
+            >
+              Clear
+            </button>
+
+          </div>
+        )}
+
+        {/* =====================================================
+            MAIN CONTENT
+            ===================================================== */}
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+          {/* Records */}
+
+          <div className="lg:col-span-8">
+
+            <div className="mb-4">
+
+              <h2 className="text-2xl font-bold text-slate-900">
+                Isolation Records
+              </h2>
+
+              <p className="text-slate-500 mt-1">
+                Track birds currently isolated
+                and their eventual outcome.
+              </p>
+
+            </div>
+
+            <IsolationList
+              records={
+                filteredRecords
+              }
+              onRecover={
+                actionLoading
+                  ? undefined
+                  : handleRecover
+              }
+              onDeath={
+                actionLoading
+                  ? undefined
+                  : handleDeath
+              }
+            />
+
           </div>
 
-          <IsolationList
-            records={filteredRecords}
-            onRecover={
-              actionLoading
-                ? undefined
-                : handleRecover
-            }
-            onDeath={
-              actionLoading
-                ? undefined
-                : handleDeath
-            }
-          />
+          {/* Quick Entry */}
+
+          <div className="lg:col-span-4">
+
+            <div className="lg:sticky lg:top-20">
+
+              <AddIsolationForm
+                farmId={farmId!}
+                flocks={flocks}
+                onSaved={refreshAll}
+              />
+
+            </div>
+
+          </div>
+
         </div>
 
       </div>

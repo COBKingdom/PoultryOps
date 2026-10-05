@@ -178,7 +178,7 @@ export default function AddHealthForm({
           placeholder={
             category === "Others (Specify)"
               ? "Specify Treatment / Health Activity"
-              : "Treatment Name"
+              : "Medication Name"
           }
           value={treatmentName}
           onChange={(e) =>
