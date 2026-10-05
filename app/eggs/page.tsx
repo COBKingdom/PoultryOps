@@ -650,60 +650,7 @@ export default function EggsPage() {
           </div>
         </div>
 
-        {/* Production Intelligence */}
-        <div
-          className={`
-            flex
-            items-start
-            gap-3
-            rounded-xl
-            border
-            px-4
-            py-4
-            ${productionStatus.containerClass}
-          `}
-        >
-
-          <div
-            className={`
-              flex
-              h-9
-              w-9
-              shrink-0
-              items-center
-              justify-center
-              rounded-full
-              ${productionStatus.iconContainerClass}
-            `}
-          >
-            <ProductionStatusIcon size={18} />
-          </div>
-
-          <div className="min-w-0">
-
-            <p
-              className={`
-                text-sm
-                font-bold
-                ${productionStatus.titleClass}
-              `}
-            >
-              Production Status: {productionStatus.label}
-            </p>
-
-            <p
-              className={`
-                mt-1
-                text-sm
-                ${productionStatus.textClass}
-              `}
-            >
-              {productionStatus.message}
-            </p>
-
-          </div>
-
-        </div>
+        
 
         {/* KPI Cards */}
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -825,7 +772,60 @@ export default function EggsPage() {
           </div>
 
         </div>
+{/* Production Intelligence */}
+        <div
+          className={`
+            flex
+            items-start
+            gap-3
+            rounded-xl
+            border
+            px-4
+            py-4
+            ${productionStatus.containerClass}
+          `}
+        >
 
+          <div
+            className={`
+              flex
+              h-9
+              w-9
+              shrink-0
+              items-center
+              justify-center
+              rounded-full
+              ${productionStatus.iconContainerClass}
+            `}
+          >
+            <ProductionStatusIcon size={18} />
+          </div>
+
+          <div className="min-w-0">
+
+            <p
+              className={`
+                text-sm
+                font-bold
+                ${productionStatus.titleClass}
+              `}
+            >
+              Production Status: {productionStatus.label}
+            </p>
+
+            <p
+              className={`
+                mt-1
+                text-sm
+                ${productionStatus.textClass}
+              `}
+            >
+              {productionStatus.message}
+            </p>
+
+          </div>
+
+        </div>
         {/* Search + Flock + Date Filters */}
         <div
           className="
