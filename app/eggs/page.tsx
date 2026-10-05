@@ -328,6 +328,83 @@ export default function EggsPage() {
   ]);
 
   /*
+   * Production intelligence.
+   *
+   * 80%+     = Normal
+   * 70-79.9% = Watch
+   * <70%     = Critical
+   */
+  const productionStatus = useMemo(() => {
+    const rate = performance.productionRate;
+
+    if (rate >= 80) {
+      return {
+        label: "Normal",
+        message:
+          "Egg production is performing well against the current production benchmark.",
+        icon: CheckCircle2,
+        containerClass:
+          "border-emerald-200 bg-emerald-50",
+        iconContainerClass:
+          "bg-white text-emerald-600",
+        titleClass:
+          "text-emerald-900",
+        textClass:
+          "text-emerald-700",
+        rateClass:
+          "text-emerald-600",
+        progressClass:
+          "bg-emerald-500",
+      };
+    }
+
+    if (rate >= 70) {
+      return {
+        label: "Watch",
+        message:
+          "Production is below the 80% benchmark. Review feed intake, flock health and laying performance.",
+        icon: AlertCircle,
+        containerClass:
+          "border-amber-200 bg-amber-50",
+        iconContainerClass:
+          "bg-white text-amber-600",
+        titleClass:
+          "text-amber-900",
+        textClass:
+          "text-amber-700",
+        rateClass:
+          "text-amber-600",
+        progressClass:
+          "bg-amber-500",
+      };
+    }
+
+    return {
+      label: "Critical",
+      message:
+        "Production is significantly below the 70% threshold. Immediate investigation is recommended.",
+      icon: AlertCircle,
+      containerClass:
+        "border-red-200 bg-red-50",
+      iconContainerClass:
+        "bg-white text-red-600",
+      titleClass:
+        "text-red-900",
+      textClass:
+        "text-red-700",
+      rateClass:
+        "text-red-600",
+      progressClass:
+        "bg-red-500",
+    };
+  }, [
+    performance.productionRate,
+  ]);
+
+  const ProductionStatusIcon =
+    productionStatus.icon;
+
+  /*
    * Pagination.
    */
   const totalItems =
@@ -422,14 +499,19 @@ export default function EggsPage() {
         {/* Production Performance */}
         <div
           className="
-            rounded-2xl
+            relative
+            overflow-hidden
+            rounded-xl
             border
-            border-slate-200
+            border-blue-100
             bg-white
             p-5
-            shadow-sm
+            shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]
           "
         >
+          {/* Standard blue module line */}
+          <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
+
           <div
             className="
               flex
@@ -440,9 +522,11 @@ export default function EggsPage() {
               lg:justify-between
             "
           >
+
             {/* Performance heading */}
-            <div className="min-w-0">
+            <div className="min-w-0 pt-1">
               <div className="flex items-center gap-2">
+
                 <div
                   className="
                     flex
@@ -468,26 +552,44 @@ export default function EggsPage() {
                     Production efficiency for the selected period
                   </p>
                 </div>
+
               </div>
             </div>
 
             {/* Production rate */}
-            <div className="lg:min-w-[220px] lg:text-right">
+            <div className="lg:min-w-[250px] lg:text-right">
+
               <div className="flex items-end justify-between lg:justify-end lg:gap-3">
+
                 <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Production Rate
                 </span>
 
-                <span className="text-2xl font-bold text-slate-900">
+                <span
+                  className={`
+                    text-2xl
+                    font-bold
+                    tracking-tight
+                    ${productionStatus.rateClass}
+                  `}
+                >
                   {availableBirdsLoading
                     ? "—"
                     : `${performance.productionRate.toFixed(1)}%`}
                 </span>
+
               </div>
 
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+
                 <div
-                  className="h-full rounded-full bg-blue-600 transition-all"
+                  className={`
+                    h-full
+                    rounded-full
+                    transition-all
+                    duration-500
+                    ${productionStatus.progressClass}
+                  `}
                   style={{
                     width: `${Math.min(
                       100,
@@ -498,8 +600,11 @@ export default function EggsPage() {
                     )}%`,
                   }}
                 />
+
               </div>
+
             </div>
+
           </div>
 
           {/* Performance context */}
@@ -517,6 +622,7 @@ export default function EggsPage() {
               sm:justify-between
             "
           >
+
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-tight text-slate-500">
                 Available Birds
@@ -530,6 +636,7 @@ export default function EggsPage() {
             </div>
 
             <div className="sm:text-right">
+
               <p className="text-[11px] font-semibold uppercase tracking-tight text-slate-500">
                 Cracked Rate
               </p>
@@ -537,114 +644,196 @@ export default function EggsPage() {
               <p className="mt-1 text-lg font-bold text-slate-900">
                 {performance.crackedRate.toFixed(1)}%
               </p>
+
             </div>
+
           </div>
         </div>
 
+        {/* Production Intelligence */}
+        <div
+          className={`
+            flex
+            items-start
+            gap-3
+            rounded-xl
+            border
+            px-4
+            py-4
+            ${productionStatus.containerClass}
+          `}
+        >
+
+          <div
+            className={`
+              flex
+              h-9
+              w-9
+              shrink-0
+              items-center
+              justify-center
+              rounded-full
+              ${productionStatus.iconContainerClass}
+            `}
+          >
+            <ProductionStatusIcon size={18} />
+          </div>
+
+          <div className="min-w-0">
+
+            <p
+              className={`
+                text-sm
+                font-bold
+                ${productionStatus.titleClass}
+              `}
+            >
+              Production Status: {productionStatus.label}
+            </p>
+
+            <p
+              className={`
+                mt-1
+                text-sm
+                ${productionStatus.textClass}
+              `}
+            >
+              {productionStatus.message}
+            </p>
+
+          </div>
+
+        </div>
+
         {/* KPI Cards */}
-<div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
 
-  {/* Eggs Collected */}
-  <div className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
-    <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
+          {/* Eggs Collected */}
+          <div className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
 
-    <div className="flex items-start justify-between gap-3 pt-1">
-      <div className="min-w-0">
-        <div className="text-sm font-medium text-slate-500">
-          Eggs Collected
+            <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
+
+            <div className="flex items-start justify-between gap-3 pt-1">
+
+              <div className="min-w-0">
+
+                <div className="text-sm font-medium text-slate-500">
+                  Eggs Collected
+                </div>
+
+                <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+                  {kpiValues.eggsCollected}
+                </div>
+
+                <div className="mt-1 text-xs text-slate-400">
+                  Selected period
+                </div>
+
+              </div>
+
+              <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-amber-500 ring-4 ring-amber-100" />
+
+            </div>
+
+          </div>
+
+          {/* Records */}
+          <div className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
+
+            <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
+
+            <div className="flex items-start justify-between gap-3 pt-1">
+
+              <div className="min-w-0">
+
+                <div className="text-sm font-medium text-slate-500">
+                  Records
+                </div>
+
+                <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+                  {kpiValues.recordCount}
+                </div>
+
+                <div className="mt-1 text-xs text-slate-400">
+                  Production records
+                </div>
+
+              </div>
+
+              <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-blue-600 ring-4 ring-blue-100" />
+
+            </div>
+
+          </div>
+
+          {/* Good Eggs */}
+          <div className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
+
+            <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
+
+            <div className="flex items-start justify-between gap-3 pt-1">
+
+              <div className="min-w-0">
+
+                <div className="text-sm font-medium text-slate-500">
+                  Good Eggs
+                </div>
+
+                <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+                  {kpiValues.goodEggs}
+                </div>
+
+                <div className="mt-1 text-xs text-slate-400">
+                  After cracked eggs
+                </div>
+
+              </div>
+
+              <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-emerald-500 ring-4 ring-emerald-100" />
+
+            </div>
+
+          </div>
+
+          {/* Cracked Eggs */}
+          <div className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
+
+            <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
+
+            <div className="flex items-start justify-between gap-3 pt-1">
+
+              <div className="min-w-0">
+
+                <div className="text-sm font-medium text-slate-500">
+                  Cracked Eggs
+                </div>
+
+                <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+                  {kpiValues.crackedEggs}
+                </div>
+
+                <div className="mt-1 text-xs text-slate-400">
+                  Selected period
+                </div>
+
+              </div>
+
+              <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-amber-500 ring-4 ring-amber-100" />
+
+            </div>
+
+          </div>
+
         </div>
 
-        <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
-          {kpiValues.eggsCollected}
-        </div>
-
-        <div className="mt-1 text-xs text-slate-400">
-          Selected period
-        </div>
-      </div>
-
-      <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-amber-500 ring-4 ring-amber-100" />
-    </div>
-  </div>
-
-  {/* Records */}
-  <div className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
-    <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
-
-    <div className="flex items-start justify-between gap-3 pt-1">
-      <div className="min-w-0">
-        <div className="text-sm font-medium text-slate-500">
-          Records
-        </div>
-
-        <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
-          {kpiValues.recordCount}
-        </div>
-
-        <div className="mt-1 text-xs text-slate-400">
-          Production records
-        </div>
-      </div>
-
-      <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-blue-600 ring-4 ring-blue-100" />
-    </div>
-  </div>
-
-  {/* Good Eggs */}
-  <div className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
-    <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
-
-    <div className="flex items-start justify-between gap-3 pt-1">
-      <div className="min-w-0">
-        <div className="text-sm font-medium text-slate-500">
-          Good Eggs
-        </div>
-
-        <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
-          {kpiValues.goodEggs}
-        </div>
-
-        <div className="mt-1 text-xs text-slate-400">
-          After cracked eggs
-        </div>
-      </div>
-
-      <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-emerald-500 ring-4 ring-emerald-100" />
-    </div>
-  </div>
-
-  {/* Cracked Eggs */}
-  <div className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
-    <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
-
-    <div className="flex items-start justify-between gap-3 pt-1">
-      <div className="min-w-0">
-        <div className="text-sm font-medium text-slate-500">
-          Cracked Eggs
-        </div>
-
-        <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
-          {kpiValues.crackedEggs}
-        </div>
-
-        <div className="mt-1 text-xs text-slate-400">
-          Selected period
-        </div>
-      </div>
-
-      <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-amber-500 ring-4 ring-amber-100" />
-    </div>
-  </div>
-
-</div>
         {/* Search + Flock + Date Filters */}
         <div
           className="
             flex
             flex-col
+            gap-3
             lg:flex-row
             lg:items-center
-            gap-3
           "
         >
 
@@ -654,12 +843,12 @@ export default function EggsPage() {
             <Search
               size={18}
               className="
+                pointer-events-none
                 absolute
                 left-4
                 top-1/2
                 -translate-y-1/2
                 text-slate-400
-                pointer-events-none
               "
             />
 
@@ -704,9 +893,9 @@ export default function EggsPage() {
                 )
               }
               className="
-                appearance-none
-                min-w-[190px]
                 w-full
+                min-w-[190px]
+                appearance-none
                 rounded-xl
                 border
                 border-slate-200
@@ -724,6 +913,7 @@ export default function EggsPage() {
                 focus:ring-blue-100
               "
             >
+
               <option value="all">
                 All Flocks
               </option>
@@ -744,12 +934,12 @@ export default function EggsPage() {
             <ChevronDown
               size={16}
               className="
+                pointer-events-none
                 absolute
                 right-3
                 top-1/2
                 -translate-y-1/2
                 text-slate-400
-                pointer-events-none
               "
             />
 
@@ -757,12 +947,14 @@ export default function EggsPage() {
 
           {/* Existing Date Range Filter */}
           <div className="flex-shrink-0">
+
             <ReportFilter
               value={dateRangeSelection}
               onChange={
                 setDateRangeSelection
               }
             />
+
           </div>
 
         </div>
@@ -771,9 +963,9 @@ export default function EggsPage() {
         <div
           className="
             grid
-            lg:grid-cols-12
-            gap-6
             items-start
+            gap-6
+            lg:grid-cols-12
           "
         >
 
@@ -787,9 +979,9 @@ export default function EggsPage() {
 
             <div
               className="
+                space-y-4
                 lg:sticky
                 lg:top-20
-                space-y-4
               "
             >
 
@@ -820,9 +1012,9 @@ export default function EggsPage() {
                       key={i}
                       className="
                         h-16
-                        bg-slate-200
-                        rounded-xl
                         animate-pulse
+                        rounded-xl
+                        bg-slate-200
                       "
                     />
                   )
@@ -854,6 +1046,7 @@ export default function EggsPage() {
               pt-4
             "
           >
+
             <OperationsPagination
               current={currentPage}
               total={totalPages}
@@ -863,6 +1056,7 @@ export default function EggsPage() {
                 setCurrentPage
               }
             />
+
           </div>
         )}
 
@@ -873,23 +1067,23 @@ export default function EggsPage() {
               className="
                 fixed
                 inset-0
-                bg-black/50
+                z-50
                 flex
                 items-center
                 justify-center
-                z-50
+                bg-black/50
                 p-4
               "
             >
 
               <div
                 className="
-                  bg-white
-                  rounded-3xl
-                  max-w-lg
-                  w-full
                   max-h-[90vh]
+                  w-full
+                  max-w-lg
                   overflow-y-auto
+                  rounded-3xl
+                  bg-white
                 "
               >
 
