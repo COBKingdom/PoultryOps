@@ -37,12 +37,12 @@ export default function SalesPage() {
   const farm = data?.farm;
   const farmId = farm?.id;
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Load all existing flocks for this farm.
-  //
-  // This is intentionally dynamic. When a new flock is created, it will
-  // automatically become available in the Sales form without any code change.
-  // ─────────────────────────────────────────────────────────────────────────────
+  /*
+   * Load all existing flocks for this farm.
+   *
+   * This is intentionally dynamic. When a new flock is created, it will
+   * automatically become available in the Sales form and flock filter.
+   */
   const [flocks, setFlocks] = useState<any[]>([]);
 
   useEffect(() => {
@@ -64,9 +64,9 @@ export default function SalesPage() {
     loadFlocks();
   }, [farmId]);
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Sales records
-  // ─────────────────────────────────────────────────────────────────────────────
+  /*
+   * Sales records
+   */
   const {
     records,
     refresh,
@@ -74,32 +74,47 @@ export default function SalesPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
 
-  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedFlockId, setSelectedFlockId] =
+    useState("");
+
+  const [currentPage, setCurrentPage] =
+    useState(1);
+
   const pageSize = 10;
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Date range filter
-  // ─────────────────────────────────────────────────────────────────────────────
-  const [dateRangeSelection, setDateRangeSelection] =
-    useState<DateRangeSelection>(
-      getDefaultDateRangeSelection()
-    );
+  /*
+   * Date range filter
+   */
+  const [
+    dateRangeSelection,
+    setDateRangeSelection,
+  ] = useState<DateRangeSelection>(
+    getDefaultDateRangeSelection()
+  );
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Edit modal
-  // ─────────────────────────────────────────────────────────────────────────────
-  const [isEditModalOpen, setIsEditModalOpen] =
-    useState(false);
+  /*
+   * Edit modal
+   */
+  const [
+    isEditModalOpen,
+    setIsEditModalOpen,
+  ] = useState(false);
 
-  const [editingRecord, setEditingRecord] =
-    useState<any | null>(null);
+  const [
+    editingRecord,
+    setEditingRecord,
+  ] = useState<any | null>(null);
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Filter records by selected date range
-  // ─────────────────────────────────────────────────────────────────────────────
+  /*
+   * ---------------------------------------------------------
+   * DATE FILTER
+   * ---------------------------------------------------------
+   */
   const dateFilteredRecords = useMemo(() => {
-    const { start, end } =
-      dateRangeSelection.range;
+    const {
+      start,
+      end,
+    } = dateRangeSelection.range;
 
     return records.filter((record) => {
       const saleDate = record.sale_date;
@@ -118,12 +133,40 @@ export default function SalesPage() {
     dateRangeSelection,
   ]);
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // KPI values use the selected date range
-  // ─────────────────────────────────────────────────────────────────────────────
+  /*
+   * ---------------------------------------------------------
+   * FLOCK FILTER
+   * ---------------------------------------------------------
+   *
+   * Applied after the date filter.
+   *
+   * Empty selectedFlockId means "All Flocks".
+   */
+  const flockFilteredRecords = useMemo(() => {
+    if (!selectedFlockId) {
+      return dateFilteredRecords;
+    }
+
+    return dateFilteredRecords.filter(
+      (record) =>
+        record.flock_id ===
+        selectedFlockId
+    );
+  }, [
+    dateFilteredRecords,
+    selectedFlockId,
+  ]);
+
+  /*
+   * ---------------------------------------------------------
+   * KPI VALUES
+   * ---------------------------------------------------------
+   *
+   * KPIs now use the selected flock.
+   */
   const kpiValues = useMemo(() => {
     const totalSales =
-      dateFilteredRecords.reduce(
+      flockFilteredRecords.reduce(
         (sum, record) =>
           sum +
           Number(record.quantity || 0),
@@ -131,7 +174,7 @@ export default function SalesPage() {
       );
 
     const totalRevenue =
-      dateFilteredRecords.reduce(
+      flockFilteredRecords.reduce(
         (sum, record) =>
           sum +
           Number(record.total_amount || 0),
@@ -139,27 +182,33 @@ export default function SalesPage() {
       );
 
     const totalRecords =
-      dateFilteredRecords.length;
+      flockFilteredRecords.length;
 
     return {
       totalSales,
       totalRevenue,
       totalRecords,
     };
-  }, [dateFilteredRecords]);
+  }, [
+    flockFilteredRecords,
+  ]);
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Search within the selected date range
-  // ─────────────────────────────────────────────────────────────────────────────
+  /*
+   * ---------------------------------------------------------
+   * SEARCH FILTER
+   * ---------------------------------------------------------
+   *
+   * Search is applied after date and flock filters.
+   */
   const filteredRecords = useMemo(() => {
     if (!searchQuery.trim()) {
-      return dateFilteredRecords;
+      return flockFilteredRecords;
     }
 
     const query =
       searchQuery.toLowerCase();
 
-    return dateFilteredRecords.filter(
+    return flockFilteredRecords.filter(
       (record) =>
         record.buyer_name
           ?.toLowerCase()
@@ -177,13 +226,15 @@ export default function SalesPage() {
           .includes(query)
     );
   }, [
-    dateFilteredRecords,
+    flockFilteredRecords,
     searchQuery,
   ]);
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Pagination
-  // ─────────────────────────────────────────────────────────────────────────────
+  /*
+   * ---------------------------------------------------------
+   * PAGINATION
+   * ---------------------------------------------------------
+   */
   const totalItems =
     filteredRecords.length;
 
@@ -202,18 +253,23 @@ export default function SalesPage() {
       startIndex + pageSize
     );
 
-  // Reset pagination whenever search
-  // or date range changes.
+  /*
+   * Reset pagination whenever search,
+   * date range, or flock changes.
+   */
   useEffect(() => {
     setCurrentPage(1);
   }, [
     searchQuery,
     dateRangeSelection,
+    selectedFlockId,
   ]);
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Edit governance
-  // ─────────────────────────────────────────────────────────────────────────────
+  /*
+   * ---------------------------------------------------------
+   * EDIT GOVERNANCE
+   * ---------------------------------------------------------
+   */
   function handleEditRecord(
     record: any
   ) {
@@ -243,9 +299,11 @@ export default function SalesPage() {
     setEditingRecord(null);
   }
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // KPI cards
-  // ─────────────────────────────────────────────────────────────────────────────
+  /*
+   * ---------------------------------------------------------
+   * KPI CARDS
+   * ---------------------------------------------------------
+   */
   const kpiCards = (
     <>
       <div className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
@@ -284,7 +342,9 @@ export default function SalesPage() {
                 style: "currency",
                 currency: farm?.currency || "NGN",
                 maximumFractionDigits: 2,
-              }).format(kpiValues.totalRevenue)}
+              }).format(
+                kpiValues.totalRevenue
+              )}
             </div>
 
             <div className="mt-1 text-xs text-slate-400">
@@ -320,9 +380,11 @@ export default function SalesPage() {
     </>
   );
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Toolbar
-  // ─────────────────────────────────────────────────────────────────────────────
+  /*
+   * ---------------------------------------------------------
+   * TOOLBAR
+   * ---------------------------------------------------------
+   */
   const toolbar = (
     <OperationsToolbar
       searchPlaceholder="Search sales records..."
@@ -331,9 +393,11 @@ export default function SalesPage() {
     />
   );
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Pagination
-  // ─────────────────────────────────────────────────────────────────────────────
+  /*
+   * ---------------------------------------------------------
+   * PAGINATION
+   * ---------------------------------------------------------
+   */
   const pagination = (
     <OperationsPagination
       current={currentPage}
@@ -344,9 +408,11 @@ export default function SalesPage() {
     />
   );
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Loading
-  // ─────────────────────────────────────────────────────────────────────────────
+  /*
+   * ---------------------------------------------------------
+   * LOADING
+   * ---------------------------------------------------------
+   */
   if (loading) {
     return (
       <AppShell email={user?.email}>
@@ -357,48 +423,120 @@ export default function SalesPage() {
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Page
-  // ─────────────────────────────────────────────────────────────────────────────
+  /*
+   * ---------------------------------------------------------
+   * PAGE
+   * ---------------------------------------------------------
+   */
   return (
     <AppShell email={user?.email}>
       <div className="space-y-6">
 
         {/* Page Title */}
-
         <h1 className="text-2xl font-bold text-slate-900">
           Sales Management
         </h1>
 
         {/* KPI Cards */}
-
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {kpiCards}
         </div>
 
-        {/* Search + Date Filter */}
-
+        {/* Search + Flock + Date Filter */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
 
           <div className="flex-1">
             {toolbar}
           </div>
 
-          <div className="flex-shrink-0">
+          <div className="flex flex-col sm:flex-row gap-3">
+
+            {/* Flock Filter */}
+            <select
+              value={selectedFlockId}
+              onChange={(e) =>
+                setSelectedFlockId(
+                  e.target.value
+                )
+              }
+              className="
+                w-full
+                sm:w-56
+                border
+                border-slate-200
+                bg-white
+                rounded-xl
+                px-4
+                py-3
+                text-sm
+                text-slate-700
+                shadow-sm
+                focus:outline-none
+                focus:ring-2
+                focus:ring-blue-500
+              "
+            >
+              <option value="">
+                All Flocks
+              </option>
+
+              {flocks.map(
+                (flock) => (
+                  <option
+                    key={flock.id}
+                    value={flock.id}
+                  >
+                    {flock.flock_name}
+                  </option>
+                )
+              )}
+            </select>
+
+            {/* Date Filter */}
             <ReportFilter
               value={dateRangeSelection}
-              onChange={setDateRangeSelection}
+              onChange={
+                setDateRangeSelection
+              }
             />
-          </div>
 
+          </div>
         </div>
 
-        {/* Main Content */}
+        {/* Selected Flock Indicator */}
+        {selectedFlockId && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-500">
+              Showing sales for:
+            </span>
 
+            <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">
+              {
+                flocks.find(
+                  (flock) =>
+                    flock.id ===
+                    selectedFlockId
+                )?.flock_name ||
+                  "Selected Flock"
+              }
+            </span>
+
+            <button
+              type="button"
+              onClick={() =>
+                setSelectedFlockId("")
+              }
+              className="text-sm font-medium text-slate-500 hover:text-slate-900"
+            >
+              Clear
+            </button>
+          </div>
+        )}
+
+        {/* Main Content */}
         <div className="grid lg:grid-cols-12 gap-6 items-start">
 
           {/* Quick Entry */}
-
           <div className="lg:col-span-4 lg:order-last">
             <div className="lg:sticky lg:top-20 space-y-4">
 
@@ -412,7 +550,6 @@ export default function SalesPage() {
           </div>
 
           {/* Sales Records */}
-
           <div className="lg:col-span-8 lg:order-first">
 
             <SalesList
@@ -422,17 +559,14 @@ export default function SalesPage() {
             />
 
           </div>
-
         </div>
 
         {/* Pagination */}
-
         <div className="flex items-center justify-center pt-4">
           {pagination}
         </div>
 
         {/* Edit Modal */}
-
         {isEditModalOpen &&
           editingRecord && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -441,14 +575,15 @@ export default function SalesPage() {
 
                 <EditSaleForm
                   record={editingRecord}
-                  onClose={handleCloseEditModal}
+                  onClose={
+                    handleCloseEditModal
+                  }
                   onSaved={refresh}
                   user={user}
                   profile={profile}
                 />
 
               </div>
-
             </div>
           )}
 
