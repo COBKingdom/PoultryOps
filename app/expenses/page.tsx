@@ -12,6 +12,8 @@ import {
   getDefaultDateRangeSelection,
 } from "@/lib/date-ranges";
 
+import { getFarmFlocks } from "@/lib/flocks";
+
 import { canEdit } from "@/lib/permissions/governance";
 
 import AppShell from "@/components/layout/app-shell";
@@ -37,7 +39,13 @@ export default function ExpensesPage() {
     refresh,
   } = useExpenses(farm?.id);
 
+  const [flocks, setFlocks] =
+    useState<any[]>([]);
+
   const [searchQuery, setSearchQuery] =
+    useState("");
+
+  const [selectedFlockId, setSelectedFlockId] =
     useState("");
 
   const [dateRangeSelection, setDateRangeSelection] =
@@ -55,6 +63,37 @@ export default function ExpensesPage() {
 
   const [editingRecord, setEditingRecord] =
     useState<any | null>(null);
+
+  /*
+   * ---------------------------------------------------------
+   * LOAD FARM FLOCKS
+   * ---------------------------------------------------------
+   */
+
+  useEffect(() => {
+    async function loadFlocks() {
+      if (!farm?.id) {
+        setFlocks([]);
+        return;
+      }
+
+      try {
+        const result =
+          await getFarmFlocks(farm.id);
+
+        setFlocks(result || []);
+      } catch (error) {
+        console.error(
+          "Failed to load farm flocks:",
+          error
+        );
+
+        setFlocks([]);
+      }
+    }
+
+    loadFlocks();
+  }, [farm?.id]);
 
   /*
    * ---------------------------------------------------------
@@ -84,13 +123,34 @@ export default function ExpensesPage() {
 
   /*
    * ---------------------------------------------------------
+   * FLOCK FILTER
+   * ---------------------------------------------------------
+   */
+
+  const flockFilteredRecords = useMemo(() => {
+    if (!selectedFlockId) {
+      return dateFilteredRecords;
+    }
+
+    return dateFilteredRecords.filter(
+      (record) =>
+        record.flock_id ===
+        selectedFlockId
+    );
+  }, [
+    dateFilteredRecords,
+    selectedFlockId,
+  ]);
+
+  /*
+   * ---------------------------------------------------------
    * KPI VALUES
    * ---------------------------------------------------------
    */
 
   const kpiValues = useMemo(() => {
     const totalExpenses =
-      dateFilteredRecords.reduce(
+      flockFilteredRecords.reduce(
         (sum, record) =>
           sum +
           Number(record.amount || 0),
@@ -98,14 +158,14 @@ export default function ExpensesPage() {
       );
 
     const transactionCount =
-      dateFilteredRecords.length;
+      flockFilteredRecords.length;
 
     return {
       totalExpenses,
       transactionCount,
     };
   }, [
-    dateFilteredRecords,
+    flockFilteredRecords,
   ]);
 
   /*
@@ -116,13 +176,13 @@ export default function ExpensesPage() {
 
   const filteredRecords = useMemo(() => {
     if (!searchQuery.trim()) {
-      return dateFilteredRecords;
+      return flockFilteredRecords;
     }
 
     const query =
       searchQuery.toLowerCase();
 
-    return dateFilteredRecords.filter(
+    return flockFilteredRecords.filter(
       (record) =>
         record.description
           ?.toLowerCase()
@@ -134,7 +194,7 @@ export default function ExpensesPage() {
           .includes(query)
     );
   }, [
-    dateFilteredRecords,
+    flockFilteredRecords,
     searchQuery,
   ]);
 
@@ -164,13 +224,14 @@ export default function ExpensesPage() {
 
   /*
    * Reset pagination whenever
-   * search or date range changes.
+   * search, flock, or date range changes.
    */
 
   useEffect(() => {
     setCurrentPage(1);
   }, [
     searchQuery,
+    selectedFlockId,
     dateRangeSelection,
   ]);
 
@@ -195,6 +256,7 @@ export default function ExpensesPage() {
         governanceResult.reason ||
           "You cannot edit this record at this time."
       );
+
       return;
     }
 
@@ -311,6 +373,40 @@ export default function ExpensesPage() {
       searchValue={searchQuery}
       onSearchChange={setSearchQuery}
     >
+      <select
+        value={selectedFlockId}
+        onChange={(e) =>
+          setSelectedFlockId(
+            e.target.value
+          )
+        }
+        className="
+          w-full sm:w-52
+          border border-slate-200
+          bg-white
+          rounded-xl
+          px-4 py-3
+          text-sm text-slate-700
+          shadow-sm
+          focus:outline-none
+          focus:ring-2
+          focus:ring-blue-500
+        "
+      >
+        <option value="">
+          All Flocks
+        </option>
+
+        {flocks.map((flock) => (
+          <option
+            key={flock.id}
+            value={flock.id}
+          >
+            {flock.flock_name}
+          </option>
+        ))}
+      </select>
+
       <ReportFilter
         value={dateRangeSelection}
         onChange={setDateRangeSelection}

@@ -83,6 +83,12 @@ export default function FeedInventoryPage() {
     useState("");
 
   const [
+    selectedFlockId,
+    setSelectedFlockId,
+  ] =
+    useState("");
+
+  const [
     currentPage,
     setCurrentPage,
   ] =
@@ -113,15 +119,17 @@ export default function FeedInventoryPage() {
     );
 
   /*
-   * Load farm flocks.
-   *
-   * Kept here so the page remains compatible
-   * with the rest of the PoultryOps architecture
-   * and future feed intelligence features.
+   * ---------------------------------------------------------
+   * LOAD FARM FLOCKS
+   * ---------------------------------------------------------
    */
+
   useEffect(() => {
     async function loadFlocks() {
-      if (!farmId) return;
+      if (!farmId) {
+        setFlocks([]);
+        return;
+      }
 
       try {
         const result =
@@ -137,6 +145,8 @@ export default function FeedInventoryPage() {
           "Failed to load farm flocks:",
           error
         );
+
+        setFlocks([]);
       }
     }
 
@@ -144,12 +154,15 @@ export default function FeedInventoryPage() {
   }, [farmId]);
 
   /*
+   * ---------------------------------------------------------
    * PURCHASES DURING SELECTED PERIOD
    *
    * This controls:
    * - Purchased KPI
    * - Purchase records shown in the list
+   * ---------------------------------------------------------
    */
+
   const dateFilteredRecords =
     useMemo(() => {
       const {
@@ -179,13 +192,35 @@ export default function FeedInventoryPage() {
     ]);
 
   /*
+   * ---------------------------------------------------------
+   * PURCHASES DURING SELECTED FLOCK + PERIOD
+   * ---------------------------------------------------------
+   */
+
+  const flockFilteredRecords =
+    useMemo(() => {
+      if (!selectedFlockId) {
+        return dateFilteredRecords;
+      }
+
+      return dateFilteredRecords.filter(
+        (record) =>
+          record.flock_id ===
+          selectedFlockId
+      );
+    }, [
+      dateFilteredRecords,
+      selectedFlockId,
+    ]);
+
+  /*
+   * ---------------------------------------------------------
    * FEED CONSUMPTION DURING SELECTED PERIOD
    *
    * Consumption comes from the Feed page.
-   *
-   * This is deliberately kept separate from
-   * Current Stock.
+   * ---------------------------------------------------------
    */
+
   const dateFilteredFeed =
     useMemo(() => {
       const {
@@ -215,6 +250,80 @@ export default function FeedInventoryPage() {
     ]);
 
   /*
+   * ---------------------------------------------------------
+   * CONSUMPTION DURING SELECTED FLOCK + PERIOD
+   * ---------------------------------------------------------
+   */
+
+  const flockFilteredFeed =
+    useMemo(() => {
+      if (!selectedFlockId) {
+        return dateFilteredFeed;
+      }
+
+      return dateFilteredFeed.filter(
+        (record) =>
+          record.flock_id ===
+          selectedFlockId
+      );
+    }, [
+      dateFilteredFeed,
+      selectedFlockId,
+    ]);
+
+  /*
+   * ---------------------------------------------------------
+   * ALL-TIME PURCHASES FOR CURRENT STOCK
+   *
+   * Current Stock deliberately ignores the date filter.
+   * When a flock is selected, however, it must only use
+   * purchases belonging to that flock.
+   * ---------------------------------------------------------
+   */
+
+  const flockFilteredAllRecords =
+    useMemo(() => {
+      if (!selectedFlockId) {
+        return records;
+      }
+
+      return records.filter(
+        (record) =>
+          record.flock_id ===
+          selectedFlockId
+      );
+    }, [
+      records,
+      selectedFlockId,
+    ]);
+
+  /*
+   * ---------------------------------------------------------
+   * ALL-TIME CONSUMPTION FOR CURRENT STOCK
+   *
+   * When a flock is selected, only consumption belonging
+   * to that flock is included.
+   * ---------------------------------------------------------
+   */
+
+  const flockFilteredAllFeedRecords =
+    useMemo(() => {
+      if (!selectedFlockId) {
+        return feedRecords;
+      }
+
+      return feedRecords.filter(
+        (record) =>
+          record.flock_id ===
+          selectedFlockId
+      );
+    }, [
+      feedRecords,
+      selectedFlockId,
+    ]);
+
+  /*
+   * ---------------------------------------------------------
    * KPI VALUES
    *
    * Purchased:
@@ -224,26 +333,21 @@ export default function FeedInventoryPage() {
    *   Feed consumed during the selected period.
    *
    * Current Stock:
-   *   Actual cumulative farm stock.
-   *
-   * IMPORTANT:
+   *   Actual cumulative stock for the farm or selected flock.
    *
    * Current Stock intentionally ignores the selected
-   * date filter. It represents the farm's actual
-   * operational feed position:
+   * date filter.
    *
-   *   All purchases
-   *   - All recorded consumption
-   *   = Current Stock
-   *
-   * Therefore Current Stock can legitimately be higher
-   * than the amount purchased during the currently
-   * selected period.
+   * All purchases
+   * - All recorded consumption
+   * = Current Stock
+   * ---------------------------------------------------------
    */
+
   const kpiValues =
     useMemo(() => {
       const purchased =
-        dateFilteredRecords.reduce(
+        flockFilteredRecords.reduce(
           (
             sum,
             record
@@ -257,7 +361,7 @@ export default function FeedInventoryPage() {
         );
 
       const consumed =
-        dateFilteredFeed.reduce(
+        flockFilteredFeed.reduce(
           (
             sum,
             record
@@ -274,7 +378,7 @@ export default function FeedInventoryPage() {
        * All-time purchased feed.
        */
       const totalPurchased =
-        records.reduce(
+        flockFilteredAllRecords.reduce(
           (
             sum,
             record
@@ -291,7 +395,7 @@ export default function FeedInventoryPage() {
        * All-time consumed feed.
        */
       const totalConsumed =
-        feedRecords.reduce(
+        flockFilteredAllFeedRecords.reduce(
           (
             sum,
             record
@@ -305,7 +409,7 @@ export default function FeedInventoryPage() {
         );
 
       /*
-       * Actual current farm stock.
+       * Actual current stock.
        */
       const currentStock =
         Math.max(
@@ -320,21 +424,26 @@ export default function FeedInventoryPage() {
         currentStock,
       };
     }, [
-      records,
-      feedRecords,
-      dateFilteredRecords,
-      dateFilteredFeed,
+      flockFilteredRecords,
+      flockFilteredFeed,
+      flockFilteredAllRecords,
+      flockFilteredAllFeedRecords,
     ]);
 
   /*
-   * Search purchase records.
+   * ---------------------------------------------------------
+   * SEARCH PURCHASE RECORDS
+   *
+   * Search is applied after date and flock filtering.
+   * ---------------------------------------------------------
    */
+
   const filteredRecords =
     useMemo(() => {
       if (
         !searchQuery.trim()
       ) {
-        return dateFilteredRecords;
+        return flockFilteredRecords;
       }
 
       const query =
@@ -342,7 +451,7 @@ export default function FeedInventoryPage() {
           .toLowerCase()
           .trim();
 
-      return dateFilteredRecords.filter(
+      return flockFilteredRecords.filter(
         (record) => {
           const feedType =
             String(
@@ -376,13 +485,16 @@ export default function FeedInventoryPage() {
         }
       );
     }, [
-      dateFilteredRecords,
+      flockFilteredRecords,
       searchQuery,
     ]);
 
   /*
-   * Pagination.
+   * ---------------------------------------------------------
+   * PAGINATION
+   * ---------------------------------------------------------
    */
+
   const totalItems =
     filteredRecords.length;
 
@@ -404,19 +516,27 @@ export default function FeedInventoryPage() {
     );
 
   /*
-   * Reset pagination whenever search
-   * or date range changes.
+   * ---------------------------------------------------------
+   * RESET PAGINATION
+   *
+   * Reset whenever search, flock or date range changes.
+   * ---------------------------------------------------------
    */
+
   useEffect(() => {
     setCurrentPage(1);
   }, [
     searchQuery,
+    selectedFlockId,
     dateRangeSelection,
   ]);
 
   /*
-   * Edit governance.
+   * ---------------------------------------------------------
+   * EDIT GOVERNANCE
+   * ---------------------------------------------------------
    */
+
   function handleEditRecord(
     record: any
   ) {
@@ -464,22 +584,27 @@ export default function FeedInventoryPage() {
   }
 
   /*
+   * ---------------------------------------------------------
    * KPI CARDS
-   *
-   * The labels deliberately distinguish:
    *
    * Purchased = selected period
    * Consumed = selected period
-   * Current Stock = actual farm balance
+   * Current Stock = actual farm/flock balance
+   * ---------------------------------------------------------
    */
+
   const kpiCards = (
     <>
       {/* Purchased */}
+
       <div className="relative min-w-0 overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
+
         <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
 
         <div className="flex items-start justify-between gap-3 pt-1">
+
           <div className="min-w-0">
+
             <div className="text-sm font-medium text-slate-500">
               Purchased
             </div>
@@ -495,18 +620,25 @@ export default function FeedInventoryPage() {
             <div className="mt-1 text-xs text-slate-400">
               kg · Selected period
             </div>
+
           </div>
 
           <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-blue-600 ring-4 ring-blue-100" />
+
         </div>
+
       </div>
 
       {/* Consumed */}
+
       <div className="relative min-w-0 overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
+
         <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
 
         <div className="flex items-start justify-between gap-3 pt-1">
+
           <div className="min-w-0">
+
             <div className="text-sm font-medium text-slate-500">
               Consumed
             </div>
@@ -522,18 +654,25 @@ export default function FeedInventoryPage() {
             <div className="mt-1 text-xs text-slate-400">
               kg · Selected period
             </div>
+
           </div>
 
           <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-emerald-500 ring-4 ring-emerald-100" />
+
         </div>
+
       </div>
 
       {/* Current Stock */}
+
       <div className="relative min-w-0 overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
+
         <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
 
         <div className="flex items-start justify-between gap-3 pt-1">
+
           <div className="min-w-0">
+
             <div className="text-sm font-medium text-slate-500">
               Current Stock
             </div>
@@ -549,17 +688,23 @@ export default function FeedInventoryPage() {
             <div className="mt-1 text-xs text-slate-400">
               kg · Current farm balance
             </div>
+
           </div>
 
           <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-blue-600 ring-4 ring-blue-100" />
+
         </div>
+
       </div>
     </>
   );
 
   /*
-   * Search toolbar.
+   * ---------------------------------------------------------
+   * SEARCH TOOLBAR
+   * ---------------------------------------------------------
    */
+
   const toolbar = (
     <OperationsToolbar
       searchPlaceholder="Search inventory records..."
@@ -573,8 +718,11 @@ export default function FeedInventoryPage() {
   );
 
   /*
-   * Pagination.
+   * ---------------------------------------------------------
+   * PAGINATION
+   * ---------------------------------------------------------
    */
+
   const pagination = (
     <OperationsPagination
       current={
@@ -596,8 +744,11 @@ export default function FeedInventoryPage() {
   );
 
   /*
-   * Loading state.
+   * ---------------------------------------------------------
+   * LOADING STATE
+   * ---------------------------------------------------------
    */
+
   if (farmLoading) {
     return (
       <AppShell
@@ -613,6 +764,12 @@ export default function FeedInventoryPage() {
     );
   }
 
+  /*
+   * ---------------------------------------------------------
+   * PAGE
+   * ---------------------------------------------------------
+   */
+
   return (
     <AppShell
       email={
@@ -623,23 +780,79 @@ export default function FeedInventoryPage() {
       <div className="space-y-6">
 
         {/* Page Title */}
+
         <h1 className="text-2xl font-bold text-slate-900">
           Feed Inventory
         </h1>
 
         {/* KPI Cards */}
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {kpiCards}
         </div>
 
-        {/* Search + Date Filter */}
+        {/* Search + Flock + Date Filter */}
+
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
 
           <div className="flex-1">
             {toolbar}
           </div>
 
-          <div className="flex-shrink-0">
+          <div className="flex flex-col sm:flex-row gap-3">
+
+            {/* Flock Filter */}
+
+            <select
+              value={
+                selectedFlockId
+              }
+              onChange={(e) =>
+                setSelectedFlockId(
+                  e.target.value
+                )
+              }
+              className="
+                w-full
+                sm:w-56
+                border
+                border-slate-200
+                bg-white
+                rounded-xl
+                px-4
+                py-3
+                text-sm
+                text-slate-700
+                shadow-sm
+                focus:outline-none
+                focus:ring-2
+                focus:ring-blue-500
+              "
+            >
+              <option value="">
+                All Flocks
+              </option>
+
+              {flocks.map(
+                (flock) => (
+                  <option
+                    key={
+                      flock.id
+                    }
+                    value={
+                      flock.id
+                    }
+                  >
+                    {
+                      flock.flock_name
+                    }
+                  </option>
+                )
+              )}
+            </select>
+
+            {/* Date Filter */}
+
             <ReportFilter
               value={
                 dateRangeSelection
@@ -648,24 +861,63 @@ export default function FeedInventoryPage() {
                 setDateRangeSelection
               }
             />
+
           </div>
 
         </div>
 
+        {/* Selected Flock Indicator */}
+
+        {selectedFlockId && (
+          <div className="flex items-center gap-2">
+
+            <span className="text-sm text-slate-500">
+              Showing feed inventory for:
+            </span>
+
+            <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">
+              {
+                flocks.find(
+                  (flock) =>
+                    flock.id ===
+                    selectedFlockId
+                )?.flock_name ||
+                  "Selected Flock"
+              }
+            </span>
+
+            <button
+              type="button"
+              onClick={() =>
+                setSelectedFlockId(
+                  ""
+                )
+              }
+              className="text-sm font-medium text-slate-500 hover:text-slate-900"
+            >
+              Clear
+            </button>
+
+          </div>
+        )}
+
         {/* Feed Stock Summary */}
+
         <FeedStockSummary
           records={
-            records
+            flockFilteredAllRecords
           }
           feedRecords={
-            feedRecords
+            flockFilteredAllFeedRecords
           }
         />
 
         {/* Main Content */}
+
         <div className="grid lg:grid-cols-12 gap-6 items-start">
 
           {/* Purchase Records */}
+
           <div className="lg:col-span-8 lg:order-first">
 
             {inventoryLoading ? (
@@ -695,6 +947,7 @@ export default function FeedInventoryPage() {
           </div>
 
           {/* Quick Entry */}
+
           <div className="lg:col-span-4 lg:order-last">
 
             <div className="lg:sticky lg:top-20">
@@ -718,6 +971,7 @@ export default function FeedInventoryPage() {
         </div>
 
         {/* Pagination */}
+
         {pagination && (
           <div className="flex items-center justify-center pt-4">
             {pagination}
@@ -725,6 +979,7 @@ export default function FeedInventoryPage() {
         )}
 
         {/* Edit Modal */}
+
         {isEditModalOpen &&
           editingRecord && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
