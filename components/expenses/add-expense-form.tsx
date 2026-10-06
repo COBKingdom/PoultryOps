@@ -6,8 +6,15 @@ import { createExpense } from "@/lib/expenses";
 
 import SaveButton from "@/components/ui/save-button";
 
+type Flock = {
+  id: string;
+  flock_name: string;
+  bird_type?: string | null;
+};
+
 type Props = {
   farmId?: string;
+  flocks?: Flock[];
   onSaved?: () => Promise<void> | void;
 };
 
@@ -30,17 +37,36 @@ const EXPENSE_CATEGORIES = [
   "Biosecurity",
   "Cleaning Disinfectant",
   "Health Inspection",
+  "Bird Purchase",
   "Others (Specify)",
+];
+
+const BIRD_PURCHASE_TYPES = [
+  "Noiler",
+  "Kuroiler",
+  "Brahma",
+  "White Cockerel",
+  "Black Cockerel",
+  "Brown Pullets (Layers)",
+  "Black Pullet (Layers)",
+  "Local Turkey",
+  "Foreign Turkey",
+  "Foreign Guinea Fowl",
+  "Local Guinea Fowl",
+  "Local Duck",
+  "Foreign Duck",
 ];
 
 export default function AddExpenseForm({
   farmId,
+  flocks = [],
   onSaved,
 }: Props) {
   const [category, setCategory] = useState("Staff Salaries");
-
+  const [flockId, setFlockId] = useState("");
+  const [birdType, setBirdType] = useState("");
+  const [quantity, setQuantity] = useState("");
   const [amount, setAmount] = useState("");
-
   const [notes, setNotes] = useState("");
 
   const [recordDate, setRecordDate] = useState(
@@ -48,8 +74,9 @@ export default function AddExpenseForm({
   );
 
   const [loading, setLoading] = useState(false);
-
   const [success, setSuccess] = useState(false);
+
+  const isBirdPurchase = category === "Bird Purchase";
 
   async function handleSave() {
     try {
@@ -63,6 +90,29 @@ export default function AddExpenseForm({
         return;
       }
 
+      if (isBirdPurchase) {
+        if (!flockId) {
+          console.error(
+            "Please select the flock for the bird purchase."
+          );
+          return;
+        }
+
+        if (!birdType) {
+          console.error(
+            "Please select the bird purchase type."
+          );
+          return;
+        }
+
+        if (!quantity || Number(quantity) <= 0) {
+          console.error(
+            "Please enter a valid bird quantity."
+          );
+          return;
+        }
+      }
+
       setLoading(true);
 
       await createExpense({
@@ -71,12 +121,22 @@ export default function AddExpenseForm({
         category,
         amount: Number(amount),
         notes: notes.trim() || null,
+        flock_id: flockId || null,
+        bird_type: isBirdPurchase
+          ? birdType
+          : null,
+        quantity: isBirdPurchase
+          ? Number(quantity)
+          : null,
       });
 
       await onSaved?.();
 
       setAmount("");
       setNotes("");
+      setFlockId("");
+      setBirdType("");
+      setQuantity("");
 
       setSuccess(true);
 
@@ -117,9 +177,16 @@ export default function AddExpenseForm({
         {/* Category */}
         <select
           value={category}
-          onChange={(e) =>
-            setCategory(e.target.value)
-          }
+          onChange={(e) => {
+            const value = e.target.value;
+
+            setCategory(value);
+
+            if (value !== "Bird Purchase") {
+              setBirdType("");
+              setQuantity("");
+            }
+          }}
           className="w-full border rounded-xl p-4"
           required
         >
@@ -132,6 +199,77 @@ export default function AddExpenseForm({
             </option>
           ))}
         </select>
+
+        {/* Flock */}
+        <select
+          value={flockId}
+          onChange={(e) =>
+            setFlockId(e.target.value)
+          }
+          className="w-full border rounded-xl p-4"
+        >
+          <option value="">
+            {isBirdPurchase
+              ? "Select Flock"
+              : "Farm-wide Expense (No Flock)"}
+          </option>
+
+          {flocks.map((flock) => (
+            <option
+              key={flock.id}
+              value={flock.id}
+            >
+              {flock.flock_name}
+              {flock.bird_type
+                ? ` — ${flock.bird_type}`
+                : ""}
+            </option>
+          ))}
+        </select>
+
+        {/* Bird Purchase Fields */}
+        {isBirdPurchase && (
+          <>
+            {/* Bird / Purchase Type */}
+            <select
+              value={birdType}
+              onChange={(e) =>
+                setBirdType(e.target.value)
+              }
+              className="w-full border rounded-xl p-4"
+              required
+            >
+              <option value="">
+                Select Bird / Purchase Type
+              </option>
+
+              {BIRD_PURCHASE_TYPES.map(
+                (item) => (
+                  <option
+                    key={item}
+                    value={item}
+                  >
+                    {item}
+                  </option>
+                )
+              )}
+            </select>
+
+            {/* Quantity */}
+            <input
+              type="number"
+              min="1"
+              step="1"
+              placeholder="Quantity of Birds"
+              value={quantity}
+              onChange={(e) =>
+                setQuantity(e.target.value)
+              }
+              className="w-full border rounded-xl p-4"
+              required
+            />
+          </>
+        )}
 
         {/* Amount */}
         <input

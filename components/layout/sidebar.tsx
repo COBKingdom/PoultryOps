@@ -1,11 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import {
-  usePathname,
-  useRouter,
-} from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
+import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/lib/permissions";
 import { supabase } from "@/lib/supabase";
 import { PERMISSIONS } from "@/lib/permissions";
@@ -24,24 +22,24 @@ import {
   BarChart3,
   ChartColumn,
   Brain,
+  Settings,
   User,
   LogOut,
+  Upload,
+  Users,
   ShieldCheck,
   Handshake,
-  Eye,
 } from "lucide-react";
 
 export default function Sidebar() {
-  const pathname =
-    usePathname();
+  const pathname = usePathname();
+  const router = useRouter();
 
-  const router =
-    useRouter();
+  const { profile } = useAuth();
 
   const {
     can,
     isPlatformAdmin,
-    isDemoMode,
   } = usePermissions();
 
   async function handleSignOut() {
@@ -142,6 +140,39 @@ export default function Sidebar() {
     },
   ];
 
+  const tools = [
+    {
+      name: "Migration",
+      href: "/migration",
+      icon: Upload,
+      permission:
+        PERMISSIONS.MIGRATION_VIEW,
+    },
+  ];
+
+  const team = [
+    {
+      name: "Team",
+      href: "/team",
+      icon: Users,
+      permission:
+        PERMISSIONS.TEAM_VIEW,
+    },
+  ];
+
+  /*
+   * Migration is an owner-level tool.
+   *
+   * The route and backend remain protected separately.
+   * This fallback only ensures that a farm owner can see
+   * the Migration navigation item even if the permission
+   * record has not been returned by the permission service.
+   */
+  const canAccessMigration =
+    profile?.role === "owner" ||
+    isPlatformAdmin ||
+    can(PERMISSIONS.MIGRATION_VIEW);
+
   return (
     <aside className="flex min-h-screen w-72 flex-col border-r border-slate-800 bg-slate-950 text-white">
 
@@ -164,19 +195,6 @@ export default function Sidebar() {
           </div>
 
         </div>
-
-        {isDemoMode && (
-          <div className="mt-4 flex items-center gap-2 rounded-xl border border-blue-500/30 bg-blue-500/10 px-3 py-2">
-            <Eye
-              size={15}
-              className="text-blue-400"
-            />
-
-            <span className="text-xs font-semibold text-blue-300">
-              DEMO MODE
-            </span>
-          </div>
-        )}
       </div>
 
       {/* Navigation */}
@@ -220,32 +238,47 @@ export default function Sidebar() {
           pathname={pathname}
         />
 
-        {/* Administration is never exposed to Demo */}
-        {isPlatformAdmin &&
-          !isDemoMode && (
-            <MenuSection
-              title="ADMINISTRATION"
-              items={[
-                {
-                  name:
-                    "Admin Control Centre",
-                  href: "/admin",
-                  icon: ShieldCheck,
-                },
-                {
-                  name: "POGP",
-                  href: "/admin/pogp",
-                  icon: User,
-                },
-                {
-                  name: "VEND",
-                  href: "/admin/vend",
-                  icon: Handshake,
-                },
-              ]}
-              pathname={pathname}
-            />
+        {canAccessMigration && (
+          <MenuSection
+            title="TOOLS"
+            items={tools}
+            pathname={pathname}
+          />
+        )}
+
+        <MenuSection
+          title="TEAM"
+          items={team.filter(
+            (item) =>
+              can(item.permission)
           )}
+          pathname={pathname}
+        />
+
+        {/* Platform Administration */}
+        {isPlatformAdmin && (
+          <MenuSection
+            title="ADMINISTRATION"
+            items={[
+              {
+                name: "Admin Control Centre",
+                href: "/admin",
+                icon: ShieldCheck,
+              },
+              {
+                name: "POGP",
+                href: "/admin/pogp",
+                icon: Users,
+              },
+              {
+                name: "VEND",
+                href: "/admin/vend",
+                icon: Handshake,
+              },
+            ]}
+            pathname={pathname}
+          />
+        )}
 
       </nav>
 
@@ -259,18 +292,16 @@ export default function Sidebar() {
           icon={User}
         />
 
-        {/* Settings deliberately hidden in Demo */}
-        {!isDemoMode &&
-          can(
-            PERMISSIONS.SETTINGS_VIEW
-          ) && (
-            <MenuItem
-              pathname={pathname}
-              name="Settings"
-              href="/settings"
-              icon={User}
-            />
-          )}
+        {can(
+          PERMISSIONS.SETTINGS_VIEW
+        ) && (
+          <MenuItem
+            pathname={pathname}
+            name="Settings"
+            href="/settings"
+            icon={Settings}
+          />
+        )}
 
         <button
           onClick={handleSignOut}
@@ -287,6 +318,7 @@ export default function Sidebar() {
         </button>
 
         <div className="border-t border-slate-800 pt-4">
+
           <p className="text-xs text-slate-500">
             PoultryOps
           </p>
@@ -294,9 +326,11 @@ export default function Sidebar() {
           <p className="mt-1 text-xs text-slate-400">
             Version 1.0.1
           </p>
+
         </div>
 
       </div>
+
     </aside>
   );
 }
@@ -323,19 +357,25 @@ function MenuSection({
 
   return (
     <div>
+
       <p className="mb-2 px-3 text-xs font-semibold tracking-wider text-slate-500">
         {title}
       </p>
 
       <div className="space-y-1">
-        {items.map((item) => (
-          <MenuItem
-            key={item.href}
-            pathname={pathname}
-            {...item}
-          />
-        ))}
+
+        {items.map(
+          (item) => (
+            <MenuItem
+              key={item.href}
+              pathname={pathname}
+              {...item}
+            />
+          )
+        )}
+
       </div>
+
     </div>
   );
 }

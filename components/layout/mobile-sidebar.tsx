@@ -1,11 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import {
-  usePathname,
-  useRouter,
-} from "next/navigation";
-
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/lib/permissions";
 import { PERMISSIONS } from "@/lib/permissions";
 import { supabase } from "@/lib/supabase";
@@ -19,17 +16,15 @@ import {
   Package,
   AlertTriangle,
   HeartPulse,
-  Activity,
   Receipt,
   ShoppingCart,
   BarChart3,
   ChartColumn,
-  Brain,
+  Settings,
+  Upload,
   User,
+  Users,
   LogOut,
-  ShieldCheck,
-  Handshake,
-  Eye,
 } from "lucide-react";
 
 type Props = {
@@ -47,11 +42,39 @@ export default function MobileSidebar({
   const router =
     useRouter();
 
+  const { profile } =
+    useAuth();
+
   const {
     can,
     isPlatformAdmin,
-    isDemoMode,
   } = usePermissions();
+
+  const isOwner =
+    profile?.role === "owner";
+
+  /*
+   * Migration is an owner-level tool.
+   *
+   * The migration route and backend remain protected separately.
+   * This visibility check simply ensures that an owner can always
+   * see Migration in the navigation even if the permission service
+   * has not returned migration.view.
+   */
+  const canAccessMigration =
+    isOwner ||
+    isPlatformAdmin ||
+    can(PERMISSIONS.MIGRATION_VIEW);
+
+  async function handleSignOut() {
+    onClose();
+
+    await supabase.auth.signOut();
+
+    router.push("/login");
+  }
+
+  if (!open) return null;
 
   const operations = [
     {
@@ -88,13 +111,6 @@ export default function MobileSidebar({
       icon: AlertTriangle,
       permission:
         PERMISSIONS.MORTALITY_VIEW,
-    },
-    {
-      name: "Isolation",
-      href: "/isolation",
-      icon: Activity,
-      permission:
-        PERMISSIONS.ISOLATION_VIEW,
     },
     {
       name: "Health",
@@ -137,54 +153,72 @@ export default function MobileSidebar({
       permission:
         PERMISSIONS.ANALYTICS_VIEW,
     },
+  ];
+
+  const tools = [
     {
-      name: "Feed Intelligence",
-      href: "/feed-intelligence",
-      icon: Brain,
+      name: "Migration",
+      href: "/migration",
+      icon: Upload,
       permission:
-        PERMISSIONS.ANALYTICS_VIEW,
+        PERMISSIONS.MIGRATION_VIEW,
     },
   ];
 
-  if (!open) {
-    return null;
-  }
-
-  async function handleSignOut() {
-    onClose();
-
-    await supabase.auth.signOut();
-
-    router.push("/login");
-  }
+  const team = [
+    {
+      name: "Team",
+      href: "/team",
+      icon: Users,
+      permission:
+        PERMISSIONS.TEAM_VIEW,
+    },
+  ];
 
   return (
     <>
-      {/* Overlay */}
       <div
-        className="fixed inset-0 z-40 bg-black/60"
+        className="fixed inset-0 bg-black/60 z-40"
         onClick={onClose}
       />
 
       <aside
         className="
-          fixed left-0 top-0 z-50 flex h-full w-72
-          flex-col bg-slate-950 text-white
+          fixed
+          left-0
+          top-0
+          h-full
+          w-72
+          bg-slate-950
+          text-white
+          z-50
+          flex
+          flex-col
         "
       >
+        <div className="p-5 border-b border-slate-800">
 
-        {/* Header */}
-        <div className="border-b border-slate-800 p-5">
           <div className="flex items-center justify-between">
 
             <div className="flex items-center gap-3">
 
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 font-bold">
+              <div
+                className="
+                  w-10
+                  h-10
+                  rounded-xl
+                  bg-blue-600
+                  flex
+                  items-center
+                  justify-center
+                  font-bold
+                "
+              >
                 P
               </div>
 
               <div>
-                <h2 className="text-lg font-bold">
+                <h2 className="font-bold text-lg">
                   PoultryOps
                 </h2>
 
@@ -197,42 +231,31 @@ export default function MobileSidebar({
 
             <button
               onClick={onClose}
-              className="rounded-lg p-2 hover:bg-slate-800"
-              aria-label="Close navigation"
+              className="
+                p-2
+                rounded-lg
+                hover:bg-slate-800
+              "
             >
               <X size={20} />
             </button>
 
           </div>
 
-          {isDemoMode && (
-            <div className="mt-4 flex items-center gap-2 rounded-xl border border-blue-500/30 bg-blue-500/10 px-3 py-2">
-              <Eye
-                size={15}
-                className="text-blue-400"
-              />
-
-              <span className="text-xs font-semibold text-blue-300">
-                DEMO MODE
-              </span>
-            </div>
-          )}
         </div>
 
-        {/* Navigation */}
-        <div className="flex-1 space-y-6 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-4 space-y-6">
 
-          {can(
-            PERMISSIONS.DASHBOARD_VIEW
-          ) && (
-            <MenuItem
-              pathname={pathname}
-              href="/dashboard"
-              name="Dashboard"
-              icon={LayoutDashboard}
-              onClose={onClose}
-            />
-          )}
+          {isOwner &&
+            can(PERMISSIONS.DASHBOARD_VIEW) && (
+              <MenuItem
+                pathname={pathname}
+                href="/dashboard"
+                name="Dashboard"
+                icon={LayoutDashboard}
+                onClose={onClose}
+              />
+            )}
 
           <MenuSection
             title="OPERATIONS"
@@ -254,38 +277,36 @@ export default function MobileSidebar({
             onClose={onClose}
           />
 
-          <MenuSection
-            title="INSIGHTS"
-            items={insights.filter(
-              (item) =>
-                can(item.permission)
-            )}
-            pathname={pathname}
-            onClose={onClose}
-          />
-
-          {isPlatformAdmin &&
-            !isDemoMode && (
+          {isOwner &&
+            can(PERMISSIONS.REPORTS_VIEW) && (
               <MenuSection
-                title="ADMINISTRATION"
-                items={[
-                  {
-                    name:
-                      "Admin Control Centre",
-                    href: "/admin",
-                    icon: ShieldCheck,
-                  },
-                  {
-                    name: "POGP",
-                    href: "/admin/pogp",
-                    icon: User,
-                  },
-                  {
-                    name: "VEND",
-                    href: "/admin/vend",
-                    icon: Handshake,
-                  },
-                ]}
+                title="INSIGHTS"
+                items={insights.filter(
+                  (item) =>
+                    can(item.permission)
+                )}
+                pathname={pathname}
+                onClose={onClose}
+              />
+            )}
+
+          {canAccessMigration && (
+            <MenuSection
+              title="TOOLS"
+              items={tools}
+              pathname={pathname}
+              onClose={onClose}
+            />
+          )}
+
+          {isOwner &&
+            can(PERMISSIONS.TEAM_VIEW) && (
+              <MenuSection
+                title="TEAM"
+                items={team.filter(
+                  (item) =>
+                    can(item.permission)
+                )}
                 pathname={pathname}
                 onClose={onClose}
               />
@@ -293,8 +314,7 @@ export default function MobileSidebar({
 
         </div>
 
-        {/* Bottom Navigation */}
-        <div className="space-y-1 border-t border-slate-800 p-4">
+        <div className="p-4 border-t border-slate-800 space-y-1">
 
           <MenuItem
             pathname={pathname}
@@ -304,15 +324,13 @@ export default function MobileSidebar({
             onClose={onClose}
           />
 
-          {!isDemoMode &&
-            can(
-              PERMISSIONS.SETTINGS_VIEW
-            ) && (
+          {isOwner &&
+            can(PERMISSIONS.SETTINGS_VIEW) && (
               <MenuItem
                 pathname={pathname}
                 href="/settings"
                 name="Settings"
-                icon={User}
+                icon={Settings}
                 onClose={onClose}
               />
             )}
@@ -320,19 +338,24 @@ export default function MobileSidebar({
           <button
             onClick={handleSignOut}
             className="
-              flex w-full items-center gap-3 rounded-xl
-              px-4 py-3 text-red-400 transition-all
+              w-full
+              flex
+              items-center
+              gap-3
+              rounded-xl
+              px-4
+              py-3
+              text-red-400
               hover:bg-red-950
+              transition-all
             "
           >
             <LogOut size={18} />
-
-            <span>
-              Sign Out
-            </span>
+            <span>Sign Out</span>
           </button>
 
         </div>
+
       </aside>
     </>
   );
@@ -344,25 +367,23 @@ function MenuSection({
   pathname,
   onClose,
 }: any) {
-  if (
-    !items ||
-    items.length === 0
-  ) {
-    return null;
-  }
-
   return (
     <div>
+
       <p
         className="
-          mb-2 text-xs font-semibold tracking-wider
+          text-xs
           text-slate-500
+          font-semibold
+          tracking-wider
+          mb-2
         "
       >
         {title}
       </p>
 
       <div className="space-y-1">
+
         {items.map(
           (item: any) => (
             <MenuItem
@@ -373,7 +394,9 @@ function MenuSection({
             />
           )
         )}
+
       </div>
+
     </div>
   );
 }
@@ -397,7 +420,12 @@ function MenuItem({
       href={href}
       onClick={onClose}
       className={`
-        flex items-center gap-3 rounded-xl px-4 py-3
+        flex
+        items-center
+        gap-3
+        px-4
+        py-3
+        rounded-xl
         transition-all
         ${
           active
@@ -407,10 +435,7 @@ function MenuItem({
       `}
     >
       <Icon size={18} />
-
-      <span>
-        {name}
-      </span>
+      <span>{name}</span>
     </Link>
   );
 }

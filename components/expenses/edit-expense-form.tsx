@@ -10,8 +10,15 @@ import SaveButton from "@/components/ui/save-button";
 
 import { X } from "lucide-react";
 
+type Flock = {
+  id: string;
+  flock_name: string;
+  bird_type?: string | null;
+};
+
 type Props = {
   record: any;
+  flocks?: Flock[];
   onClose: () => void;
   onSaved: () => Promise<void> | void;
   user: any;
@@ -37,11 +44,29 @@ const EXPENSE_CATEGORIES = [
   "Biosecurity",
   "Cleaning Disinfectant",
   "Health Inspection",
+  "Bird Purchase",
   "Others (Specify)",
+];
+
+const BIRD_PURCHASE_TYPES = [
+  "Noiler",
+  "Kuroiler",
+  "Brahma",
+  "White Cockerel",
+  "Black Cockerel",
+  "Brown Pullets (Layers)",
+  "Black Pullet (Layers)",
+  "Local Turkey",
+  "Foreign Turkey",
+  "Foreign Guinea Fowl",
+  "Local Guinea Fowl",
+  "Local Duck",
+  "Foreign Duck",
 ];
 
 export default function EditExpenseForm({
   record,
+  flocks = [],
   onClose,
   onSaved,
   user,
@@ -54,6 +79,18 @@ export default function EditExpenseForm({
 
   const [category, setCategory] = useState(
     record.category || "Miscellaneous"
+  );
+
+  const [flockId, setFlockId] = useState(
+    record.flock_id || ""
+  );
+
+  const [birdType, setBirdType] = useState(
+    record.bird_type || ""
+  );
+
+  const [quantity, setQuantity] = useState(
+    record.quantity?.toString() || ""
   );
 
   const [amount, setAmount] = useState(
@@ -70,8 +107,10 @@ export default function EditExpenseForm({
   const [governanceError, setGovernanceError] =
     useState<string | null>(null);
 
+  const isBirdPurchase =
+    category === "Bird Purchase";
+
   useEffect(() => {
-    // Check Edit Governance on mount
     const governanceResult = canEdit(
       {
         id: user?.id || "",
@@ -99,13 +138,43 @@ export default function EditExpenseForm({
         return;
       }
 
+      if (isBirdPurchase) {
+        if (!flockId) {
+          console.error(
+            "Please select the flock for the bird purchase."
+          );
+          return;
+        }
+
+        if (!birdType) {
+          console.error(
+            "Please select the bird purchase type."
+          );
+          return;
+        }
+
+        if (!quantity || Number(quantity) <= 0) {
+          console.error(
+            "Please enter a valid bird quantity."
+          );
+          return;
+        }
+      }
+
       setLoading(true);
 
       await updateExpense(record.id, {
         expense_date: expenseDate,
-        category: category,
+        category,
         amount: Number(amount),
         notes: notes.trim() || null,
+        flock_id: flockId || null,
+        bird_type: isBirdPurchase
+          ? birdType
+          : null,
+        quantity: isBirdPurchase
+          ? Number(quantity)
+          : null,
       });
 
       await onSaved?.();
@@ -117,7 +186,10 @@ export default function EditExpenseForm({
         onClose();
       }, 1500);
     } catch (error) {
-      console.error("Error updating expense:", error);
+      console.error(
+        "Error updating expense:",
+        error
+      );
     } finally {
       setLoading(false);
     }
@@ -195,9 +267,16 @@ export default function EditExpenseForm({
         {/* Category */}
         <select
           value={category}
-          onChange={(e) =>
-            setCategory(e.target.value)
-          }
+          onChange={(e) => {
+            const value = e.target.value;
+
+            setCategory(value);
+
+            if (value !== "Bird Purchase") {
+              setBirdType("");
+              setQuantity("");
+            }
+          }}
           className="w-full border rounded-xl p-4"
           required
         >
@@ -210,6 +289,77 @@ export default function EditExpenseForm({
             </option>
           ))}
         </select>
+
+        {/* Flock */}
+        <select
+          value={flockId}
+          onChange={(e) =>
+            setFlockId(e.target.value)
+          }
+          className="w-full border rounded-xl p-4"
+        >
+          <option value="">
+            {isBirdPurchase
+              ? "Select Flock"
+              : "Farm-wide Expense (No Flock)"}
+          </option>
+
+          {flocks.map((flock) => (
+            <option
+              key={flock.id}
+              value={flock.id}
+            >
+              {flock.flock_name}
+              {flock.bird_type
+                ? ` — ${flock.bird_type}`
+                : ""}
+            </option>
+          ))}
+        </select>
+
+        {/* Bird Purchase Fields */}
+        {isBirdPurchase && (
+          <>
+            {/* Bird / Purchase Type */}
+            <select
+              value={birdType}
+              onChange={(e) =>
+                setBirdType(e.target.value)
+              }
+              className="w-full border rounded-xl p-4"
+              required
+            >
+              <option value="">
+                Select Bird / Purchase Type
+              </option>
+
+              {BIRD_PURCHASE_TYPES.map(
+                (item) => (
+                  <option
+                    key={item}
+                    value={item}
+                  >
+                    {item}
+                  </option>
+                )
+              )}
+            </select>
+
+            {/* Quantity */}
+            <input
+              type="number"
+              min="1"
+              step="1"
+              placeholder="Quantity of Birds"
+              value={quantity}
+              onChange={(e) =>
+                setQuantity(e.target.value)
+              }
+              className="w-full border rounded-xl p-4"
+              required
+            />
+          </>
+        )}
 
         {/* Amount */}
         <input

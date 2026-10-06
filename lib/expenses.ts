@@ -59,7 +59,10 @@ export async function updateExpense(
     expense_date: string;
     category: string;
     amount: number;
-    notes: string;
+    notes: string | null;
+    flock_id?: string | null;
+    bird_type?: string | null;
+    quantity?: number | null;
   }
 ) {
   const { error } =
