@@ -101,6 +101,13 @@ export default function Sidebar() {
 
   const finance = [
     {
+      name: "Customers",
+      href: "/customers",
+      icon: Users,
+      permission:
+        PERMISSIONS.CUSTOMERS_VIEW,
+    },
+    {
       name: "Expenses",
       href: "/expenses",
       icon: Receipt,

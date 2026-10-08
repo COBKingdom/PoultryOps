@@ -42,6 +42,7 @@ const EXPENSE_CATEGORIES = [
 ];
 
 const BIRD_PURCHASE_TYPES = [
+  "Broiler",
   "Noiler",
   "Kuroiler",
   "Brahma",

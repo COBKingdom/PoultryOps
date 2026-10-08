@@ -71,6 +71,12 @@ export const PERMISSIONS = {
   SALES_EDIT: "sales.edit",
   SALES_DELETE: "sales.delete",
 
+  // Customers
+  CUSTOMERS_VIEW: "customers.view",
+  CUSTOMERS_CREATE: "customers.create",
+  CUSTOMERS_EDIT: "customers.edit",
+  CUSTOMERS_DELETE: "customers.delete",
+
   // Expenses
   EXPENSES_VIEW: "expenses.view",
   EXPENSES_CREATE: "expenses.create",
@@ -137,6 +143,7 @@ export const PERMISSION_CATEGORIES = [
   "Mortality",
   "Isolation",
   "Sales",
+  "Customers",
   "Expenses",
   "Reports",
   "Analytics",

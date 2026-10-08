@@ -166,6 +166,7 @@ export async function updateSale(
     quantity: number;
     unit_price: number;
     total_amount: number;
+    customer_id: string | null;
     notes: string;
   }
 ) {
