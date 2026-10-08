@@ -6,18 +6,17 @@ import type { ComponentType } from "react";
 
 import {
   Activity,
+  AlertTriangle,
   Archive,
   ArrowLeft,
   Calendar,
   Egg,
-  Edit,
   FileText,
   HeartPulse,
   Package,
   ReceiptText,
   ShoppingCart,
   Skull,
-  Truck,
   Wallet,
 } from "lucide-react";
 
@@ -330,7 +329,7 @@ function KpiCard({
   description?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="relative overflow-hidden rounded-2xl border border-slate-200 border-t-4 border-t-blue-600 bg-white p-5 shadow-md">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -786,7 +785,7 @@ function HealthTab({
               label: "Notes",
               render: (row) => (
                 <span className="max-w-xs truncate">
-                  {row.notes || "—"}
+                  {row.notes || "â€”"}
                 </span>
               ),
             },
@@ -1083,7 +1082,7 @@ function ExpensesTab({
             },
             {
               label: "Notes",
-              render: (row) => row.notes || "—",
+              render: (row) => row.notes || "â€”",
             },
           ]}
         />
@@ -1449,6 +1448,15 @@ export default function FlockDetailsPage() {
   const [recordsError, setRecordsError] =
     useState<string | null>(null);
 
+  const [archiveModalOpen, setArchiveModalOpen] =
+    useState(false);
+
+  const [archiveLoading, setArchiveLoading] =
+    useState(false);
+
+  const [archiveError, setArchiveError] =
+    useState<string | null>(null);
+
   const [activeTab, setActiveTab] =
     useState<TabId>("overview");
 
@@ -1624,16 +1632,20 @@ export default function FlockDetailsPage() {
     loadOperationalData();
   }, [flockId, flock?.farm_id]);
 
-  async function handleArchive() {
+  function handleArchive() {
     if (!flockId) return;
 
-    const confirmed = confirm(
-      "Are you sure you want to archive this flock? Archived flocks will be hidden from the list but all data will be preserved."
-    );
+    setArchiveError(null);
+    setArchiveModalOpen(true);
+  }
 
-    if (!confirmed) return;
+  async function confirmArchive() {
+    if (!flockId) return;
 
     try {
+      setArchiveLoading(true);
+      setArchiveError(null);
+
       await archiveFlock(flockId);
       router.push("/flocks");
     } catch (err) {
@@ -1642,9 +1654,11 @@ export default function FlockDetailsPage() {
         err
       );
 
-      alert(
+      setArchiveError(
         "Unable to archive this flock. Please try again."
       );
+    } finally {
+      setArchiveLoading(false);
     }
   }
 
@@ -1809,18 +1823,6 @@ export default function FlockDetailsPage() {
               </button>
 
               <button
-                onClick={() =>
-                  router.push(
-                    `/flocks/${flockId}/edit`
-                  )
-                }
-                className="inline-flex items-center gap-2 rounded-xl border border-blue-300 bg-blue-50 px-5 py-3 text-sm font-semibold text-blue-700 shadow-sm transition hover:bg-blue-100"
-              >
-                <Edit size={18} />
-                Edit
-              </button>
-
-              <button
                 onClick={handleArchive}
                 className="inline-flex items-center gap-2 rounded-xl border border-orange-300 bg-orange-50 px-5 py-3 text-sm font-semibold text-orange-700 shadow-sm transition hover:bg-orange-100"
               >
@@ -1844,7 +1846,7 @@ export default function FlockDetailsPage() {
             </h2>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-2 lg:grid-cols-4">
             <KpiCard
               title="Available Birds"
               value={formatNumber(
@@ -1879,22 +1881,6 @@ export default function FlockDetailsPage() {
   icon={Calendar}
 />
 
-            <KpiCard
-              title="Arrival"
-              value={formatLongDate(
-                flock.arrival_date
-              )}
-              icon={Truck}
-            />
-
-            <KpiCard
-              title="Supplier"
-              value={
-                flock.supplier ||
-                "Not recorded"
-              }
-              icon={Package}
-            />
           </div>
         </div>
 
@@ -2144,6 +2130,81 @@ export default function FlockDetailsPage() {
             </span>
           )}
         </div>
+
+        {archiveModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-6 backdrop-blur-sm">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="archive-flock-title"
+              className="w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+            >
+              <div className="border-b border-slate-200 bg-orange-50 px-6 py-5">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
+                    <AlertTriangle size={24} />
+                  </div>
+
+                  <div className="min-w-0">
+                    <h2
+                      id="archive-flock-title"
+                      className="text-xl font-bold text-slate-900"
+                    >
+                      Archive Flock?
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-600">
+                      You are about to archive <span className="font-semibold text-slate-900">{flock.flock_name}</span>.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4 px-6 py-6">
+                <p className="text-sm leading-6 text-slate-600">
+                  Archiving removes this flock from the active Flocks list. The flock and its historical records will be preserved.
+                </p>
+
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                  <p className="text-sm font-semibold text-amber-900">
+                    Before you continue
+                  </p>
+                  <ul className="mt-2 space-y-1.5 text-sm text-amber-800">
+                    <li>• The flock will no longer appear in the active flock list.</li>
+                    <li>• Its production, feed, health, mortality, sales and expense history will be preserved.</li>
+                    <li>• Archive this flock only when you no longer need it as an active flock.</li>
+                  </ul>
+                </div>
+
+                {archiveError && (
+                  <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                    {archiveError}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col-reverse gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setArchiveModalOpen(false)}
+                  disabled={archiveLoading}
+                  className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={confirmArchive}
+                  disabled={archiveLoading}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <Archive size={17} />
+                  {archiveLoading ? "Archiving..." : "Archive Flock"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AppShell>
   );
