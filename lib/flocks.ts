@@ -1,13 +1,20 @@
 import { supabase } from "@/lib/supabase";
-import {
-  getTotalBirdsSold,
-  getFlockBirdsSold,
-} from "@/lib/sales";
+import { getTotalBirdsSold } from "@/lib/sales";
 import {
   getTotalMortality,
   getFlockMortality,
 } from "@/lib/mortality";
 
+const BIRD_SALE_TYPES = [
+  "Live Bird Sales",
+  "Spent Layer Sales",
+  "Broiler Sales",
+  "Cockerel Sales",
+];
+
+/**
+ * Creates a new flock.
+ */
 export async function createFlock(
   flock: any
 ) {
@@ -27,6 +34,9 @@ export async function createFlock(
   return data;
 }
 
+/**
+ * Updates a flock.
+ */
 export async function updateFlock(
   id: string,
   flock: any
@@ -48,6 +58,9 @@ export async function updateFlock(
   return data;
 }
 
+/**
+ * Archives a flock.
+ */
 export async function archiveFlock(
   id: string
 ) {
@@ -69,6 +82,11 @@ export async function archiveFlock(
   return data;
 }
 
+/**
+ * Gets flocks for a farm.
+ *
+ * Archived flocks are excluded by default.
+ */
 export async function getFlocks(
   farmId: string,
   includeArchived = false
@@ -98,6 +116,9 @@ export async function getFlocks(
   return data;
 }
 
+/**
+ * Gets total starting birds across a farm.
+ */
 export async function getTotalBirds(
   farmId: string
 ) {
@@ -125,28 +146,15 @@ export async function getTotalBirds(
  * Shared source of truth for the operational
  * farm bird figure.
  *
- * Available Birds =
+ * Farm Available Birds =
  *
  *   Starting Birds
  *   − Total Mortality
  *   − Birds Sold
  *
- * IMPORTANT:
- *
- * Birds in isolation are still alive and still
- * belong to their original flock.
- *
- * Therefore isolation does NOT reduce the farm's
- * Available Birds figure.
- *
- * Isolation is tracked separately as an operational
- * status/audit figure.
- *
- * When a bird dies in isolation, recordIsolationDeath()
- * creates a normal mortality record. That mortality
- * then permanently reduces Available Birds.
- *
- * Used by Dashboard, Reports, Analytics and Flocks.
+ * Active isolation does NOT reduce the farm-level
+ * available figure because isolated birds are still
+ * alive and still belong to their original flock.
  */
 export async function getAvailableBirds(
   farmId: string
@@ -169,6 +177,9 @@ export async function getAvailableBirds(
   );
 }
 
+/**
+ * Gets the total number of flock records.
+ */
 export async function getTotalFlocks(
   farmId: string
 ) {
@@ -186,6 +197,9 @@ export async function getTotalFlocks(
   return count || 0;
 }
 
+/**
+ * Gets all flocks for a farm.
+ */
 export async function getFarmFlocks(
   farmId: string
 ) {
@@ -203,6 +217,9 @@ export async function getFarmFlocks(
   return data;
 }
 
+/**
+ * Gets one flock by ID.
+ */
 export async function getFlockById(
   id: string
 ) {
@@ -219,22 +236,57 @@ export async function getFlockById(
 }
 
 /**
- * Available birds for a single flock.
+ * Gets birds sold from ONE specific flock.
  *
- * For an individual flock, "available" means
- * birds currently available within that flock
- * for normal operations.
+ * This is deliberately different from
+ * getTotalBirdsSold(), which is farm-wide.
+ */
+async function getFlockBirdsSold(
+  flockId: string
+) {
+  const { data, error } =
+    await supabase
+      .from("sales")
+      .select(
+        "quantity, item_type"
+      )
+      .eq(
+        "flock_id",
+        flockId
+      );
+
+  if (error) throw error;
+
+  return (
+    data?.reduce(
+      (sum, row) => {
+        if (
+          BIRD_SALE_TYPES.includes(
+            row.item_type
+          )
+        ) {
+          return (
+            sum +
+            Number(
+              row.quantity || 0
+            )
+          );
+        }
+
+        return sum;
+      },
+      0
+    ) || 0
+  );
+}
+
+/**
+ * Available birds for a single flock.
  *
  * Starting Birds
  * − Flock Mortality
- * − Flock Birds Sold
+ * − Birds Sold from THIS flock
  * − Active Isolated Birds
- *
- * IMPORTANT:
- *
- * Sales MUST be restricted to this flock.
- * A sale belonging to another flock must never
- * reduce this flock's available bird count.
  */
 export async function getFlockAvailableBirds(
   flockId: string
