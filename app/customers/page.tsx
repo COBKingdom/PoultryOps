@@ -419,6 +419,7 @@ export default function CustomersPage() {
                   selectedCustomer
                 )
               }
+              onPaymentCorrected={handlePaymentSaved}
             />
           )}
 
