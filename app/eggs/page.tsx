@@ -286,7 +286,7 @@ export default function EggsPage() {
    * Production performance.
    *
    * Production Rate =
-   * Eggs Collected / Available Birds × 100
+   * Eggs Collected / Available Birds Ã— 100
    *
    * The rate uses the same selected
    * period + flock context as the
@@ -505,7 +505,8 @@ export default function EggsPage() {
             border
             border-blue-100
             bg-white
-            p-5
+            p-3
+            sm:p-4
             shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]
           "
         >
@@ -556,67 +557,127 @@ export default function EggsPage() {
               </div>
             </div>
 
-            {/* Production rate */}
-            <div className="lg:min-w-[250px] lg:text-right">
-
-              <div className="flex items-end justify-between lg:justify-end lg:gap-3">
-
+                       {/* Production rate */}
+            <div className="w-full min-w-0 lg:flex-1">
+              <div className="flex items-center justify-between gap-3 lg:justify-end">
                 <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Production Rate
                 </span>
 
                 <span
                   className={`
-                    text-2xl
+                    rounded-full
+                    px-2.5
+                    py-1
+                    text-[10px]
                     font-bold
-                    tracking-tight
+                    ${productionStatus.containerClass}
                     ${productionStatus.rateClass}
                   `}
                 >
                   {availableBirdsLoading
-                    ? "—"
-                    : `${performance.productionRate.toFixed(1)}%`}
+                    ? "Loading"
+                    : productionStatus.label}
                 </span>
-
               </div>
 
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+              {/* Compact, centred production gauge */}
+              <div className="mt-1 flex flex-col items-center gap-1">
+                <svg
+                  viewBox="0 0 120 72"
+                  className="h-[88px] w-[146px] shrink-0"
+                  role="img"
+                  aria-label={`Production rate ${performance.productionRate.toFixed(1)} percent. Status: ${productionStatus.label}`}
+                >
+                  {/* Critical: 0% to below 70% */}
+                  <path
+                    d="M 15 60 A 45 45 0 0 1 86.45 23.55"
+                    fill="none"
+                    stroke="#ef4444"
+                    strokeWidth="9"
+                    strokeLinecap="round"
+                  />
 
-                <div
-                  className={`
-                    h-full
-                    rounded-full
-                    transition-all
-                    duration-500
-                    ${productionStatus.progressClass}
-                  `}
-                  style={{
-                    width: `${Math.min(
-                      100,
-                      Math.max(
-                        0,
-                        performance.productionRate
-                      )
-                    )}%`,
-                  }}
-                />
+                  {/* Watch: 70% to below 80% */}
+                  <path
+                    d="M 86.45 23.55 A 45 45 0 0 1 96.41 33.55"
+                    fill="none"
+                    stroke="#f59e0b"
+                    strokeWidth="9"
+                    strokeLinecap="round"
+                  />
 
+                  {/* Normal: 80% to 100% */}
+                  <path
+                    d="M 96.41 33.55 A 45 45 0 0 1 105 60"
+                    fill="none"
+                    stroke="#10b981"
+                    strokeWidth="9"
+                    strokeLinecap="round"
+                  />
+
+                  {/* Needle follows the existing production percentage */}
+                  <g
+                    transform={`rotate(${Math.max(0, Math.min(100, performance.productionRate)) * 1.8} 60 60)`}
+                    className="transition-transform duration-500"
+                  >
+                    <line
+                      x1="60"
+                      y1="60"
+                      x2="27"
+                      y2="60"
+                      stroke="#0f172a"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                    />
+                  </g>
+
+                  <circle cx="60" cy="60" r="4.5" fill="#0f172a" />
+
+                  <text
+                    x="60"
+                    y="48"
+                    textAnchor="middle"
+                    fontSize="12"
+                    fontWeight="700"
+                    fill="currentColor"
+                  >
+                    {availableBirdsLoading
+                      ? "—"
+                      : `${performance.productionRate.toFixed(1)}%`}
+                  </text>
+                </svg>
+
+                <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-[10px] font-semibold">
+                  <span className="flex items-center gap-1 text-red-600">
+                    <span className="h-2 w-2 rounded-full bg-red-500" />
+                    Critical
+                  </span>
+
+                  <span className="flex items-center gap-1 text-amber-600">
+                    <span className="h-2 w-2 rounded-full bg-amber-500" />
+                    Watch
+                  </span>
+
+                  <span className="flex items-center gap-1 text-emerald-600">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                    Normal
+                  </span>
+                </div>
               </div>
-
             </div>
-
           </div>
 
           {/* Performance context */}
           <div
             className="
-              mt-5
+              mt-3
               flex
               flex-col
               gap-3
               border-t
               border-slate-100
-              pt-4
+              pt-3
               sm:flex-row
               sm:items-center
               sm:justify-between
@@ -630,7 +691,7 @@ export default function EggsPage() {
 
               <p className="mt-1 text-lg font-bold text-slate-900">
                 {availableBirdsLoading
-                  ? "—"
+                  ? "â€”"
                   : performance.birds.toLocaleString()}
               </p>
             </div>
@@ -650,7 +711,60 @@ export default function EggsPage() {
           </div>
         </div>
 
-        
+        {/* Production Intelligence */}
+        <div
+          className={`
+            flex
+            items-start
+            gap-3
+            rounded-xl
+            border
+            px-4
+            py-4
+            ${productionStatus.containerClass}
+          `}
+        >
+
+          <div
+            className={`
+              flex
+              h-9
+              w-9
+              shrink-0
+              items-center
+              justify-center
+              rounded-full
+              ${productionStatus.iconContainerClass}
+            `}
+          >
+            <ProductionStatusIcon size={18} />
+          </div>
+
+          <div className="min-w-0">
+
+            <p
+              className={`
+                text-sm
+                font-bold
+                ${productionStatus.titleClass}
+              `}
+            >
+              Production Status: {productionStatus.label}
+            </p>
+
+            <p
+              className={`
+                mt-1
+                text-sm
+                ${productionStatus.textClass}
+              `}
+            >
+              {productionStatus.message}
+            </p>
+
+          </div>
+
+        </div>
 
         {/* KPI Cards */}
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -772,60 +886,7 @@ export default function EggsPage() {
           </div>
 
         </div>
-{/* Production Intelligence */}
-        <div
-          className={`
-            flex
-            items-start
-            gap-3
-            rounded-xl
-            border
-            px-4
-            py-4
-            ${productionStatus.containerClass}
-          `}
-        >
 
-          <div
-            className={`
-              flex
-              h-9
-              w-9
-              shrink-0
-              items-center
-              justify-center
-              rounded-full
-              ${productionStatus.iconContainerClass}
-            `}
-          >
-            <ProductionStatusIcon size={18} />
-          </div>
-
-          <div className="min-w-0">
-
-            <p
-              className={`
-                text-sm
-                font-bold
-                ${productionStatus.titleClass}
-              `}
-            >
-              Production Status: {productionStatus.label}
-            </p>
-
-            <p
-              className={`
-                mt-1
-                text-sm
-                ${productionStatus.textClass}
-              `}
-            >
-              {productionStatus.message}
-            </p>
-
-          </div>
-
-        </div>
         {/* Search + Flock + Date Filters */}
         <div
           className="

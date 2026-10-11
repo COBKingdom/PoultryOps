@@ -164,34 +164,43 @@ export default function SalesPage() {
    *
    * KPIs now use the selected flock.
    */
+ 
   const kpiValues = useMemo(() => {
-    const totalSales =
-      flockFilteredRecords.reduce(
-        (sum, record) =>
-          sum +
-          Number(record.quantity || 0),
-        0
-      );
+    const totalSales = flockFilteredRecords.reduce(
+      (sum, record) => sum + Number(record.quantity || 0),
+      0
+    );
 
-    const totalRevenue =
-      flockFilteredRecords.reduce(
-        (sum, record) =>
-          sum +
-          Number(record.total_amount || 0),
-        0
-      );
+    const totalRevenue = flockFilteredRecords.reduce(
+      (sum, record) => sum + Number(record.total_amount || 0),
+      0
+    );
 
-    const totalRecords =
-      flockFilteredRecords.length;
+    const eggRevenue = flockFilteredRecords.reduce(
+      (sum, record) =>
+        record.sale_category === "Egg Sales"
+          ? sum + Number(record.total_amount || 0)
+          : sum,
+      0
+    );
+
+    const birdRevenue = flockFilteredRecords.reduce(
+      (sum, record) =>
+        record.sale_category === "Bird Sales"
+          ? sum + Number(record.total_amount || 0)
+          : sum,
+      0
+    );
 
     return {
       totalSales,
       totalRevenue,
-      totalRecords,
+      eggRevenue,
+      birdRevenue,
+      totalRecords: flockFilteredRecords.length,
     };
-  }, [
-    flockFilteredRecords,
-  ]);
+  }, [flockFilteredRecords]);
+
 
   /*
    * ---------------------------------------------------------
@@ -304,79 +313,69 @@ export default function SalesPage() {
    * KPI CARDS
    * ---------------------------------------------------------
    */
+  
+  const formatSalesCurrency = (amount: number) =>
+    new Intl.NumberFormat("en-NG", {
+      style: "currency",
+      currency: farm?.currency || "NGN",
+      maximumFractionDigits: 2,
+    }).format(amount);
+
   const kpiCards = (
     <>
-      <div className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
-        <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
+      {[
+        {
+          label: "Total Sales",
+          value: kpiValues.totalSales.toLocaleString(),
+          description: "Units sold in selected period",
+          dot: "bg-blue-600 ring-blue-100",
+        },
+        {
+          label: "Egg Sales",
+          value: formatSalesCurrency(kpiValues.eggRevenue),
+          description: "Egg revenue in selected period",
+          dot: "bg-amber-500 ring-amber-100",
+        },
+        {
+          label: "Bird Sales",
+          value: formatSalesCurrency(kpiValues.birdRevenue),
+          description: "Bird revenue in selected period",
+          dot: "bg-emerald-500 ring-emerald-100",
+        },
+        {
+          label: "Transactions",
+          value: kpiValues.totalRecords.toLocaleString(),
+          description: "Matching sale records",
+          dot: "bg-indigo-600 ring-indigo-100",
+        },
+      ].map((card) => (
+        <div
+          key={card.label}
+          className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]"
+        >
+          <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
 
-        <div className="flex items-start justify-between gap-3 pt-1">
-          <div className="min-w-0">
-            <div className="text-sm font-medium text-slate-500">
-              Total Sales
+          <div className="flex items-start justify-between gap-3 pt-1">
+            <div className="min-w-0">
+              <div className="text-sm font-medium text-slate-500">
+                {card.label}
+              </div>
+
+              <div className="mt-2 break-words text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                {card.value}
+              </div>
+
+              <div className="mt-1 text-xs text-slate-400">
+                {card.description}
+              </div>
             </div>
 
-            <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
-              {kpiValues.totalSales.toLocaleString()}
-            </div>
-
-            <div className="mt-1 text-xs text-slate-400">
-              Units sold in selected period
-            </div>
+            <div
+              className={`mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full ring-4 ${card.dot}`}
+            />
           </div>
-
-          <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-blue-600 ring-4 ring-blue-100" />
         </div>
-      </div>
-
-      <div className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
-        <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
-
-        <div className="flex items-start justify-between gap-3 pt-1">
-          <div className="min-w-0">
-            <div className="text-sm font-medium text-slate-500">
-              Revenue
-            </div>
-
-            <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
-              {new Intl.NumberFormat("en-NG", {
-                style: "currency",
-                currency: farm?.currency || "NGN",
-                maximumFractionDigits: 2,
-              }).format(
-                kpiValues.totalRevenue
-              )}
-            </div>
-
-            <div className="mt-1 text-xs text-slate-400">
-              Revenue in selected period
-            </div>
-          </div>
-
-          <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-emerald-500 ring-4 ring-emerald-100" />
-        </div>
-      </div>
-
-      <div className="relative overflow-hidden rounded-xl border border-blue-100 bg-white p-5 shadow-[4px_5px_0_rgba(37,99,235,0.09),0_8px_22px_rgba(15,23,42,0.07)]">
-        <div className="absolute inset-x-0 top-0 h-[3px] bg-blue-500/85" />
-
-        <div className="flex items-start justify-between gap-3 pt-1">
-          <div className="min-w-0">
-            <div className="text-sm font-medium text-slate-500">
-              Records
-            </div>
-
-            <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
-              {kpiValues.totalRecords.toLocaleString()}
-            </div>
-
-            <div className="mt-1 text-xs text-slate-400">
-              Sales records in selected period
-            </div>
-          </div>
-
-          <div className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full bg-blue-600 ring-4 ring-blue-100" />
-        </div>
-      </div>
+      ))}
     </>
   );
 

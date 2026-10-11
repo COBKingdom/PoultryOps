@@ -1,23 +1,16 @@
+
 "use client";
 
 import { ReactNode } from "react";
-
 import { formatCurrency } from "@/lib/currency";
 
 type OperationsKpiCardProps = {
-  /** Label displayed above the value */
   label: string;
-  /** The main value to display */
   value: string | number;
-  /** Optional sub-label below the value */
   sublabel?: string;
-  /** Optional icon displayed on the right */
   icon?: ReactNode;
-  /** Optional color variant for the value text */
   valueColor?: "slate" | "blue" | "green" | "red" | "amber" | "indigo";
-  /** Optional background color for the icon container */
   iconBg?: "blue" | "green" | "red" | "amber" | "indigo" | "slate";
-  /** Optional ISO currency code to format the value as money (e.g. "NGN") */
   currency?: string;
 };
 
@@ -57,26 +50,38 @@ export default function OperationsKpiCard({
       });
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-slate-500 text-sm font-medium">{label}</p>
-          <p
-            className={`text-3xl font-bold mt-1 ${colorMap.value[valueColor]}`}
-          >
-            {displayValue}
-          </p>
-          {sublabel && (
-            <p className="text-slate-400 text-xs mt-1">{sublabel}</p>
+    <div className="group relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md">
+      {/* Blue accent */}
+      <div className="h-1 bg-gradient-to-r from-blue-700 via-blue-500 to-sky-400" />
+
+      <div className="p-5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-slate-500">
+              {label}
+            </p>
+
+            <p
+              className={`mt-2 break-words text-2xl font-bold tracking-tight sm:text-3xl ${colorMap.value[valueColor]}`}
+            >
+              {displayValue}
+            </p>
+
+            {sublabel && (
+              <p className="mt-2 text-xs leading-5 text-slate-400">
+                {sublabel}
+              </p>
+            )}
+          </div>
+
+          {icon && (
+            <div
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ring-1 ring-black/[0.03] ${colorMap.iconBg[iconBg]}`}
+            >
+              {icon}
+            </div>
           )}
         </div>
-        {icon && (
-          <div
-            className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${colorMap.iconBg[iconBg]}`}
-          >
-            {icon}
-          </div>
-        )}
       </div>
     </div>
   );

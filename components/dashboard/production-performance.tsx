@@ -1,3 +1,4 @@
+
 import {
   Activity,
   Egg,
@@ -9,6 +10,56 @@ type Props = {
   availableEggs: number;
   productionPercentage: number;
 };
+
+function ProductionGauge({
+  percentage,
+}: {
+  percentage: number;
+}) {
+  const radius = 38;
+  const circumference = Math.PI * radius;
+  const progress = (percentage / 100) * circumference;
+
+  return (
+    <div className="flex h-[76px] w-[118px] shrink-0 items-center justify-center">
+      <svg
+        viewBox="0 0 100 58"
+        className="h-[76px] w-[118px]"
+        role="img"
+        aria-label={`Production rate ${percentage.toFixed(2)} percent`}
+      >
+        <path
+          d="M 12 50 A 38 38 0 0 1 88 50"
+          fill="none"
+          stroke="#e2e8f0"
+          strokeWidth="8"
+          strokeLinecap="round"
+        />
+
+        <path
+          d="M 12 50 A 38 38 0 0 1 88 50"
+          fill="none"
+          stroke="#10b981"
+          strokeWidth="8"
+          strokeLinecap="round"
+          strokeDasharray={`${progress} ${circumference}`}
+          className="transition-all duration-500"
+        />
+
+        <text
+          x="50"
+          y="43"
+          textAnchor="middle"
+          fontSize="15"
+          fontWeight="700"
+          fill="currentColor"
+        >
+          {percentage.toFixed(1)}%
+        </text>
+      </svg>
+    </div>
+  );
+}
 
 export default function ProductionPerformance({
   todayEggs,
@@ -27,8 +78,10 @@ export default function ProductionPerformance({
         rounded-2xl
         border
         border-slate-200
+        border-t-[3px]
+        border-t-blue-500
         bg-white
-        shadow-sm
+        shadow-[4px_5px_0_rgba(37,99,235,0.08),0_8px_22px_rgba(15,23,42,0.05)]
       "
     >
       {/* Header */}
@@ -63,7 +116,7 @@ export default function ProductionPerformance({
               text-slate-500
             "
           >
-            Production for the selected period
+            Production efficiency for the selected period
           </p>
         </div>
 
@@ -86,18 +139,17 @@ export default function ProductionPerformance({
       </div>
 
       <div className="p-4">
-
-        {/* Main production figure */}
+        {/* Production rate and gauge */}
 
         <div
           className="
             flex
-            items-end
+            items-center
             justify-between
             gap-4
           "
         >
-          <div>
+          <div className="min-w-0">
             <p
               className="
                 text-[10px]
@@ -110,82 +162,26 @@ export default function ProductionPerformance({
               Production Rate
             </p>
 
-            <div className="mt-1 flex items-baseline gap-1.5">
-              <p
-                className="
-                  text-3xl
-                  font-bold
-                  tracking-tight
-                  text-slate-900
-                "
-              >
-                {percentage.toFixed(2)}
-              </p>
+            <div className="mt-2 flex items-center gap-1.5">
+              <TrendingUp
+                size={16}
+                className="text-emerald-600"
+              />
 
-              <span
-                className="
-                  text-sm
-                  font-semibold
-                  text-slate-500
-                "
-              >
-                %
+              <span className="text-sm font-semibold text-emerald-700">
+                Current
               </span>
             </div>
           </div>
 
-          <div
-            className="
-              flex
-              items-center
-              gap-1.5
-              rounded-full
-              bg-emerald-50
-              px-2.5
-              py-1
-              text-[10px]
-              font-semibold
-              text-emerald-700
-            "
-          >
-            <TrendingUp size={13} />
-            Current
-          </div>
-        </div>
-
-        {/* Production indicator */}
-
-        <div className="mt-4">
-          <div
-            className="
-              h-2
-              overflow-hidden
-              rounded-full
-              bg-slate-100
-            "
-          >
-            <div
-              className="
-                h-full
-                rounded-full
-                bg-gradient-to-r
-                from-cyan-500
-                to-blue-600
-                transition-all
-                duration-500
-              "
-              style={{
-                width: `${percentage}%`,
-              }}
-            />
-          </div>
+          <ProductionGauge percentage={percentage} />
         </div>
 
         {/* Supporting metrics */}
 
         <div
           className="
-            mt-4
+            mt-3
             grid
             grid-cols-2
             gap-2
@@ -194,6 +190,8 @@ export default function ProductionPerformance({
           <div
             className="
               rounded-xl
+              border
+              border-slate-100
               bg-slate-50
               px-3
               py-2.5
@@ -231,6 +229,8 @@ export default function ProductionPerformance({
           <div
             className="
               rounded-xl
+              border
+              border-slate-100
               bg-slate-50
               px-3
               py-2.5
