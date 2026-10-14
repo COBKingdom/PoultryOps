@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getLocalDateString } from "@/lib/date-utils";
 
 import { updateMortality } from "@/lib/mortality";
 import { canEdit } from "@/lib/permissions/governance";
@@ -40,7 +41,7 @@ export default function EditMortalityForm({
 
   const [recordDate, setRecordDate] = useState(
     record.mortality_date ||
-      new Date().toISOString().split("T")[0]
+      getLocalDateString()
   );
 
   const [loading, setLoading] = useState(false);

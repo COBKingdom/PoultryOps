@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getLocalDateString } from "@/lib/date-utils";
 
 import { createIsolation } from "@/lib/isolation";
 
@@ -53,7 +54,7 @@ export default function AddIsolationForm({
   const [notes, setNotes] = useState("");
 
   const [isolationDate, setIsolationDate] = useState(
-    new Date().toISOString().split("T")[0]
+    getLocalDateString()
   );
 
   const [loading, setLoading] = useState(false);

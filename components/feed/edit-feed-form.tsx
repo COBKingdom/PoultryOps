@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getLocalDateString } from "@/lib/date-utils";
 
 import {
   updateFeedRecord,
@@ -33,7 +34,7 @@ export default function EditFeedForm({
   const [feedType, setFeedType] = useState(record.feed_type || "");
   const [quantityKg, setQuantityKg] = useState(record.quantity_kg?.toString() || "");
   const [recordDate, setRecordDate] = useState(
-    record.feed_date || new Date().toISOString().split("T")[0]
+    record.feed_date || getLocalDateString()
   );
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);

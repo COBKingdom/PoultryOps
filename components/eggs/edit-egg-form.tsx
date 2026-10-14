@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getLocalDateString } from "@/lib/date-utils";
 
 import {
   updateEggProduction,
@@ -35,7 +36,7 @@ export default function EditEggForm({
     record.cracked_eggs?.toString() || "0"
   );
   const [recordDate, setRecordDate] = useState(
-    record.production_date || new Date().toISOString().split("T")[0]
+    record.production_date || getLocalDateString()
   );
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);

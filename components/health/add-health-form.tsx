@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getLocalDateString } from "@/lib/date-utils";
 
 import { createHealthRecord } from "@/lib/health";
 
@@ -39,7 +40,7 @@ export default function AddHealthForm({
   const [notes, setNotes] = useState("");
 
   const [recordDate, setRecordDate] = useState(
-    new Date().toISOString().split("T")[0]
+    getLocalDateString()
   );
 
   const [loading, setLoading] = useState(false);

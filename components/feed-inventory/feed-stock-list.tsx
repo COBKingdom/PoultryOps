@@ -9,6 +9,7 @@ import {
 import {
   getFeedPurchaseDetails,
 } from "@/lib/feedInventory";
+import { formatDateOnly } from "@/lib/date-utils";
 
 type Props = {
   records: any[];
@@ -46,19 +47,9 @@ function formatDate(
 ) {
   if (!value) return "";
 
-  const date =
-    new Date(
-      `${value}T00:00:00`
-    );
+  const formatted = formatDateOnly(value, "short");
 
-  return date.toLocaleDateString(
-    undefined,
-    {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    }
-  );
+  return formatted === "Not recorded" ? "" : formatted;
 }
 
 export default function FeedStockList({

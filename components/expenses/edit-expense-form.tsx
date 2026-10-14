@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getLocalDateString } from "@/lib/date-utils";
 
 import { updateExpense } from "@/lib/expenses";
 
@@ -75,7 +76,7 @@ export default function EditExpenseForm({
 }: Props) {
   const [expenseDate, setExpenseDate] = useState(
     record.expense_date ||
-      new Date().toISOString().split("T")[0]
+      getLocalDateString()
   );
 
   const [category, setCategory] = useState(

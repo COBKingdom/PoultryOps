@@ -83,9 +83,7 @@ function getCurrentAgeDays(
     return null;
   }
 
-  const startingAgeWeeks = Number(
-    flock.age_weeks
-  );
+  const startingAgeWeeks = Number(flock.age_weeks);
 
   if (
     !Number.isFinite(startingAgeWeeks) ||
@@ -95,42 +93,61 @@ function getCurrentAgeDays(
   }
 
   const startDateValue =
-    flock.arrival_date ||
-    flock.created_at;
+    flock.arrival_date || flock.created_at;
 
   if (!startDateValue) {
-    return Math.round(
-      startingAgeWeeks * 7
+    return Math.round(startingAgeWeeks * 7);
+  }
+
+  let elapsedDays: number;
+
+  const dateOnlyMatch =
+    typeof startDateValue === "string" &&
+    /^(\d{4})-(\d{2})-(\d{2})$/.exec(startDateValue);
+
+  if (dateOnlyMatch) {
+    const year = Number(dateOnlyMatch[1]);
+    const monthIndex = Number(dateOnlyMatch[2]) - 1;
+    const day = Number(dateOnlyMatch[3]);
+
+    const startDay = Date.UTC(year, monthIndex, day);
+    const today = new Date();
+    const todayDay = Date.UTC(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
+
+    const startDateCheck = new Date(startDay);
+
+    if (
+      startDateCheck.getUTCFullYear() !== year ||
+      startDateCheck.getUTCMonth() !== monthIndex ||
+      startDateCheck.getUTCDate() !== day
+    ) {
+      return Math.round(startingAgeWeeks * 7);
+    }
+
+    elapsedDays = Math.max(
+      0,
+      Math.floor((todayDay - startDay) / 86400000)
+    );
+  } else {
+    const startDate = new Date(startDateValue);
+
+    if (Number.isNaN(startDate.getTime())) {
+      return Math.round(startingAgeWeeks * 7);
+    }
+
+    elapsedDays = Math.max(
+      0,
+      Math.floor(
+        (Date.now() - startDate.getTime()) / 86400000
+      )
     );
   }
 
-  const startDate =
-    new Date(startDateValue);
-
-  if (Number.isNaN(startDate.getTime())) {
-    return Math.round(
-      startingAgeWeeks * 7
-    );
-  }
-
-  const now = new Date();
-
-  const elapsedMilliseconds =
-    now.getTime() -
-    startDate.getTime();
-
-  const elapsedDays = Math.max(
-    0,
-    Math.floor(
-      elapsedMilliseconds /
-        (1000 * 60 * 60 * 24)
-    )
-  );
-
-  return (
-    Math.round(startingAgeWeeks * 7) +
-    elapsedDays
-  );
+  return Math.round(startingAgeWeeks * 7) + elapsedDays;
 }
 
 function getCurrentAgeWeeks(

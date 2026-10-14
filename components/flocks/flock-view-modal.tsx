@@ -1,5 +1,6 @@
 "use client";
 
+
 import {
   Activity,
   Calendar,
@@ -10,6 +11,8 @@ import {
   User,
   X,
 } from "lucide-react";
+import { formatDateOnly } from "@/lib/date-utils";
+
 
 type Props = {
   isOpen: boolean;
@@ -18,19 +21,7 @@ type Props = {
 };
 
 function formatDate(dateString?: string | null) {
-  if (!dateString) return "Not recorded";
-
-  const date = new Date(dateString);
-
-  if (Number.isNaN(date.getTime())) {
-    return "Not recorded";
-  }
-
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  return formatDateOnly(dateString, "long");
 }
 
 function formatNumber(value: unknown) {

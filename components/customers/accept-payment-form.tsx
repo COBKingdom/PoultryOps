@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getLocalDateString } from "@/lib/date-utils";
 import {
   CheckCircle2,
   CreditCard,
@@ -50,7 +51,7 @@ export default function AcceptPaymentForm({
   const [verified, setVerified] = useState(Boolean(initialCustomer));
   const [amount, setAmount] = useState("");
   const [paymentDate, setPaymentDate] = useState(
-    new Date().toISOString().split("T")[0]
+    getLocalDateString()
   );
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [reference, setReference] = useState("");

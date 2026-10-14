@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { getLocalDateString } from "@/lib/date-utils";
 import { supabase } from "@/lib/supabase";
 import {
   CustomerBalance,
@@ -58,7 +59,7 @@ export default function AddSaleForm({
   const [applyCredit, setApplyCredit] = useState(true);
   const [notes, setNotes] = useState("");
   const [recordDate, setRecordDate] = useState(
-    new Date().toISOString().split("T")[0]
+    getLocalDateString()
   );
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);

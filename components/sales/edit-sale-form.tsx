@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getLocalDateString } from "@/lib/date-utils";
 import { supabase } from "@/lib/supabase";
 import { updateSale } from "@/lib/sales";
 import {
@@ -47,7 +48,7 @@ export default function EditSaleForm({
 }: Props) {
   const [recordDate, setRecordDate] = useState(
     record.sale_date ||
-      new Date().toISOString().split("T")[0]
+      getLocalDateString()
   );
 
   const [itemType, setItemType] = useState(

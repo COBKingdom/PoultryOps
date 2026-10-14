@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getLocalDateString } from "@/lib/date-utils";
 
 import { createExpense } from "@/lib/expenses";
 
@@ -71,7 +72,7 @@ export default function AddExpenseForm({
   const [notes, setNotes] = useState("");
 
   const [recordDate, setRecordDate] = useState(
-    new Date().toISOString().split("T")[0]
+    getLocalDateString()
   );
 
   const [loading, setLoading] = useState(false);

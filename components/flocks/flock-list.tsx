@@ -8,6 +8,7 @@ import {
   Package,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { formatDateOnly } from "@/lib/date-utils";
 
 type Props = {
   loading: boolean;
@@ -17,19 +18,7 @@ type Props = {
 };
 
 function formatDate(value?: string | null) {
-  if (!value) return "Not recorded";
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "Not recorded";
-  }
-
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  return formatDateOnly(value, "short");
 }
 
 function formatNumber(value: unknown) {

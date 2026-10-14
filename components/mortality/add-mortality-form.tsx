@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { getLocalDateString } from "@/lib/date-utils";
 import { useAuth } from "@/contexts/AuthContext";
 
 import { createMortality } from "@/lib/mortality";
@@ -24,7 +25,7 @@ export default function AddMortalityForm({
   const [quantity, setQuantity] = useState("");
   const [reason, setReason] = useState("");
   const [recordDate, setRecordDate] = useState(
-    new Date().toISOString().split("T")[0]
+    getLocalDateString()
   );
 
   const [loading, setLoading] = useState(false);

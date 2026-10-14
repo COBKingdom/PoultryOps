@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { formatDateOnly } from "@/lib/date-utils";
 import type { ComponentType } from "react";
 
 import {
@@ -75,35 +76,11 @@ const TABS: Tab[] = [
 ];
 
 function formatDate(value?: string | null) {
-  if (!value) return "Not recorded";
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "Not recorded";
-  }
-
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  return formatDateOnly(value, "short");
 }
 
 function formatLongDate(value?: string | null) {
-  if (!value) return "Not recorded";
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "Not recorded";
-  }
-
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  return formatDateOnly(value, "long");
 }
 
 function formatNumber(value: unknown) {

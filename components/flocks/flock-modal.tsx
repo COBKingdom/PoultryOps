@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { X, Calendar, Package, Truck, FileText } from "lucide-react";
+import { getLocalDateString } from "@/lib/date-utils";
 
 type Props = {
   isOpen: boolean;
@@ -219,9 +220,10 @@ export default function FlockModal({
       newErrors.custom_breed = "Please specify the breed";
     }
 
+
     if (
       formData.arrival_date &&
-      new Date(formData.arrival_date) > new Date()
+      formData.arrival_date > getLocalDateString()
     ) {
       newErrors.arrival_date = "Arrival date cannot be in the future";
     }
