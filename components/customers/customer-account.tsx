@@ -23,6 +23,11 @@ import {
   correctCustomerPayment,
 } from "@/lib/customer-payments";
 
+import {
+  usePermissions,
+  PERMISSIONS,
+} from "@/lib/permissions";
+
 type Props = {
   customer: CustomerBalance;
   sales: CustomerSaleBalance[];
@@ -62,6 +67,12 @@ export default function CustomerAccount({
   onAcceptPayment,
   onPaymentCorrected,
 }: Props) {
+  const { can } = usePermissions();
+
+  const canEditPaymentHistory = can(
+    PERMISSIONS.CUSTOMERS_PAYMENT_HISTORY_EDIT
+  );
+
   const [editingPayment, setEditingPayment] =
     useState<CustomerPayment | null>(null);
 
@@ -77,6 +88,8 @@ export default function CustomerAccount({
     useState("");
 
   function openEditPayment(payment: CustomerPayment) {
+    if (!canEditPaymentHistory) return;
+
     setEditingPayment(payment);
     setAmount(String(payment.amount ?? ""));
     setPaymentDate(
@@ -92,6 +105,13 @@ export default function CustomerAccount({
     event: React.FormEvent<HTMLFormElement>
   ) {
     event.preventDefault();
+
+    if (!canEditPaymentHistory) {
+      setCorrectionError(
+        "You do not have permission to edit payment history."
+      );
+      return;
+    }
 
     if (!editingPayment) return;
 
@@ -340,7 +360,7 @@ export default function CustomerAccount({
                   <Th>Method</Th>
                   <Th>Reference</Th>
                   <Th right>Amount</Th>
-                  <Th>Action</Th>
+                  {canEditPaymentHistory && <Th>Action</Th>}
                 </tr>
               </thead>
 
@@ -369,16 +389,18 @@ export default function CustomerAccount({
                       )}
                     </td>
 
-                    <td className="px-5 py-4">
-                      <button
-                        type="button"
-                        onClick={() => openEditPayment(payment)}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                      >
-                        <Pencil size={14} />
-                        Edit
-                      </button>
-                    </td>
+                    {canEditPaymentHistory && (
+                      <td className="px-5 py-4">
+                        <button
+                          type="button"
+                          onClick={() => openEditPayment(payment)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                        >
+                          <Pencil size={14} />
+                          Edit
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -388,7 +410,7 @@ export default function CustomerAccount({
       </section>
 
       {/* CORRECT PAYMENT MODAL */}
-      {editingPayment && (
+      {canEditPaymentHistory && editingPayment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/50 p-4">
           <div
             role="dialog"

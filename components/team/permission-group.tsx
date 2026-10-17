@@ -65,7 +65,14 @@ export default function PermissionGroup({
             <PermissionCheckbox
               key={permission}
               permission={permission}
-              label={permission.split(".")[1].charAt(0).toUpperCase() + permission.split(".")[1].slice(1)}
+              label={
+  permission === PERMISSIONS.CUSTOMERS_PAYMENT_HISTORY_EDIT
+    ? "Payment History Edit"
+    : permission
+        .split(".")[1]
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase())
+}
               checked={hasPermission}
               onChange={onPermissionChange}
               disabled={disabled}

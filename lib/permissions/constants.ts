@@ -76,6 +76,7 @@ export const PERMISSIONS = {
   CUSTOMERS_CREATE: "customers.create",
   CUSTOMERS_EDIT: "customers.edit",
   CUSTOMERS_DELETE: "customers.delete",
+  CUSTOMERS_PAYMENT_HISTORY_EDIT: "customers.payment_history_edit",
 
   // Expenses
   EXPENSES_VIEW: "expenses.view",
