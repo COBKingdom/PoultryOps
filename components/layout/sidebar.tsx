@@ -16,6 +16,7 @@ import {
   Wheat,
   Package,
   Tags,
+  Store,
   AlertTriangle,
   HeartPulse,
   Activity,
@@ -40,10 +41,7 @@ export default function Sidebar() {
 
   const { profile } = useAuth();
 
-  const {
-    can,
-    isPlatformAdmin,
-  } = usePermissions();
+  const { can, isPlatformAdmin } = usePermissions();
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -106,6 +104,12 @@ export default function Sidebar() {
       name: "Products",
       href: "/products",
       icon: Tags,
+      permission: PERMISSIONS.SALES_VIEW,
+    },
+    {
+      name: "Online Store",
+      href: "/online-store",
+      icon: Store,
       permission: PERMISSIONS.SALES_VIEW,
     },
     {
@@ -207,25 +211,19 @@ export default function Sidebar() {
 
         <MenuSection
           title="OPERATIONS"
-          items={operations.filter((item) =>
-            can(item.permission)
-          )}
+          items={operations.filter((item) => can(item.permission))}
           pathname={pathname}
         />
 
         <MenuSection
           title="FINANCE"
-          items={finance.filter((item) =>
-            can(item.permission)
-          )}
+          items={finance.filter((item) => can(item.permission))}
           pathname={pathname}
         />
 
         <MenuSection
           title="INSIGHTS"
-          items={insights.filter((item) =>
-            can(item.permission)
-          )}
+          items={insights.filter((item) => can(item.permission))}
           pathname={pathname}
         />
 
@@ -239,9 +237,7 @@ export default function Sidebar() {
 
         <MenuSection
           title="TEAM"
-          items={team.filter((item) =>
-            can(item.permission)
-          )}
+          items={team.filter((item) => can(item.permission))}
           pathname={pathname}
         />
 
@@ -298,12 +294,8 @@ export default function Sidebar() {
         </button>
 
         <div className="border-t border-slate-800 pt-4">
-          <p className="text-xs text-slate-500">
-            PoultryOps
-          </p>
-          <p className="mt-1 text-xs text-slate-400">
-            Version 1.0.1
-          </p>
+          <p className="text-xs text-slate-500">PoultryOps</p>
+          <p className="mt-1 text-xs text-slate-400">Version 1.0.1</p>
         </div>
       </div>
     </aside>
@@ -319,16 +311,12 @@ function MenuSection({
   items: Array<{
     name: string;
     href: string;
-    icon: React.ComponentType<{
-      size: number;
-    }>;
+    icon: React.ComponentType<{ size: number }>;
     permission?: string;
   }>;
   pathname: string;
 }) {
-  if (items.length === 0) {
-    return null;
-  }
+  if (items.length === 0) return null;
 
   return (
     <div>
@@ -358,9 +346,7 @@ function MenuItem({
   pathname: string;
   href: string;
   name: string;
-  icon: React.ComponentType<{
-    size: number;
-  }>;
+  icon: React.ComponentType<{ size: number }>;
 }) {
   const active =
     pathname === href ||

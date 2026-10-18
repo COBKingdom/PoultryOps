@@ -16,6 +16,7 @@ import {
   Wheat,
   Package,
   Tags,
+  Store,
   AlertTriangle,
   HeartPulse,
   Activity,
@@ -38,17 +39,11 @@ type Props = {
   onClose: () => void;
 };
 
-export default function MobileSidebar({
-  open,
-  onClose,
-}: Props) {
+export default function MobileSidebar({ open, onClose }: Props) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const {
-    can,
-    isPlatformAdmin,
-  } = usePermissions();
+  const { can, isPlatformAdmin } = usePermissions();
 
   const operations = [
     {
@@ -109,6 +104,12 @@ export default function MobileSidebar({
       permission: PERMISSIONS.SALES_VIEW,
     },
     {
+      name: "Online Store",
+      href: "/online-store",
+      icon: Store,
+      permission: PERMISSIONS.SALES_VIEW,
+    },
+    {
       name: "Orders",
       href: "/orders",
       icon: ClipboardList,
@@ -161,9 +162,7 @@ export default function MobileSidebar({
     },
   ];
 
-  if (!open) {
-    return null;
-  }
+  if (!open) return null;
 
   async function handleSignOut() {
     onClose();
@@ -179,29 +178,17 @@ export default function MobileSidebar({
         onClick={onClose}
       />
 
-      <aside
-        className="
-          fixed left-0 top-0 z-50 flex h-full w-72
-          flex-col bg-slate-950 text-white
-        "
-      >
+      <aside className="fixed left-0 top-0 z-50 flex h-full w-72 flex-col bg-slate-950 text-white">
         {/* Header */}
         <div className="border-b border-slate-800 p-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div
-                className="
-                  flex h-10 w-10 items-center justify-center
-                  rounded-xl bg-blue-600 font-bold
-                "
-              >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 font-bold">
                 P
               </div>
 
               <div>
-                <h2 className="text-lg font-bold">
-                  PoultryOps
-                </h2>
+                <h2 className="text-lg font-bold">PoultryOps</h2>
                 <p className="text-xs text-slate-400">
                   Poultry Farm Management
                 </p>
@@ -232,45 +219,35 @@ export default function MobileSidebar({
 
           <MenuSection
             title="OPERATIONS"
-            items={operations.filter((item) =>
-              can(item.permission)
-            )}
+            items={operations.filter((item) => can(item.permission))}
             pathname={pathname}
             onClose={onClose}
           />
 
           <MenuSection
             title="FINANCE"
-            items={finance.filter((item) =>
-              can(item.permission)
-            )}
+            items={finance.filter((item) => can(item.permission))}
             pathname={pathname}
             onClose={onClose}
           />
 
           <MenuSection
             title="INSIGHTS"
-            items={insights.filter((item) =>
-              can(item.permission)
-            )}
+            items={insights.filter((item) => can(item.permission))}
             pathname={pathname}
             onClose={onClose}
           />
 
           <MenuSection
             title="TOOLS"
-            items={tools.filter((item) =>
-              can(item.permission)
-            )}
+            items={tools.filter((item) => can(item.permission))}
             pathname={pathname}
             onClose={onClose}
           />
 
           <MenuSection
             title="TEAM"
-            items={team.filter((item) =>
-              can(item.permission)
-            )}
+            items={team.filter((item) => can(item.permission))}
             pathname={pathname}
             onClose={onClose}
           />
@@ -319,11 +296,7 @@ export default function MobileSidebar({
 
           <button
             onClick={handleSignOut}
-            className="
-              flex w-full items-center gap-3 rounded-xl
-              px-4 py-3 text-red-400 transition-all
-              hover:bg-red-950
-            "
+            className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-red-400 transition-all hover:bg-red-950"
           >
             <LogOut size={18} />
             <span>Sign Out</span>
@@ -339,24 +312,27 @@ function MenuSection({
   items,
   pathname,
   onClose,
-}: any) {
-  if (!items || items.length === 0) {
-    return null;
-  }
+}: {
+  title: string;
+  items: Array<{
+    name: string;
+    href: string;
+    icon: React.ComponentType<{ size: number }>;
+    permission?: string;
+  }>;
+  pathname: string;
+  onClose: () => void;
+}) {
+  if (items.length === 0) return null;
 
   return (
     <div>
-      <p
-        className="
-          mb-2 text-xs font-semibold tracking-wider
-          text-slate-500
-        "
-      >
+      <p className="mb-2 text-xs font-semibold tracking-wider text-slate-500">
         {title}
       </p>
 
       <div className="space-y-1">
-        {items.map((item: any) => (
+        {items.map((item) => (
           <MenuItem
             key={item.href}
             pathname={pathname}
@@ -375,11 +351,16 @@ function MenuItem({
   name,
   icon: Icon,
   onClose,
-}: any) {
+}: {
+  pathname: string;
+  href: string;
+  name: string;
+  icon: React.ComponentType<{ size: number }>;
+  onClose?: () => void;
+}) {
   const active =
     pathname === href ||
-    (href !== "/" &&
-      pathname.startsWith(href + "/"));
+    (href !== "/" && pathname.startsWith(href + "/"));
 
   return (
     <Link
