@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -14,11 +15,13 @@ import {
   Egg,
   Wheat,
   Package,
+  Tags,
   AlertTriangle,
   HeartPulse,
   Activity,
   Receipt,
   ShoppingCart,
+  ClipboardList,
   BarChart3,
   ChartColumn,
   Brain,
@@ -52,50 +55,43 @@ export default function Sidebar() {
       name: "Flocks",
       href: "/flocks",
       icon: Bird,
-      permission:
-        PERMISSIONS.FLOCKS_VIEW,
+      permission: PERMISSIONS.FLOCKS_VIEW,
     },
     {
       name: "Egg Production",
       href: "/eggs",
       icon: Egg,
-      permission:
-        PERMISSIONS.EGGS_VIEW,
+      permission: PERMISSIONS.EGGS_VIEW,
     },
     {
       name: "Feed",
       href: "/feed",
       icon: Wheat,
-      permission:
-        PERMISSIONS.FEED_VIEW,
+      permission: PERMISSIONS.FEED_VIEW,
     },
     {
       name: "Feed Inventory",
       href: "/feed-inventory",
       icon: Package,
-      permission:
-        PERMISSIONS.FEED_INVENTORY_VIEW,
+      permission: PERMISSIONS.FEED_INVENTORY_VIEW,
     },
     {
       name: "Mortality",
       href: "/mortality",
       icon: AlertTriangle,
-      permission:
-        PERMISSIONS.MORTALITY_VIEW,
+      permission: PERMISSIONS.MORTALITY_VIEW,
     },
     {
       name: "Isolation",
       href: "/isolation",
       icon: Activity,
-      permission:
-        PERMISSIONS.ISOLATION_VIEW,
+      permission: PERMISSIONS.ISOLATION_VIEW,
     },
     {
       name: "Health",
       href: "/health",
       icon: HeartPulse,
-      permission:
-        PERMISSIONS.HEALTH_VIEW,
+      permission: PERMISSIONS.HEALTH_VIEW,
     },
   ];
 
@@ -104,22 +100,31 @@ export default function Sidebar() {
       name: "Customers",
       href: "/customers",
       icon: Users,
-      permission:
-        PERMISSIONS.CUSTOMERS_VIEW,
+      permission: PERMISSIONS.CUSTOMERS_VIEW,
+    },
+    {
+      name: "Products",
+      href: "/products",
+      icon: Tags,
+      permission: PERMISSIONS.SALES_VIEW,
+    },
+    {
+      name: "Orders",
+      href: "/orders",
+      icon: ClipboardList,
+      permission: PERMISSIONS.SALES_VIEW,
     },
     {
       name: "Expenses",
       href: "/expenses",
       icon: Receipt,
-      permission:
-        PERMISSIONS.EXPENSES_VIEW,
+      permission: PERMISSIONS.EXPENSES_VIEW,
     },
     {
       name: "Sales",
       href: "/sales",
       icon: ShoppingCart,
-      permission:
-        PERMISSIONS.SALES_VIEW,
+      permission: PERMISSIONS.SALES_VIEW,
     },
   ];
 
@@ -128,22 +133,19 @@ export default function Sidebar() {
       name: "Reports",
       href: "/reports",
       icon: BarChart3,
-      permission:
-        PERMISSIONS.REPORTS_VIEW,
+      permission: PERMISSIONS.REPORTS_VIEW,
     },
     {
       name: "Analytics",
       href: "/analytics",
       icon: ChartColumn,
-      permission:
-        PERMISSIONS.ANALYTICS_VIEW,
+      permission: PERMISSIONS.ANALYTICS_VIEW,
     },
     {
       name: "Feed Intelligence",
       href: "/feed-intelligence",
       icon: Brain,
-      permission:
-        PERMISSIONS.ANALYTICS_VIEW,
+      permission: PERMISSIONS.ANALYTICS_VIEW,
     },
   ];
 
@@ -152,8 +154,7 @@ export default function Sidebar() {
       name: "Migration",
       href: "/migration",
       icon: Upload,
-      permission:
-        PERMISSIONS.MIGRATION_VIEW,
+      permission: PERMISSIONS.MIGRATION_VIEW,
     },
   ];
 
@@ -162,18 +163,13 @@ export default function Sidebar() {
       name: "Team",
       href: "/team",
       icon: Users,
-      permission:
-        PERMISSIONS.TEAM_VIEW,
+      permission: PERMISSIONS.TEAM_VIEW,
     },
   ];
 
   /*
    * Migration is an owner-level tool.
-   *
    * The route and backend remain protected separately.
-   * This fallback only ensures that a farm owner can see
-   * the Migration navigation item even if the permission
-   * record has not been returned by the permission service.
    */
   const canAccessMigration =
     profile?.role === "owner" ||
@@ -182,34 +178,25 @@ export default function Sidebar() {
 
   return (
     <aside className="flex min-h-screen w-72 flex-col border-r border-slate-800 bg-slate-950 text-white">
-
       {/* Brand */}
       <div className="border-b border-slate-800 p-6">
         <div className="flex items-center gap-3">
-
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 text-lg font-bold">
             P
           </div>
 
           <div>
-            <h1 className="text-xl font-bold">
-              PoultryOps
-            </h1>
-
+            <h1 className="text-xl font-bold">PoultryOps</h1>
             <p className="text-xs text-slate-400">
               Poultry Farm Management
             </p>
           </div>
-
         </div>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 space-y-6 overflow-y-auto p-4">
-
-        {can(
-          PERMISSIONS.DASHBOARD_VIEW
-        ) && (
+        {can(PERMISSIONS.DASHBOARD_VIEW) && (
           <MenuItem
             pathname={pathname}
             name="Dashboard"
@@ -220,27 +207,24 @@ export default function Sidebar() {
 
         <MenuSection
           title="OPERATIONS"
-          items={operations.filter(
-            (item) =>
-              can(item.permission)
+          items={operations.filter((item) =>
+            can(item.permission)
           )}
           pathname={pathname}
         />
 
         <MenuSection
           title="FINANCE"
-          items={finance.filter(
-            (item) =>
-              can(item.permission)
+          items={finance.filter((item) =>
+            can(item.permission)
           )}
           pathname={pathname}
         />
 
         <MenuSection
           title="INSIGHTS"
-          items={insights.filter(
-            (item) =>
-              can(item.permission)
+          items={insights.filter((item) =>
+            can(item.permission)
           )}
           pathname={pathname}
         />
@@ -255,9 +239,8 @@ export default function Sidebar() {
 
         <MenuSection
           title="TEAM"
-          items={team.filter(
-            (item) =>
-              can(item.permission)
+          items={team.filter((item) =>
+            can(item.permission)
           )}
           pathname={pathname}
         />
@@ -286,12 +269,10 @@ export default function Sidebar() {
             pathname={pathname}
           />
         )}
-
       </nav>
 
       {/* Bottom Navigation */}
       <div className="space-y-1 border-t border-slate-800 p-4">
-
         <MenuItem
           pathname={pathname}
           name="Profile"
@@ -299,9 +280,7 @@ export default function Sidebar() {
           icon={User}
         />
 
-        {can(
-          PERMISSIONS.SETTINGS_VIEW
-        ) && (
+        {can(PERMISSIONS.SETTINGS_VIEW) && (
           <MenuItem
             pathname={pathname}
             name="Settings"
@@ -312,32 +291,21 @@ export default function Sidebar() {
 
         <button
           onClick={handleSignOut}
-          className="
-            flex w-full items-center gap-3 rounded-xl px-4 py-3
-            text-red-400 transition-all hover:bg-red-950
-          "
+          className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-red-400 transition-all hover:bg-red-950"
         >
           <LogOut size={18} />
-
-          <span>
-            Sign Out
-          </span>
+          <span>Sign Out</span>
         </button>
 
         <div className="border-t border-slate-800 pt-4">
-
           <p className="text-xs text-slate-500">
             PoultryOps
           </p>
-
           <p className="mt-1 text-xs text-slate-400">
             Version 1.0.1
           </p>
-
         </div>
-
       </div>
-
     </aside>
   );
 }
@@ -364,25 +332,19 @@ function MenuSection({
 
   return (
     <div>
-
       <p className="mb-2 px-3 text-xs font-semibold tracking-wider text-slate-500">
         {title}
       </p>
 
       <div className="space-y-1">
-
-        {items.map(
-          (item) => (
-            <MenuItem
-              key={item.href}
-              pathname={pathname}
-              {...item}
-            />
-          )
-        )}
-
+        {items.map((item) => (
+          <MenuItem
+            key={item.href}
+            pathname={pathname}
+            {...item}
+          />
+        ))}
       </div>
-
     </div>
   );
 }
@@ -402,10 +364,7 @@ function MenuItem({
 }) {
   const active =
     pathname === href ||
-    (href !== "/" &&
-      pathname.startsWith(
-        href + "/"
-      ));
+    (href !== "/" && pathname.startsWith(href + "/"));
 
   return (
     <Link
@@ -421,10 +380,7 @@ function MenuItem({
       `}
     >
       <Icon size={18} />
-
-      <span>
-        {name}
-      </span>
+      <span>{name}</span>
     </Link>
   );
 }

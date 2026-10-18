@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -14,11 +15,13 @@ import {
   Egg,
   Wheat,
   Package,
+  Tags,
   AlertTriangle,
   HeartPulse,
   Activity,
   Receipt,
   ShoppingCart,
+  ClipboardList,
   BarChart3,
   ChartColumn,
   Settings,
@@ -100,6 +103,18 @@ export default function MobileSidebar({
       permission: PERMISSIONS.CUSTOMERS_VIEW,
     },
     {
+      name: "Products",
+      href: "/products",
+      icon: Tags,
+      permission: PERMISSIONS.SALES_VIEW,
+    },
+    {
+      name: "Orders",
+      href: "/orders",
+      icon: ClipboardList,
+      permission: PERMISSIONS.SALES_VIEW,
+    },
+    {
       name: "Expenses",
       href: "/expenses",
       icon: Receipt,
@@ -152,9 +167,7 @@ export default function MobileSidebar({
 
   async function handleSignOut() {
     onClose();
-
     await supabase.auth.signOut();
-
     router.push("/login");
   }
 
@@ -189,7 +202,6 @@ export default function MobileSidebar({
                 <h2 className="text-lg font-bold">
                   PoultryOps
                 </h2>
-
                 <p className="text-xs text-slate-400">
                   Poultry Farm Management
                 </p>
@@ -314,7 +326,6 @@ export default function MobileSidebar({
             "
           >
             <LogOut size={18} />
-
             <span>Sign Out</span>
           </button>
         </div>
@@ -385,7 +396,6 @@ function MenuItem({
       `}
     >
       <Icon size={18} />
-
       <span>{name}</span>
     </Link>
   );
