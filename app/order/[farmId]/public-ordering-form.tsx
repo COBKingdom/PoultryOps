@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -51,6 +50,16 @@ type OrderConfirmation = {
   status: string;
 };
 
+type CustomerLookupResult = {
+  found?: boolean;
+  message?: string;
+  customer_code?: string;
+  name?: string;
+  phone?: string;
+  address?: string;
+  location?: string;
+};
+
 const inputClass =
   "w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
 
@@ -73,6 +82,11 @@ export default function PublicOrderingForm({
   const [customerCode, setCustomerCode] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [phone, setPhone] = useState("");
+
+  const [customerLookupLoading, setCustomerLookupLoading] = useState(false);
+  const [customerLookupMessage, setCustomerLookupMessage] = useState("");
+  const [verifiedCustomer, setVerifiedCustomer] = useState(false);
+
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [stateRegion, setStateRegion] = useState("");
   const [notes, setNotes] = useState("");
@@ -99,27 +113,103 @@ export default function PublicOrderingForm({
     setLoading(true);
     setError("");
 
-    const { data, error: queryError } = await supabase.rpc(
-      "get_public_ordering_catalog",
-      { p_farm_id: farmId }
-    );
-
-    if (queryError || !data) {
-      console.error("Public catalogue load failed:", queryError);
-      setError(
-        "This farm's ordering page is unavailable. Please check the link or contact the farm."
+    try {
+      const { data, error: queryError } = await supabase.rpc(
+        "get_public_ordering_catalog",
+        { p_farm_id: farmId }
       );
-      setCatalog(null);
-    } else {
-      setCatalog(data as unknown as CatalogResponse);
-    }
 
-    setLoading(false);
+      if (queryError || !data) {
+        console.error("Public catalogue load failed:", queryError);
+        setError(
+          "This farm's ordering page is unavailable. Please check the link or contact the farm."
+        );
+        setCatalog(null);
+      } else {
+        setCatalog(data as unknown as CatalogResponse);
+      }
+    } catch (catalogError) {
+      console.error("Public catalogue error:", catalogError);
+      setError("Unable to load the farm catalogue. Please try again.");
+      setCatalog(null);
+    } finally {
+      setLoading(false);
+    }
   }, [farmId]);
 
   useEffect(() => {
     void loadCatalog();
   }, [loadCatalog]);
+
+  async function lookupCustomer() {
+    setCustomerLookupMessage("");
+    setVerifiedCustomer(false);
+
+    if (!catalog) {
+      setCustomerLookupMessage("The farm catalogue is not ready yet.");
+      return;
+    }
+
+    if (!customerCode.trim() || !phone.trim()) {
+      setCustomerLookupMessage(
+        "Enter your customer code and phone number first."
+      );
+      return;
+    }
+
+    setCustomerLookupLoading(true);
+
+    try {
+      const { data, error: lookupError } = await supabase.rpc(
+        "lookup_public_order_customer",
+        {
+          p_farm_id: catalog.farm.id,
+          p_customer_code: customerCode.trim(),
+          p_phone: phone.trim(),
+        }
+      );
+
+      if (lookupError) {
+        console.error("Customer lookup failed:", lookupError);
+        setCustomerLookupMessage(
+          "We could not verify your details. Please try again."
+        );
+        return;
+      }
+
+      const result = data as CustomerLookupResult | null;
+
+      if (!result?.found) {
+        setCustomerName("");
+        setDeliveryAddress("");
+        setStateRegion("");
+        setVerifiedCustomer(false);
+        setCustomerLookupMessage(
+          result?.message ||
+            "Customer not found. Check your code and phone number."
+        );
+        return;
+      }
+
+      setCustomerCode(result.customer_code || customerCode.trim());
+      setCustomerName(result.name || "");
+      setPhone(result.phone || phone.trim());
+      setDeliveryAddress(result.address || "");
+      setStateRegion(result.location || "");
+      setVerifiedCustomer(true);
+
+      setCustomerLookupMessage(
+        "Customer verified. Your details have been filled in. Please confirm your delivery address."
+      );
+    } catch (lookupError) {
+      console.error("Customer lookup error:", lookupError);
+      setCustomerLookupMessage(
+        "Customer lookup failed. Please try again."
+      );
+    } finally {
+      setCustomerLookupLoading(false);
+    }
+  }
 
   const basketTotal = useMemo(
     () =>
@@ -311,8 +401,8 @@ export default function PublicOrderingForm({
                 {confirmation.customer_code}
               </p>
               <p className="mt-1 text-xs text-slate-500">
-                Keep this code. Returning customers need their code, name and
-                phone number for verification.
+                Keep this code. Returning customers can use it with their
+                registered phone number to retrieve their details.
               </p>
             </div>
 
@@ -346,6 +436,8 @@ export default function PublicOrderingForm({
             onClick={() => {
               setConfirmation(null);
               setCustomerCode(confirmation.customer_code);
+              setCustomerLookupMessage("");
+              setVerifiedCustomer(false);
               setError("");
               window.scrollTo({ top: 0, behavior: "smooth" });
             }}
@@ -370,6 +462,7 @@ export default function PublicOrderingForm({
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 text-white">
             <Store size={24} />
           </div>
+
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
               PoultryOps customer ordering
@@ -422,14 +515,17 @@ export default function PublicOrderingForm({
                         {product.category}
                       </span>
                     )}
+
                     <h3 className="mt-3 font-bold text-slate-900">
                       {product.name}
                     </h3>
+
                     {product.description && (
                       <p className="mt-1 text-sm text-slate-500">
                         {product.description}
                       </p>
                     )}
+
                     <p className="mt-3 text-lg font-bold text-slate-900">
                       {formatMoney(Number(product.selling_price))}
                       <span className="ml-1 text-xs font-normal text-slate-500">
@@ -437,6 +533,7 @@ export default function PublicOrderingForm({
                       </span>
                     </p>
                   </div>
+
                   <button
                     type="button"
                     onClick={() => addProduct(product)}
@@ -483,6 +580,7 @@ export default function PublicOrderingForm({
                           {item.product.unit || "unit"}
                         </p>
                       </div>
+
                       <button
                         type="button"
                         onClick={() => removeProduct(item.product.id)}
@@ -503,9 +601,11 @@ export default function PublicOrderingForm({
                         >
                           <Minus size={14} />
                         </button>
+
                         <span className="min-w-6 text-center text-sm font-semibold">
                           {item.quantity}
                         </span>
+
                         <button
                           type="button"
                           onClick={() => changeQuantity(item.product.id, 1)}
@@ -515,6 +615,7 @@ export default function PublicOrderingForm({
                           <Plus size={14} />
                         </button>
                       </div>
+
                       <span className="text-sm font-semibold text-slate-900">
                         {formatMoney(
                           item.quantity * Number(item.product.selling_price)
@@ -532,6 +633,7 @@ export default function PublicOrderingForm({
                     {formatMoney(basketTotal)}
                   </span>
                 </div>
+
                 <p className="text-xs text-slate-500">
                   The database recalculates the total using current catalogue
                   prices at submission.
@@ -555,16 +657,50 @@ export default function PublicOrderingForm({
 
             <label className="block space-y-1.5 text-sm font-medium text-slate-700">
               Customer code
+
               <input
                 value={customerCode}
-                onChange={(event) => setCustomerCode(event.target.value)}
+                onChange={(event) => {
+                  setCustomerCode(event.target.value);
+                  setVerifiedCustomer(false);
+                  setCustomerLookupMessage("");
+                }}
                 placeholder="New customer? Leave blank"
                 className={inputClass}
                 autoComplete="off"
               />
+
+              <button
+                type="button"
+                onClick={lookupCustomer}
+                disabled={customerLookupLoading || submitting}
+                className={`${buttonClass} mt-2 w-full`}
+              >
+                {customerLookupLoading ? (
+                  <>
+                    <LoaderCircle className="animate-spin" size={17} />
+                    Verifying customer...
+                  </>
+                ) : (
+                  "Find my customer details"
+                )}
+              </button>
+
+              {customerLookupMessage && (
+                <p
+                  role="status"
+                  className={`mt-2 text-xs ${
+                    verifiedCustomer ? "text-emerald-700" : "text-amber-700"
+                  }`}
+                >
+                  {customerLookupMessage}
+                </p>
+              )}
+
               <span className="block text-xs font-normal text-slate-500">
-                Returning customers must enter their code, name and phone
-                number. A phone number alone does not identify a customer.
+                Returning customer? Enter your customer code and phone number,
+                then select Find my customer details. New customers can leave
+                the code blank.
               </span>
             </label>
 
@@ -593,7 +729,11 @@ export default function PublicOrderingForm({
                   type="tel"
                   maxLength={40}
                   value={phone}
-                  onChange={(event) => setPhone(event.target.value)}
+                  onChange={(event) => {
+                    setPhone(event.target.value);
+                    setVerifiedCustomer(false);
+                    setCustomerLookupMessage("");
+                  }}
                   placeholder="WhatsApp phone number"
                   className={`${inputClass} pl-10`}
                   autoComplete="tel"

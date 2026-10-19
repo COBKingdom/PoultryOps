@@ -94,7 +94,9 @@ export default function AddSaleForm({
     setItemType(OTHER_SALE_TYPES[0]);
   }, [saleCategory]);
 
-  const requiresFlock = saleCategory === "Bird Sales";
+  const requiresFlock =
+  saleCategory === "Bird Sales" ||
+  saleCategory === "Egg Sales";
 
   const allowsFlock =
     saleCategory === "Bird Sales" ||

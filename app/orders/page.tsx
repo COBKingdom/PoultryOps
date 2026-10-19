@@ -21,6 +21,7 @@ import { useDashboard } from "@/hooks/useDashboard";
 import { useCustomers } from "@/hooks/useCustomers";
 import AppShell from "@/components/layout/app-shell";
 import OperationsKpiCard from "@/components/operations/operations-kpi-card";
+import VerifyOrderPaymentForm from "@/components/orders/verify-order-payment-form";
 
 type OrderStatus =
   | "pending"
@@ -383,6 +384,7 @@ export default function OrdersPage() {
     setOrderDate(new Date().toISOString().slice(0, 10));
   }
 
+ 
   async function createOrder(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
@@ -400,11 +402,14 @@ export default function OrdersPage() {
       return;
     }
 
+    const orderQuantity = Number(quantity);
+    const orderUnitPrice = Number(unitPrice);
+
     if (
-      !Number.isFinite(Number(quantity)) ||
-      Number(quantity) <= 0 ||
-      !Number.isFinite(Number(unitPrice)) ||
-      Number(unitPrice) < 0
+      !Number.isFinite(orderQuantity) ||
+      orderQuantity <= 0 ||
+      !Number.isFinite(orderUnitPrice) ||
+      orderUnitPrice < 0
     ) {
       setError("Enter a valid quantity and a non-negative unit price.");
       return;
@@ -423,34 +428,39 @@ export default function OrdersPage() {
 
     setSaving(true);
 
-    const { error: insertError } = await supabase.from("orders").insert({
-      farm_id: farmId,
-      customer_id: customerId,
-      product_name: currentProduct.name,
-      quantity: Number(quantity),
-      unit_price: Number(unitPrice),
-      order_date: orderDate,
-      notes: notes.trim() || null,
-      status: "pending",
-      payment_status: "unpaid",
-      created_by: user.id,
-    });
+    try {
 
-    setSaving(false);
+const { error: insertError } = await supabase.from("orders").insert({
+  farm_id: farmId,
+  customer_id: customerId,
+  product_id: currentProduct.id,
+  product_name: currentProduct.name,
+  quantity: orderQuantity,
+  unit_price: orderUnitPrice,
+  order_date: orderDate,
+  notes: notes.trim() || null,
+  status: "pending",
+  payment_status: "unpaid",
+  created_by: user.id,
+});
 
-    if (insertError) {
+
+      if (insertError) throw insertError;
+
+      setSuccess("Order created successfully.");
+      setShowForm(false);
+      resetForm();
+      await loadOrders();
+    } catch (insertError) {
       console.error("Failed to create order:", insertError);
       setError(
-        insertError.message ||
-          "Unable to save the order. Please check the form and try again."
+        insertError instanceof Error
+          ? insertError.message
+          : "Unable to save the order. Please check the form and try again."
       );
-      return;
+    } finally {
+      setSaving(false);
     }
-
-    setSuccess("Order created successfully.");
-    setShowForm(false);
-    resetForm();
-    await loadOrders();
   }
 
   async function updateGroup(
@@ -1079,51 +1089,39 @@ export default function OrdersPage() {
                         </p>
                       )}
 
-                      <div className="grid grid-cols-1 gap-3 border-t border-slate-100 pt-3 sm:grid-cols-2">
-                        <label className="space-y-1 text-xs font-medium text-slate-500">
-                          Order status
-                          <select
-                            value={group.status}
-                            onChange={(event) =>
-                              void updateGroup(group, {
-                                status: event.target.value as OrderStatus,
-                              })
-                            }
-                            className={inputClass}
-                          >
-                            {ORDER_STATUSES.map((status) => (
-                              <option
-                                key={status.value}
-                                value={status.value}
-                              >
-                                {status.label}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
 
-                        <label className="space-y-1 text-xs font-medium text-slate-500">
-                          Payment status
-                          <select
-                            value={group.paymentStatus}
-                            onChange={(event) =>
-                              void updateGroup(group, {
-                                payment_status: event.target.value as PaymentStatus,
-                              })
-                            }
-                            className={inputClass}
-                          >
-                            {PAYMENT_STATUSES.map((status) => (
-                              <option
-                                key={status.value}
-                                value={status.value}
-                              >
-                                {status.label}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      </div>
+<div className="space-y-4 border-t border-slate-100 pt-3">
+  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <label className="space-y-1 text-xs font-medium text-slate-500">
+      Order status
+      <select
+        value={group.status}
+        onChange={(event) =>
+          void updateGroup(group, {
+            status: event.target.value as OrderStatus,
+          })
+        }
+        className={inputClass}
+      >
+        {ORDER_STATUSES.map((status) => (
+          <option key={status.value} value={status.value}>
+            {status.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  </div>
+
+  {group.status !== "cancelled" && (
+    <VerifyOrderPaymentForm
+      orderId={group.batchId ? undefined : group.lines[0].id}
+      orderBatchId={group.batchId ?? undefined}
+      currency={currency}
+      onSuccess={loadOrders}
+    />
+  )}
+</div>
+
                     </article>
                   );
                 })}
