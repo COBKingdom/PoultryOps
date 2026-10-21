@@ -6,6 +6,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import ReferralTools from "@/components/pogp/referral-tools";
+import ResourceCentre from "@/components/pogp/resource-centre";
 import {
   ArrowRight,
   BarChart3,
@@ -25,6 +26,10 @@ import {
   Users,
   WalletCards,
   X,
+  BookOpen,
+  Download,
+  ExternalLink,
+  Search,
 } from "lucide-react";
 
 import { supabase } from "@/lib/supabase";
@@ -98,7 +103,8 @@ type Section =
   | "customers"
   | "prospects"
   | "network"
-  | "earnings";
+  | "earnings"
+  | "resources";
 
 export default function POGPPage() {
   const router = useRouter();
@@ -379,11 +385,11 @@ export default function POGPPage() {
       label: "My Prospects",
       icon: Target,
     },
-    {
-      id: "network" as Section,
-      label: "My Network",
-      icon: Network,
-    },
+{
+  id: "resources" as Section,
+  label: "Resource Centre",
+  icon: BookOpen,
+},
     {
       id: "earnings" as Section,
       label: "My Earnings",
@@ -391,17 +397,18 @@ export default function POGPPage() {
     },
   ];
 
-  const pageTitle =
-    activeSection === "overview"
-      ? `Welcome back, ${firstName}!`
-      : activeSection === "customers"
-        ? "My Customers"
-        : activeSection === "prospects"
-          ? "My Prospects"
-          : activeSection === "network"
-            ? "My Network"
+const pageTitle =
+  activeSection === "overview"
+    ? `Welcome back, ${firstName}!`
+    : activeSection === "customers"
+      ? "My Customers"
+      : activeSection === "prospects"
+        ? "My Prospects"
+        : activeSection === "network"
+          ? "My Network"
+          : activeSection === "resources"
+            ? "Resource Centre"
             : "My Earnings";
-
   return (
     <main className="min-h-screen bg-[#f5f8fc] text-[#0b1f3a]">
       {/* Mobile overlay */}
@@ -752,21 +759,21 @@ export default function POGPPage() {
                   {pageTitle}
                 </h1>
 
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                  {activeSection ===
-                  "overview"
-                    ? "Your partner activity, customer growth and earnings at a glance."
-                    : activeSection ===
-                        "customers"
-                      ? "Keep track of the customers you have brought to PoultryOps."
-                      : activeSection ===
-                          "prospects"
-                        ? "Manage the businesses you are following up and converting."
-                        : activeSection ===
-                            "network"
-                          ? "See the referral partners you have brought into your network."
-                          : "A transparent view of your PoultryOps commission history and earnings."}
-                </p>
+
+<p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+  {activeSection === "overview"
+    ? "Your partner activity, customer growth and earnings at a glance."
+    : activeSection === "customers"
+      ? "Keep track of the customers you have brought to PoultryOps."
+      : activeSection === "prospects"
+        ? "Manage the businesses you are following up and converting."
+        : activeSection === "network"
+          ? "See the referral partners you have brought into your network."
+          : activeSection === "resources"
+            ? "Your guides, training and marketing resources to help you grow with PoultryOps."
+            : "A transparent view of your PoultryOps commission history and earnings."}
+</p>
+
               </div>
 
               {activeSection ===
@@ -1215,6 +1222,11 @@ export default function POGPPage() {
                 </div>
               </div>
             </>
+          )}
+
+          {/* Resource Centre */}
+         {activeSection === "resources" && (
+         <ResourceCentre />
           )}
 
           {/* Customers */}

@@ -436,16 +436,28 @@ export default function POGPPage() {
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                setMessage("");
-                setShowAdd(true);
-              }}
-              className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
-            >
-              + Add POGP
-            </button>
+
+<div className="flex flex-col gap-3 sm:flex-row">
+  <button
+    type="button"
+    onClick={() => router.push("/admin/pogp/resources")}
+    className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-blue-200 hover:bg-blue-50"
+  >
+    Manage Resources →
+  </button>
+
+  <button
+    type="button"
+    onClick={() => {
+      setMessage("");
+      setShowAdd(true);
+    }}
+    className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+  >
+    + Add POGP
+  </button>
+</div>
+
           </div>
 
           {/* Message */}
