@@ -177,6 +177,9 @@ export default function OrdersPage() {
   const [success, setSuccess] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [sourceFilter, setSourceFilter] = useState("all");
+  const [fulfilledByOrder, setFulfilledByOrder] = useState<Record<string, number>>({});
+  const [orderReservations, setOrderReservations] = useState<Array<{ order_id: string | null; order_batch_id: string | null; amount: number | string; amount_applied_to_sales: number | string }>>([]);
   const [showForm, setShowForm] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<
     Record<string, boolean>
@@ -197,7 +200,7 @@ export default function OrdersPage() {
       new Intl.NumberFormat("en-NG", {
         style: "currency",
         currency,
-        maximumFractionDigits: 2,
+        maximumFractionDigits: 0,
       }).format(amount || 0),
     [currency]
   );
@@ -227,7 +230,37 @@ export default function OrdersPage() {
       );
       setOrders([]);
     } else {
-      setOrders((data || []) as unknown as OrderRecord[]);
+      const loadedOrders = (data || []) as unknown as OrderRecord[];
+      setOrders(loadedOrders);
+
+      // Read fulfilment totals and payment reservations for the dashboard KPIs.
+      // These are read-only queries; all transaction recording remains in the existing RPCs.
+      const orderIds = loadedOrders.map((order) => order.id);
+      const [{ data: fulfilments, error: fulfilmentError }, { data: reservations, error: reservationsError }] = await Promise.all([
+        orderIds.length
+          ? supabase.from("order_fulfilments").select("order_id, quantity").in("order_id", orderIds)
+          : Promise.resolve({ data: [], error: null } as any),
+        supabase.from("order_payment_allocations").select("order_id, order_batch_id, amount, amount_applied_to_sales").eq("farm_id", farmId),
+      ]);
+
+      if (fulfilmentError) {
+        console.error("Failed to load order fulfilment totals:", fulfilmentError);
+        setFulfilledByOrder({});
+      } else {
+        const totals: Record<string, number> = {};
+        for (const row of fulfilments || []) {
+          const key = String((row as any).order_id);
+          totals[key] = (totals[key] || 0) + Number((row as any).quantity || 0);
+        }
+        setFulfilledByOrder(totals);
+      }
+
+      if (reservationsError) {
+        console.error("Failed to load order payment reservations:", reservationsError);
+        setOrderReservations([]);
+      } else {
+        setOrderReservations((reservations || []) as any);
+      }
     }
 
     setLoadingOrders(false);
@@ -352,22 +385,114 @@ export default function OrdersPage() {
             line.id.toLowerCase().includes(term)
         );
 
+      const isPublic = Boolean(group.batchId);
+      const matchesSource = sourceFilter === "all" ||
+        (sourceFilter === "public" && isPublic) ||
+        (sourceFilter === "internal" && !isPublic);
+
       return (
         matchesSearch &&
+        matchesSource &&
         (statusFilter === "all" || group.status === statusFilter)
       );
     });
-  }, [groups, search, statusFilter]);
+  }, [groups, search, statusFilter, sourceFilter]);
 
-  const totalValue = groups
+  // Value of unfulfilled goods: remaining quantity multiplied by each line's unit price.
+  const pendingOrderValue = useMemo(() => groups
     .filter((group) => group.status !== "cancelled")
-    .reduce((sum, group) => sum + group.total, 0);
+    .reduce((sum, group) => sum + group.lines.reduce((lineSum, line) => {
+      const remaining = Math.max(0, Number(line.quantity || 0) - (fulfilledByOrder[line.id] || 0));
+      return lineSum + remaining * Number(line.unit_price || 0);
+    }, 0), 0), [groups, fulfilledByOrder]);
+
+  // Customer advances are reserved payments not yet applied to sales, capped at the
+  // value of the still-unfulfilled goods for the related order/checkout.
+const customerAdvances = useMemo((): number => {
+  const toNumber = (value: unknown): number => {
+    if (typeof value === "number") {
+      return Number.isFinite(value) ? value : 0;
+    }
+
+    if (typeof value === "string") {
+      const cleaned = value.trim().replace(/,/g, "");
+      if (!cleaned) return 0;
+
+      const parsed = Number(cleaned);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    return 0;
+  };
+
+  const pendingByTarget = new Map<string, number>();
+
+  for (const group of groups) {
+    if (group.status === "cancelled") continue;
+
+    let pendingValue = 0;
+
+    for (const line of group.lines) {
+      const ordered = Math.max(0, toNumber(line.quantity));
+      const fulfilled = Math.max(
+        0,
+        toNumber(fulfilledByOrder[line.id])
+      );
+      const unitPrice = Math.max(0, toNumber(line.unit_price));
+
+      pendingValue += Math.max(0, ordered - fulfilled) * unitPrice;
+    }
+
+    const targetKey = group.batchId
+      ? `batch:${group.batchId}`
+      : group.lines[0]?.id
+        ? `order:${group.lines[0].id}`
+        : null;
+
+    if (targetKey) {
+      pendingByTarget.set(
+        targetKey,
+        (pendingByTarget.get(targetKey) || 0) + pendingValue
+      );
+    }
+  }
+
+  const reservationsByTarget = new Map<string, number>();
+
+  for (const reservation of orderReservations) {
+    const amount = Math.max(0, toNumber(reservation.amount));
+    const applied = Math.max(
+      0,
+      toNumber(reservation.amount_applied_to_sales)
+    );
+
+    const remaining = Math.max(0, amount - applied);
+
+    const targetKey = reservation.order_batch_id
+      ? `batch:${reservation.order_batch_id}`
+      : reservation.order_id
+        ? `order:${reservation.order_id}`
+        : null;
+
+    if (!targetKey || remaining <= 0) continue;
+
+    reservationsByTarget.set(
+      targetKey,
+      (reservationsByTarget.get(targetKey) || 0) + remaining
+    );
+  }
+
+  let total = 0;
+
+  for (const [targetKey, reserved] of reservationsByTarget) {
+    const pending = pendingByTarget.get(targetKey) || 0;
+    total += Math.min(reserved, pending);
+  }
+
+  return Number.isFinite(total) ? total : 0;
+}, [groups, fulfilledByOrder, orderReservations]);
 
   const pendingCount = groups.filter(
-    (group) => group.status === "pending"
-  ).length;
-
-  const activeCount = groups.filter(
     (group) => !["completed", "cancelled"].includes(group.status)
   ).length;
 
@@ -614,39 +739,38 @@ changes: Partial<Pick<OrderRecord, "status" | "dispatch_notes">>
           />
 
           <OperationsKpiCard
-            label="Awaiting Action"
+            label="Pending Orders"
             value={pendingCount}
-            sublabel="Orders not yet confirmed"
+            sublabel="Not yet completed or cancelled"
             icon={<Clock size={20} />}
           />
 
           <OperationsKpiCard
-            label="In Progress"
-            value={activeCount}
-            sublabel="Open, non-cancelled orders"
-            icon={<Package size={20} />}
-          />
-
-          <OperationsKpiCard
-            label="Completed"
+            label="Completed Orders"
             value={completedCount}
             sublabel="Orders marked completed"
             icon={<CheckCircle2 size={20} />}
+          />
+
+          <OperationsKpiCard
+            label="Customer Advances"
+            value={formatMoney(customerAdvances)}
+            sublabel="Payments received for goods not yet supplied"
+            icon={<Package size={20} />}
           />
         </section>
 
         <section className="rounded-2xl border border-blue-100 bg-white p-5 shadow-sm">
           <div className="mb-1 text-sm font-medium text-slate-500">
-            Order value
+            Order Value
           </div>
 
           <div className="text-2xl font-bold text-slate-900">
-            {formatMoney(totalValue)}
+            {formatMoney(pendingOrderValue)}
           </div>
 
           <p className="mt-1 text-xs text-slate-500">
-            Value of all non-cancelled orders. This is not recognised sales
-            revenue.
+            Value of goods ordered but not yet supplied; fulfilled quantities are excluded.
           </p>
         </section>
 
@@ -896,6 +1020,18 @@ changes: Partial<Pick<OrderRecord, "status" | "dispatch_notes">>
             </div>
 
             <select
+              aria-label="Filter by order source"
+              value={sourceFilter}
+              onChange={(event) => setSourceFilter(event.target.value)}
+              className={`${inputClass} sm:w-48`}
+            >
+              <option value="all">All order sources</option>
+              <option value="public">Public orders</option>
+              <option value="internal">Internal orders</option>
+            </select>
+
+            <select
+              aria-label="Filter by order status"
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
               className={`${inputClass} sm:w-56`}
@@ -940,218 +1076,221 @@ changes: Partial<Pick<OrderRecord, "status" | "dispatch_notes">>
                 </p>
               </div>
             ) : (
-              <div className="divide-y divide-slate-100">
-                {filteredGroups.map((group) => {
-                  const expanded = !!expandedGroups[group.key];
+      <div className="divide-y divide-slate-100">
+  {filteredGroups.map((group) => {
+    const expanded = !!expandedGroups[group.key];
 
-                  return (
-                    <article
-                      key={group.key}
-                      className="space-y-4 p-4 sm:p-5"
-                    >
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="font-semibold text-slate-900">
-                              {group.batchId
-                                ? `Customer checkout · ${group.lines.length} product${group.lines.length === 1 ? "" : "s"}`
-                                : group.lines[0].product_name}
-                            </h3>
+    const orderStatusLabel =
+      ORDER_STATUSES.find((item) => item.value === group.status)?.label ??
+      group.status;
 
-                            {group.batchId && (
-                              <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">
-                                Public order
-                              </span>
-                            )}
-                          </div>
+    const paymentStatusLabel =
+      PAYMENT_STATUSES.find(
+        (item) => item.value === group.paymentStatus
+      )?.label ?? group.paymentStatus;
 
-                          <div className="mt-1 text-sm text-slate-600">
-                            {group.customerName}
-                            {group.customerPhone
-                              ? ` · ${group.customerPhone}`
-                              : ""}
-                          </div>
+    return (
+      <article key={group.key} className="px-4 py-3 sm:px-5">
+        {/* Compact summary — always visible */}
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.7fr)_minmax(110px,0.7fr)_minmax(190px,1.2fr)_auto] lg:items-center">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="font-semibold text-slate-900">
+                {group.batchId
+                  ? `Customer checkout · ${group.lines.length} product${group.lines.length === 1 ? "" : "s"}`
+                  : group.lines[0].product_name}
+              </h3>
 
-                          <div className="mt-1 break-all text-xs text-slate-400">
-                            {group.batchId ? "Order reference" : "Order ID"}:{" "}
-                            {group.reference}
-                          </div>
+              {group.batchId && (
+                <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">
+                  Public order
+                </span>
+              )}
+            </div>
 
-                          <div className="mt-1 text-xs text-slate-500">
-                            {new Date(
-                              `${group.orderDate}T00:00:00`
-                            ).toLocaleDateString("en-GB")}
-                          </div>
+            <p className="mt-1 text-sm text-slate-600">
+              {group.customerName}
+              {group.customerPhone ? ` · ${group.customerPhone}` : ""}
+            </p>
 
-                          {group.deliveryAddress && (
-                            <div className="mt-2 text-sm text-slate-600">
-                              <strong>Delivery:</strong>{" "}
-                              {group.deliveryAddress}
-                              {group.stateRegion
-                                ? `, ${group.stateRegion}`
-                                : ""}
-                            </div>
-                          )}
-                        </div>
+            <p className="mt-1 text-xs text-slate-500">
+              {new Date(`${group.orderDate}T00:00:00`).toLocaleDateString(
+                "en-GB"
+              )}
+              {" · "}
+              {group.lines.length === 1
+                ? `${Number(group.lines[0].quantity).toLocaleString()} units`
+                : `${group.lines.length} order lines`}
+            </p>
+          </div>
 
-                        <div className="sm:text-right">
-                          <div className="text-lg font-bold text-slate-900">
-                            {formatMoney(group.total)}
-                          </div>
+          <div className="flex items-center lg:justify-center">
+            <div className="w-full rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 lg:text-center">
+              <p className="font-bold text-blue-900">{formatMoney(group.total)}</p>
+              <p className="text-xs text-blue-700">Order total</p>
+            </div>
+          </div>
 
-                          <div className="mt-2 flex flex-wrap gap-2 sm:justify-end">
-                            <span
-                              className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusStyle(group.status)}`}
-                            >
-                              {ORDER_STATUSES.find(
-                                (item) => item.value === group.status
-                              )?.label || group.status}
-                            </span>
+         <div className="flex flex-wrap items-center gap-1.5 lg:flex-col lg:items-stretch">
+  <span className="inline-flex min-h-7 w-fit max-w-full items-center justify-center rounded-lg border border-blue-100 bg-blue-50 px-2 py-1 text-center text-[11px] font-semibold leading-tight text-blue-700 lg:w-full lg:text-xs">
+    {orderStatusLabel}
+  </span>
 
-                            <span
-                              className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusStyle(group.paymentStatus)}`}
-                            >
-                              {PAYMENT_STATUSES.find(
-                                (item) => item.value === group.paymentStatus
-                              )?.label || group.paymentStatus}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="overflow-hidden rounded-xl border border-slate-100">
-                        <div className="flex items-center justify-between bg-slate-50 px-3 py-2">
-                          <span className="text-xs font-semibold text-slate-600">
-                            {group.batchId
-                              ? "Products in this checkout"
-                              : "Order item"}
-                          </span>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setExpandedGroups((current) => ({
-                                ...current,
-                                [group.key]: !current[group.key],
-                              }))
-                            }
-                            className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700"
-                          >
-                            {expanded ? "Hide details" : "View details"}
-                            {expanded ? (
-                              <ChevronUp size={15} />
-                            ) : (
-                              <ChevronDown size={15} />
-                            )}
-                          </button>
-                        </div>
-
-                        <div className="divide-y divide-slate-100">
-                          {group.lines.map((line) => (
-                            <div
-                              key={line.id}
-                              className="flex flex-col gap-1 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
-                            >
-                              <div>
-                                <div className="font-medium text-slate-800">
-                                  {line.product_name}
-                                </div>
-
-                                <div className="text-xs text-slate-500">
-                                  {Number(line.quantity).toLocaleString()} ×{" "}
-                                  {formatMoney(Number(line.unit_price))}
-                                </div>
-
-                                {expanded && (
-                                  <div className="mt-1 break-all text-xs text-slate-400">
-                                    Line ID: {line.id}
-                                  </div>
-                                )}
-                              </div>
-
-                              <div className="font-semibold text-slate-900">
-                                {formatMoney(Number(line.total_amount || 0))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {group.notes && (
-                        <p className="text-sm text-slate-500">
-                          <span className="font-semibold">Notes:</span>{" "}
-                          {group.notes}
-                        </p>
-                      )}
-
-
-<div className="space-y-4 border-t border-slate-100 pt-3">
-  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-    <label className="space-y-1 text-xs font-medium text-slate-500">
-      Order status
-      <select
-        value={group.status}
-        onChange={(event) =>
-          void updateGroup(group, {
-            status: event.target.value as OrderStatus,
-          })
-        }
-        className={inputClass}
-      >
-        {ORDER_STATUSES.map((status) => (
-          <option key={status.value} value={status.value}>
-            {status.label}
-          </option>
-        ))}
-      </select>
-    </label>
-  </div>
-
-  {group.status !== "cancelled" && (
-    <VerifyOrderPaymentForm
-      orderId={group.batchId ? undefined : group.lines[0].id}
-      orderBatchId={group.batchId ?? undefined}
-      currency={currency}
-      onSuccess={loadOrders}
-    />
-  )}
-  {group.lines.map((line) => {
-  const isWholeNumberQuantity =
-    Number.isSafeInteger(Number(line.quantity)) &&
-    Number(line.quantity) > 0;
-
-  return (
-    <div key={`fulfilment-${line.id}`} className="space-y-2">
-      <div className="text-sm font-semibold text-slate-800">
-        Fulfilment: {line.product_name}
-      </div>
-
-      {isWholeNumberQuantity ? (
-        <OrderFulfilmentPanel
-          orderId={line.id}
-          orderedQuantity={Number(line.quantity)}
-          currency={currency}
-          disabled={group.status === "cancelled"}
-          onSuccess={async () => {
-            await loadOrders();
-          }}
-        />
-      ) : (
-        <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-          Fulfilment recording is unavailable because this order quantity
-          is not a positive whole number. Review the order and its
-          product unit before recording a delivery.
-        </p>
-      )}
-    </div>
-  );
-})}
+  <span
+    className={`inline-flex min-h-7 w-fit max-w-full items-center justify-center rounded-lg border px-2 py-1 text-center text-[11px] font-semibold leading-tight lg:w-full lg:text-xs ${statusStyle(group.paymentStatus)} border-current/10`}
+  >
+    {paymentStatusLabel}
+  </span>
 </div>
+          <div className="flex lg:justify-end">
+            <button
+              type="button"
+              aria-expanded={expanded}
+              onClick={() =>
+                setExpandedGroups(
+                  expanded ? {} : { [group.key]: true }
+                )
+              }
+              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50"
+            >
+              {expanded ? "Hide details" : "View details"}
+              {expanded ? (
+                <ChevronUp size={14} />
+              ) : (
+                <ChevronDown size={14} />
+              )}
+            </button>
+          </div>
+        </div>
 
-                    </article>
-                  );
-                })}
+        {/* Operational workspace — visible for the selected order only */}
+        {expanded && (
+          <div className="mt-4 space-y-4 border-t border-slate-100 pt-4">
+            <div className="overflow-hidden rounded-xl border border-slate-100">
+              <div className="bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
+                {group.batchId ? "Products in this checkout" : "Order item"}
               </div>
+
+              <div className="divide-y divide-slate-100">
+                {group.lines.map((line) => (
+                  <div
+                    key={line.id}
+                    className="flex flex-col gap-1 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div>
+                      <p className="font-medium text-slate-800">
+                        {line.product_name}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {Number(line.quantity).toLocaleString()} ×{" "}
+                        {formatMoney(Number(line.unit_price))}
+                      </p>
+                      <p className="break-all text-xs text-slate-400">
+                        Order line ID: {line.id}
+                      </p>
+                    </div>
+
+                    <p className="font-semibold text-slate-900">
+                      {formatMoney(Number(line.total_amount || 0))}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {group.deliveryAddress && (
+              <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
+                <span className="font-semibold">Delivery address:</span>{" "}
+                {group.deliveryAddress}
+                {group.stateRegion ? `, ${group.stateRegion}` : ""}
+              </div>
+            )}
+
+            {group.notes && (
+              <p className="text-sm text-slate-600">
+                <span className="font-semibold">Notes:</span> {group.notes}
+              </p>
+            )}
+
+            <div className="rounded-xl border border-slate-200 p-3 sm:p-4">
+              <h4 className="mb-3 text-sm font-semibold text-slate-800">
+                Order progress
+              </h4>
+
+              <label className="block max-w-md space-y-1.5 text-xs font-medium text-slate-500">
+                Fulfilment status
+                <select
+                  value={group.status}
+                  onChange={(event) =>
+                    void updateGroup(group, {
+                      status: event.target.value as OrderStatus,
+                    })
+                  }
+                  className={inputClass}
+                >
+                  {ORDER_STATUSES.map((status) => (
+                    <option key={status.value} value={status.value}>
+                      {status.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <p className="mt-2 text-xs text-slate-500">
+                Fulfilment status describes the goods. Payment status above
+                separately describes the money received.
+              </p>
+            </div>
+
+            {group.status !== "cancelled" && (
+              <VerifyOrderPaymentForm
+                orderId={group.batchId ? undefined : group.lines[0].id}
+                orderBatchId={group.batchId ?? undefined}
+                currency={currency}
+                onSuccess={loadOrders}
+              />
+            )}
+
+            {group.lines.map((line) => {
+              const isWholeNumberQuantity =
+                Number.isSafeInteger(Number(line.quantity)) &&
+                Number(line.quantity) > 0;
+
+              return (
+                <div
+                  key={`fulfilment-${line.id}`}
+                  className="space-y-2"
+                >
+                  <h4 className="text-sm font-semibold text-slate-800">
+                    Collections & fulfilment: {line.product_name}
+                  </h4>
+
+                  {isWholeNumberQuantity ? (
+                    <OrderFulfilmentPanel
+                      orderId={line.id}
+                      orderedQuantity={Number(line.quantity)}
+                      currency={currency}
+                      disabled={group.status === "cancelled"}
+                      onSuccess={async () => {
+                        await loadOrders();
+                      }}
+                    />
+                  ) : (
+                    <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                      Fulfilment recording is unavailable because this order
+                      quantity is not a positive whole number. Review the
+                      order and product unit before recording a delivery.
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </article>
+    );
+  })}
+</div>
             )}
           </div>
         </section>

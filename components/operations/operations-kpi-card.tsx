@@ -42,12 +42,15 @@ export default function OperationsKpiCard({
   iconBg = "slate",
   currency,
 }: OperationsKpiCardProps) {
-  const displayValue = currency
-    ? formatCurrency(Number(value), { currency })
-    : Number(value).toLocaleString(undefined, {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
-      });
+const displayValue =
+  typeof value === "string"
+    ? value
+    : currency
+      ? formatCurrency(value, { currency })
+      : value.toLocaleString(undefined, {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2,
+        });
 
   return (
     <div className="group relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md">
