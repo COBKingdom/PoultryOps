@@ -22,6 +22,7 @@ import { useCustomers } from "@/hooks/useCustomers";
 import AppShell from "@/components/layout/app-shell";
 import OperationsKpiCard from "@/components/operations/operations-kpi-card";
 import VerifyOrderPaymentForm from "@/components/orders/verify-order-payment-form";
+import OrderFulfilmentPanel from "@/components/orders/order-fulfilment-panel";
 
 type OrderStatus =
   | "pending"
@@ -465,9 +466,7 @@ const { error: insertError } = await supabase.from("orders").insert({
 
   async function updateGroup(
     group: OrderGroup,
-    changes: Partial<
-      Pick<OrderRecord, "status" | "payment_status" | "dispatch_notes">
-    >
+changes: Partial<Pick<OrderRecord, "status" | "dispatch_notes">>
   ) {
     setError("");
     setSuccess("");
@@ -478,10 +477,6 @@ const { error: insertError } = await supabase.from("orders").insert({
 
       if (changes.status) {
         batchChanges.status = changes.status;
-      }
-
-      if (changes.payment_status) {
-        batchChanges.payment_status = changes.payment_status;
       }
 
       const { error: batchError } = await supabase
@@ -1120,6 +1115,37 @@ const { error: insertError } = await supabase.from("orders").insert({
       onSuccess={loadOrders}
     />
   )}
+  {group.lines.map((line) => {
+  const isWholeNumberQuantity =
+    Number.isSafeInteger(Number(line.quantity)) &&
+    Number(line.quantity) > 0;
+
+  return (
+    <div key={`fulfilment-${line.id}`} className="space-y-2">
+      <div className="text-sm font-semibold text-slate-800">
+        Fulfilment: {line.product_name}
+      </div>
+
+      {isWholeNumberQuantity ? (
+        <OrderFulfilmentPanel
+          orderId={line.id}
+          orderedQuantity={Number(line.quantity)}
+          currency={currency}
+          disabled={group.status === "cancelled"}
+          onSuccess={async () => {
+            await loadOrders();
+          }}
+        />
+      ) : (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          Fulfilment recording is unavailable because this order quantity
+          is not a positive whole number. Review the order and its
+          product unit before recording a delivery.
+        </p>
+      )}
+    </div>
+  );
+})}
 </div>
 
                     </article>

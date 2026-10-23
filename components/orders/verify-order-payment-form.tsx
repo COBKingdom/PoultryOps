@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -15,6 +15,7 @@ type PaymentResult = {
   duplicate?: boolean;
   payment_status?: string;
   outstanding_after_payment?: number;
+  message?: string;
 };
 
 const inputClass =
@@ -41,8 +42,8 @@ export default function VerifyOrderPaymentForm({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // Keep the same key when a request fails or its outcome is uncertain.
-  // The database uses this key to prevent a retry recording the payment twice.
+  // Reuse the same key after an uncertain request so a retry cannot
+  // unintentionally record the same payment twice.
   const [idempotencyKey, setIdempotencyKey] = useState(createRequestKey);
 
   const money = (value: number) =>
@@ -78,14 +79,16 @@ export default function VerifyOrderPaymentForm({
     }
 
     if (orderId && orderBatchId) {
-      setError("This form must identify either an order or a checkout batch, not both.");
+      setError(
+        "This form must identify either an order or a checkout batch, not both."
+      );
       return;
     }
 
     const confirmed = window.confirm(
       `Confirm that you have independently verified receipt of ${money(
         paymentAmount
-      )} from the customer? This will record a payment and may create the order's Sales records.`
+      )} from the customer? This records the payment against the selected order. It does not confirm that any goods have been supplied.`
     );
 
     if (!confirmed) return;
@@ -112,27 +115,24 @@ export default function VerifyOrderPaymentForm({
       const result = data as PaymentResult;
 
       if (!result?.success) {
-        throw new Error("The database did not confirm the payment.");
-      }
-
-      const outstanding = Number(result.outstanding_after_payment ?? 0);
-
-      if (!Number.isFinite(outstanding)) {
         throw new Error(
-          "The payment was recorded, but the outstanding balance could not be read. Refresh the order before retrying."
+          result?.message || "The database did not confirm the payment."
         );
       }
 
+      const outstanding = Number(result.outstanding_after_payment);
+
       setSuccess(
         `${result.duplicate ? "This payment was already recorded. " : "Payment recorded. "}` +
-          `Status: ${result.payment_status ?? "updated"}. ` +
-          `Outstanding: ${money(outstanding)}.`
+          `Payment status: ${result.payment_status ?? "updated"}.` +
+          (Number.isFinite(outstanding)
+            ? ` Outstanding order balance: ${money(outstanding)}.`
+            : "") +
+          " Goods supplied must be recorded separately through fulfilment."
       );
 
-      // The request has a confirmed result. A new key is now safe for
-      // the next intentional payment, such as a later instalment.
+      // Only rotate the key after the server confirms the payment.
       setIdempotencyKey(createRequestKey());
-
       setAmount("");
       setReference("");
       setNotes("");
@@ -162,9 +162,11 @@ export default function VerifyOrderPaymentForm({
         </h4>
         <p className="mt-1 text-xs leading-5 text-slate-600">
           Only record money the farm has actually received. A receipt alone
-          does not establish that a transfer succeeded. Partial payments are
-          supported. Repeating the same request is protected against duplicate
-          payment recording.
+          does not establish that a transfer succeeded. Partial payments and
+          deposits are supported where permitted by the database. Payment
+          recording does not create a sale or confirm that goods were supplied.
+          Repeating the same request is protected against duplicate payment
+          recording.
         </p>
       </div>
 
