@@ -24,9 +24,7 @@ import {
   CustomerPayment,
 } from "@/lib/customer-payments";
 
-import {
-  getFarmFlocks,
-} from "@/lib/flocks";
+import { getFarmFlocks } from "@/lib/flocks";
 
 import AppShell from "@/components/layout/app-shell";
 
@@ -45,12 +43,9 @@ import { useCustomers } from "@/hooks/useCustomers";
 export default function CustomersPage() {
   const { profile } = useAuth();
 
-  const {
-    data: dashboardData,
-  } = useDashboard();
+  const { data: dashboardData } = useDashboard();
 
-  const dashboard: any =
-    dashboardData || {};
+  const dashboard: any = dashboardData || {};
 
   const farmId =
     profile?.farm_id ||
@@ -70,24 +65,21 @@ export default function CustomersPage() {
     refresh,
   } = useCustomers(farmId);
 
-  const [flocks, setFlocks] =
-    useState<any[]>([]);
+  const [flocks, setFlocks] = useState<any[]>([]);
+  const [search, setSearch] = useState("");
 
-  const [search, setSearch] =
-    useState("");
-
-  const [activeTab, setActiveTab] =
-    useState<
-      "registry" | "debtors"
-    >("registry");
+  const [activeTab, setActiveTab] = useState<
+    "registry" | "debtors"
+  >("registry");
 
   const [showCustomerForm, setShowCustomerForm] =
     useState(false);
 
+  const [editingCustomer, setEditingCustomer] =
+    useState<CustomerBalance | null>(null);
+
   const [selectedCustomer, setSelectedCustomer] =
-    useState<CustomerBalance | null>(
-      null
-    );
+    useState<CustomerBalance | null>(null);
 
   const [accountSales, setAccountSales] =
     useState<CustomerSaleBalance[]>([]);
@@ -99,22 +91,19 @@ export default function CustomersPage() {
     useState(false);
 
   const [paymentCustomer, setPaymentCustomer] =
-    useState<CustomerBalance | null>(
-      null
-    );
+    useState<CustomerBalance | null>(null);
 
   const [showPaymentForm, setShowPaymentForm] =
     useState(false);
 
-  const [flockFilter, setFlockFilter] =
-    useState("");
-
-  const [page, setPage] =
-    useState(1);
+  const [flockFilter, setFlockFilter] = useState("");
+  const [page, setPage] = useState(1);
 
   const pageSize = 10;
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadFlocks() {
       if (!farmId) {
         setFlocks([]);
@@ -122,258 +111,144 @@ export default function CustomersPage() {
       }
 
       try {
-        const result =
-          await getFarmFlocks(
-            farmId
-          );
+        const result = await getFarmFlocks(farmId);
 
-        setFlocks(
-          result || []
-        );
+        if (!cancelled) {
+          setFlocks(result || []);
+        }
       } catch (err) {
-        console.error(
-          "Failed to load flocks:",
-          err
-        );
+        console.error("Failed to load flocks:", err);
       }
     }
 
-    loadFlocks();
+    void loadFlocks();
+
+    return () => {
+      cancelled = true;
+    };
   }, [farmId]);
 
   useEffect(() => {
     setPage(1);
-  }, [
-    search,
-    activeTab,
-    flockFilter,
-  ]);
+  }, [search, activeTab, flockFilter]);
 
-  const filteredCustomers =
-    useMemo(() => {
-      const term =
-        search
-          .trim()
-          .toLowerCase();
+  const filteredCustomers = useMemo(() => {
+    const term = search.trim().toLowerCase();
 
-      if (!term) {
-        return records;
-      }
+    if (!term) {
+      return records;
+    }
 
-      return records.filter(
+    return records.filter(
+      (customer) =>
+        customer.name?.toLowerCase().includes(term) ||
+        customer.customer_code?.toLowerCase().includes(term) ||
+        customer.phone?.toLowerCase().includes(term) ||
+        customer.location?.toLowerCase().includes(term)
+    );
+  }, [records, search]);
+
+  const debtors = useMemo(() => {
+    const term = search.trim().toLowerCase();
+
+    return records
+      .filter(
         (customer) =>
-          customer.name
-            ?.toLowerCase()
-            .includes(term) ||
-          customer.customer_code
-            ?.toLowerCase()
-            .includes(term) ||
-          customer.phone
-            ?.toLowerCase()
-            .includes(term) ||
-          customer.location
-            ?.toLowerCase()
-            .includes(term)
-      );
-    }, [
-      records,
-      search,
-    ]);
+          Number(customer.outstanding_balance || 0) > 0
+      )
+      .filter((customer) => {
+        if (!term) {
+          return true;
+        }
 
-  const debtors =
-    useMemo(() => {
-      const term =
-        search
-          .trim()
-          .toLowerCase();
-
-      return records
-        .filter(
-          (customer) =>
-            Number(
-              customer.outstanding_balance || 0
-            ) > 0
-        )
-        .filter((customer) => {
-          if (!term) {
-            return true;
-          }
-
-          return (
-            customer.name
-              ?.toLowerCase()
-              .includes(term) ||
-            customer.customer_code
-              ?.toLowerCase()
-              .includes(term) ||
-            customer.phone
-              ?.toLowerCase()
-              .includes(term) ||
-            customer.location
-              ?.toLowerCase()
-              .includes(term)
-          );
-        });
-    }, [
-      records,
-      search,
-    ]);
+        return (
+          customer.name?.toLowerCase().includes(term) ||
+          customer.customer_code?.toLowerCase().includes(term) ||
+          customer.phone?.toLowerCase().includes(term) ||
+          customer.location?.toLowerCase().includes(term)
+        );
+      });
+  }, [records, search]);
 
   const visibleRecords =
-    activeTab === "registry"
-      ? filteredCustomers
-      : debtors;
+    activeTab === "registry" ? filteredCustomers : debtors;
 
-  const totalPages =
-    Math.max(
-      1,
-      Math.ceil(
-        visibleRecords.length /
-          pageSize
-      )
-    );
+  const totalPages = Math.max(
+    1,
+    Math.ceil(visibleRecords.length / pageSize)
+  );
 
-  const paginatedRecords =
-    visibleRecords.slice(
-      (page - 1) * pageSize,
-      page * pageSize
-    );
+  const paginatedRecords = visibleRecords.slice(
+    (page - 1) * pageSize,
+    page * pageSize
+  );
 
-  const totalCustomers =
-    records.length;
+  const totalCustomers = records.length;
 
-  const activeCustomers =
-    records.filter(
-      (customer) =>
-        customer.active
-    ).length;
+  const activeCustomers = records.filter(
+    (customer) => customer.active
+  ).length;
 
-  const debtorCount =
-    records.filter(
-      (customer) =>
-        Number(
-          customer.outstanding_balance || 0
-        ) > 0
-    ).length;
+  const debtorCount = records.filter(
+    (customer) =>
+      Number(customer.outstanding_balance || 0) > 0
+  ).length;
 
-  const totalReceivables =
-    records.reduce(
-      (sum, customer) =>
-        sum +
-        Number(
-          customer.outstanding_balance || 0
-        ),
-      0
-    );
+  const totalReceivables = records.reduce(
+    (sum, customer) =>
+      sum + Number(customer.outstanding_balance || 0),
+    0
+  );
 
-  async function openAccount(
-    customer: CustomerBalance
-  ) {
+  async function openAccount(customer: CustomerBalance) {
     if (!farmId) {
       return;
     }
 
     try {
       setAccountLoading(true);
+      setSelectedCustomer(customer);
 
-      setSelectedCustomer(
-        customer
-      );
-
-      const [
-        sales,
-        payments,
-      ] = await Promise.all([
-        getCustomerSales(
-          farmId,
-          customer.customer_id
-        ),
-        getCustomerPayments(
-          farmId,
-          customer.customer_id
-        ),
+      const [sales, payments] = await Promise.all([
+        getCustomerSales(farmId, customer.customer_id),
+        getCustomerPayments(farmId, customer.customer_id),
       ]);
 
-      setAccountSales(
-        sales
-      );
-
-      setAccountPayments(
-        payments
-      );
-
+      setAccountSales(sales);
+      setAccountPayments(payments);
     } catch (err) {
-      console.error(
-        "Failed to load customer account:",
-        err
-      );
+      console.error("Failed to load customer account:", err);
 
-      alert(
-        "Unable to load the customer account."
-      );
+      alert("Unable to load the customer account.");
 
-      setSelectedCustomer(
-        null
-      );
-
+      setSelectedCustomer(null);
     } finally {
       setAccountLoading(false);
     }
   }
 
-  function openPayment(
-    customer?: CustomerBalance
-  ) {
-    setPaymentCustomer(
-      customer || null
-    );
-
-    setShowPaymentForm(
-      true
-    );
+  function openPayment(customer?: CustomerBalance) {
+    setPaymentCustomer(customer || null);
+    setShowPaymentForm(true);
   }
 
   async function handlePaymentSaved() {
     await refresh();
 
-    if (
-      selectedCustomer &&
-      farmId
-    ) {
+    if (selectedCustomer && farmId) {
       try {
-        const [
-          customer,
-          sales,
-          payments,
-        ] = await Promise.all([
-          getCustomer(
-            farmId,
-            selectedCustomer.customer_id
-          ),
-          getCustomerSales(
-            farmId,
-            selectedCustomer.customer_id
-          ),
-          getCustomerPayments(
-            farmId,
-            selectedCustomer.customer_id
-          ),
+        const [customer, sales, payments] = await Promise.all([
+          getCustomer(farmId, selectedCustomer.customer_id),
+          getCustomerSales(farmId, selectedCustomer.customer_id),
+          getCustomerPayments(farmId, selectedCustomer.customer_id),
         ]);
 
         if (customer) {
-          setSelectedCustomer(
-            customer
-          );
+          setSelectedCustomer(customer);
         }
 
-        setAccountSales(
-          sales
-        );
-
-        setAccountPayments(
-          payments
-        );
-
+        setAccountSales(sales);
+        setAccountPayments(payments);
       } catch (err) {
         console.error(
           "Failed to refresh customer account:",
@@ -383,12 +258,25 @@ export default function CustomersPage() {
     }
   }
 
+  function openAddCustomerForm() {
+    setEditingCustomer(null);
+    setShowCustomerForm(true);
+  }
+
+  function openEditCustomerForm(customer: CustomerBalance) {
+    setEditingCustomer(customer);
+    setShowCustomerForm(true);
+  }
+
+  function closeCustomerForm() {
+    setShowCustomerForm(false);
+    setEditingCustomer(null);
+  }
+
   if (selectedCustomer) {
     return (
       <AppShell>
-
         <div className="p-6">
-
           {accountLoading ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
               <p className="text-sm text-slate-500">
@@ -397,27 +285,13 @@ export default function CustomersPage() {
             </div>
           ) : (
             <CustomerAccount
-              customer={
-                selectedCustomer
-              }
-              sales={
-                accountSales
-              }
-              payments={
-                accountPayments
-              }
-              currency={
-                currency
-              }
-              onBack={() =>
-                setSelectedCustomer(
-                  null
-                )
-              }
+              customer={selectedCustomer}
+              sales={accountSales}
+              payments={accountPayments}
+              currency={currency}
+              onBack={() => setSelectedCustomer(null)}
               onAcceptPayment={() =>
-                openPayment(
-                  selectedCustomer
-                )
+                openPayment(selectedCustomer)
               }
               onPaymentCorrected={handlePaymentSaved}
             />
@@ -425,48 +299,28 @@ export default function CustomersPage() {
 
           {showPaymentForm && (
             <AcceptPaymentForm
-              customers={
-                records.filter(
-                  (customer) =>
-                    Number(
-                      customer.outstanding_balance || 0
-                    ) > 0
-                )
-              }
-              initialCustomer={
-                paymentCustomer
-              }
-              currency={
-                currency
-              }
-              onClose={() =>
-                setShowPaymentForm(
-                  false
-                )
-              }
-              onSaved={
-                handlePaymentSaved
-              }
+              customers={records.filter(
+                (customer) =>
+                  Number(customer.outstanding_balance || 0) > 0
+              )}
+              initialCustomer={paymentCustomer}
+              currency={currency}
+              onClose={() => setShowPaymentForm(false)}
+              onSaved={handlePaymentSaved}
             />
           )}
-
         </div>
-
       </AppShell>
     );
   }
 
   return (
     <AppShell>
-
       <div className="space-y-6 p-6">
-
         {/* HEADER */}
 
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-
           <div>
-
             <h1 className="text-3xl font-bold text-slate-900">
               Customers
             </h1>
@@ -474,92 +328,57 @@ export default function CustomersPage() {
             <p className="mt-1 text-sm text-slate-500">
               Manage customer accounts, debtors and payments.
             </p>
-
           </div>
 
           <button
             type="button"
-            onClick={() =>
-              setShowCustomerForm(
-                true
-              )
-            }
+            onClick={openAddCustomerForm}
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
           >
             <Plus size={18} />
             Add Customer
           </button>
-
         </div>
 
         {/* KPI CARDS */}
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-
           <OperationsKpiCard
             label="Customers"
-            value={
-              totalCustomers
-            }
+            value={totalCustomers}
             sublabel="Registered customers"
-            icon={
-              <Users size={20} />
-            }
-
+            icon={<Users size={20} />}
           />
 
           <OperationsKpiCard
             label="Active"
-            value={
-              activeCustomers
-            }
+            value={activeCustomers}
             sublabel="Active customer accounts"
-            icon={
-              <Users size={20} />
-            }
-
+            icon={<Users size={20} />}
           />
 
           <OperationsKpiCard
             label="Debtors"
-            value={
-              debtorCount
-            }
+            value={debtorCount}
             sublabel="Customers with outstanding balances"
-            icon={
-              <CreditCard size={20} />
-            }
-
+            icon={<CreditCard size={20} />}
           />
 
           <OperationsKpiCard
             label="Receivables"
-            value={
-              totalReceivables
-            }
+            value={totalReceivables}
             sublabel="Total customer outstanding"
-            icon={
-              <WalletCards size={20} />
-            }
-
-            currency={
-              currency
-            }
+            icon={<WalletCards size={20} />}
+            currency={currency}
           />
-
         </div>
 
         {/* TABS */}
 
         <div className="flex gap-1 rounded-xl border border-slate-200 bg-slate-100 p-1">
-
           <button
             type="button"
-            onClick={() =>
-              setActiveTab(
-                "registry"
-              )
-            }
+            onClick={() => setActiveTab("registry")}
             className={`
               rounded-lg px-4 py-2.5 text-sm font-semibold transition
               ${
@@ -574,11 +393,7 @@ export default function CustomersPage() {
 
           <button
             type="button"
-            onClick={() =>
-              setActiveTab(
-                "debtors"
-              )
-            }
+            onClick={() => setActiveTab("debtors")}
             className={`
               rounded-lg px-4 py-2.5 text-sm font-semibold transition
               ${
@@ -595,61 +410,41 @@ export default function CustomersPage() {
                 {debtorCount}
               </span>
             )}
-
           </button>
-
         </div>
 
         {/* TOOLBAR */}
 
         <OperationsToolbar
-          searchValue={
-            search
-          }
-          onSearchChange={
-            setSearch
-          }
+          searchValue={search}
+          onSearchChange={setSearch}
           searchPlaceholder={
             activeTab === "registry"
               ? "Search customers by name, code, phone or location..."
               : "Search debtors by name, code or phone..."
           }
         >
-
           <select
-            value={
-              flockFilter
-            }
-            onChange={(e) =>
-              setFlockFilter(
-                e.target.value
-              )
-            }
+            value={flockFilter}
+            onChange={(e) => setFlockFilter(e.target.value)}
             className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
           >
-            <option value="">
-              All Flocks
-            </option>
+            <option value="">All Flocks</option>
 
-            {flocks.map(
-              (flock: any) => (
-                <option
-                  key={flock.id}
-                  value={flock.id}
-                >
-                  {flock.flock_name}
-                </option>
-              )
-            )}
-
+            {flocks.map((flock: any) => (
+              <option key={flock.id} value={flock.id}>
+                {flock.flock_name}
+              </option>
+            ))}
           </select>
-
         </OperationsToolbar>
 
         {/* FILTER INFORMATION */}
 
         <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500">
-          The customer registry and debtor balances show current account totals. Transaction-level flock and date filtering will be applied within customer account history.
+          The customer registry and debtor balances show current account
+          totals. Transaction-level flock and date filtering will be
+          applied within customer account history.
         </div>
 
         {/* ERROR */}
@@ -670,61 +465,40 @@ export default function CustomersPage() {
           </div>
         ) : activeTab === "registry" ? (
           <CustomerList
-            records={
-              paginatedRecords
-            }
-            currency={
-              currency
-            }
-            onView={
-              openAccount
-            }
+            records={paginatedRecords}
+            currency={currency}
+            onView={openAccount}
+            onEdit={openEditCustomerForm}
           />
         ) : (
           <DebtorsList
-            records={
-              paginatedRecords
-            }
-            currency={
-              currency
-            }
-            onViewAccount={
-              openAccount
-            }
-            onAcceptPayment={
-              openPayment
-            }
+            records={paginatedRecords}
+            currency={currency}
+            onViewAccount={openAccount}
+            onAcceptPayment={openPayment}
           />
         )}
 
         {/* PAGINATION */}
 
-        {visibleRecords.length >
-          pageSize && (
-<OperationsPagination
-  current={page}
-  total={totalPages}
-  onPageChange={setPage}
-/>
+        {visibleRecords.length > pageSize && (
+          <OperationsPagination
+            current={page}
+            total={totalPages}
+            onPageChange={setPage}
+          />
         )}
-
       </div>
 
-      {/* ADD CUSTOMER */}
+      {/* ADD / EDIT CUSTOMER */}
 
       {showCustomerForm && (
         <CustomerForm
-          farmId={
-            farmId
-          }
-          onSaved={
-            refresh
-          }
-          onClose={() =>
-            setShowCustomerForm(
-              false
-            )
-          }
+          key={editingCustomer?.customer_id ?? "new-customer"}
+          farmId={farmId}
+          customer={editingCustomer}
+          onSaved={refresh}
+          onClose={closeCustomerForm}
         />
       )}
 
@@ -732,31 +506,16 @@ export default function CustomersPage() {
 
       {showPaymentForm && (
         <AcceptPaymentForm
-          customers={
-            records.filter(
-              (customer) =>
-                Number(
-                  customer.outstanding_balance || 0
-                ) > 0
-            )
-          }
-          initialCustomer={
-            paymentCustomer
-          }
-          currency={
-            currency
-          }
-          onClose={() =>
-            setShowPaymentForm(
-              false
-            )
-          }
-          onSaved={
-            handlePaymentSaved
-          }
+          customers={records.filter(
+            (customer) =>
+              Number(customer.outstanding_balance || 0) > 0
+          )}
+          initialCustomer={paymentCustomer}
+          currency={currency}
+          onClose={() => setShowPaymentForm(false)}
+          onSaved={handlePaymentSaved}
         />
       )}
-
     </AppShell>
   );
 }

@@ -85,6 +85,7 @@ type OrderGroup = {
   customerId: string;
   customerName: string;
   customerPhone: string | null;
+  customerCode: string | null;
   lines: OrderRecord[];
   total: number;
   orderDate: string;
@@ -204,6 +205,56 @@ export default function OrdersPage() {
       }).format(amount || 0),
     [currency]
   );
+function shareBookingConfirmation(group: OrderGroup) {
+  if (!group.customerPhone?.trim()) {
+    setError(
+      "This customer has no phone number recorded. Update the customer record before sharing a private WhatsApp confirmation."
+    );
+    return;
+  }
+
+  const phone = group.customerPhone.replace(/\D/g, "");
+
+  if (!phone) {
+    setError("The customer's phone number is invalid.");
+    return;
+  }
+
+  const farmName =
+    (dashboardData as any)?.farm?.name || "Our Farm";
+
+  const message = [
+    `Hello ${group.customerName},`,
+    "",
+    `Your booking with ${farmName} has been recorded.`,
+    `Booking reference: ${group.reference}`,
+    ...(group.customerCode
+      ? [`Customer code: ${group.customerCode}`]
+      : []),
+    "",
+    "Items booked:",
+    ...group.lines.map(
+      (line) =>
+        `- ${line.product_name}: ${line.quantity} × ${formatMoney(Number(line.unit_price))}`
+    ),
+    "",
+    `Booking total: ${formatMoney(group.total)}`,
+    `Booking status: ${
+      ORDER_STATUSES.find((item) => item.value === group.status)?.label ??
+      group.status
+    }`,
+    "",
+    "This confirms your booking only. It is not a payment receipt or confirmation that goods have been collected.",
+    "",
+    "Please contact the farm directly if you need to amend your booking.",
+  ].join("\n");
+
+  window.open(
+    `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,
+    "_blank",
+    "noopener,noreferrer"
+  );
+}
 
   const loadOrders = useCallback(async () => {
     if (!farmId) {
@@ -343,6 +394,7 @@ export default function OrdersPage() {
         continue;
       }
 
+ 
       byKey.set(key, {
         key,
         batchId: order.order_batch_id,
@@ -350,6 +402,10 @@ export default function OrdersPage() {
         customerId: order.customer_id,
         customerName: order.customers?.name || "Customer",
         customerPhone: order.customers?.phone || null,
+        customerCode:
+          customers.find(
+            (customer) => customer.customer_id === order.customer_id
+          )?.customer_code ?? null,
         lines: [order],
         total:
           order.order_batch_id && batch
@@ -365,10 +421,11 @@ export default function OrdersPage() {
       });
     }
 
+
     return Array.from(byKey.values()).sort((a, b) =>
       b.createdAt.localeCompare(a.createdAt)
     );
-  }, [orders]);
+  }, [orders, customers]);
 
   const filteredGroups = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -1166,6 +1223,43 @@ changes: Partial<Pick<OrderRecord, "status" | "dispatch_notes">>
         {/* Operational workspace — visible for the selected order only */}
         {expanded && (
           <div className="mt-4 space-y-4 border-t border-slate-100 pt-4">
+            
+ 
+            {/* Customer Booking Confirmation */}
+            <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h4 className="text-sm font-semibold text-slate-900">
+                    Customer Booking Confirmation
+                  </h4>
+
+                  <p className="mt-1 text-sm text-slate-600">
+                    Share this booking privately with the customer.
+                    This does not verify payment or confirm collection.
+                  </p>
+
+                  <p className="mt-2 text-xs text-slate-500">
+                    Booking reference: {group.reference}
+                  </p>
+
+                  {group.customerCode && (
+                    <p className="mt-1 text-xs text-slate-500">
+                      Customer code: {group.customerCode}
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => shareBookingConfirmation(group)}
+                  className={buttonClass}
+                >
+                  <ShoppingBag size={16} />
+                  Share on WhatsApp
+                </button>
+              </div>
+            </div>
+
             <div className="overflow-hidden rounded-xl border border-slate-100">
               <div className="bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
                 {group.batchId ? "Products in this checkout" : "Order item"}

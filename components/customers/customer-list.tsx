@@ -1,11 +1,7 @@
+
 "use client";
 
-import {
-  Eye,
-  Phone,
-  MapPin,
-  CreditCard,
-} from "lucide-react";
+import { CreditCard, Eye, MapPin, Pencil, Phone } from "lucide-react";
 
 import { CustomerBalance } from "@/lib/customers";
 import { formatCurrency } from "@/lib/currency";
@@ -14,17 +10,19 @@ type CustomerListProps = {
   records: CustomerBalance[];
   currency?: string;
   onView?: (customer: CustomerBalance) => void;
+  onEdit?: (customer: CustomerBalance) => void;
 };
 
 export default function CustomerList({
   records,
   currency = "NGN",
   onView,
+  onEdit,
 }: CustomerListProps) {
   if (records.length === 0) {
     return (
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center">
-        <div className="mx-auto w-12 h-12 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center">
+      <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
           <CreditCard size={22} />
         </div>
 
@@ -40,13 +38,10 @@ export default function CustomerList({
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="px-5 py-4 border-b border-slate-100">
-        <h2 className="font-semibold text-slate-900">
-          Customer Registry
-        </h2>
-
-        <p className="text-xs text-slate-400 mt-1">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="border-b border-slate-100 px-5 py-4">
+        <h2 className="font-semibold text-slate-900">Customer Registry</h2>
+        <p className="mt-1 text-xs text-slate-400">
           Registered customers and account balances
         </p>
       </div>
@@ -54,51 +49,44 @@ export default function CustomerList({
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="text-left px-4 py-3 font-semibold text-slate-600">
+            <tr className="border-b border-slate-200 bg-slate-50">
+              <th className="px-4 py-3 text-left font-semibold text-slate-600">
                 Customer
               </th>
-
-              <th className="text-left px-4 py-3 font-semibold text-slate-600">
+              <th className="px-4 py-3 text-left font-semibold text-slate-600">
                 Phone
               </th>
-
-              <th className="text-left px-4 py-3 font-semibold text-slate-600">
+              <th className="px-4 py-3 text-left font-semibold text-slate-600">
                 State / Region
               </th>
-
-              <th className="text-right px-4 py-3 font-semibold text-slate-600">
+              <th className="px-4 py-3 text-right font-semibold text-slate-600">
                 Sales
               </th>
-
-              <th className="text-right px-4 py-3 font-semibold text-slate-600">
+              <th className="px-4 py-3 text-right font-semibold text-slate-600">
                 Outstanding
               </th>
-
-              <th className="text-center px-4 py-3 font-semibold text-slate-600">
+              <th className="px-4 py-3 text-center font-semibold text-slate-600">
                 Status
               </th>
-
-              <th className="text-right px-4 py-3 font-semibold text-slate-600">
-                Action
+              <th className="px-4 py-3 text-right font-semibold text-slate-600">
+                Actions
               </th>
             </tr>
           </thead>
 
           <tbody className="divide-y divide-slate-100">
             {records.map((customer) => {
-              const debtor = customer.outstanding_balance > 0;
+              const debtor = Number(customer.outstanding_balance || 0) > 0;
 
               return (
                 <tr
                   key={customer.customer_id}
-                  className="hover:bg-slate-50 transition-colors"
+                  className="transition-colors hover:bg-slate-50"
                 >
                   <td className="px-4 py-4">
                     <div className="font-semibold text-slate-900">
                       {customer.name}
                     </div>
-
                     <div className="mt-1 text-xs font-semibold text-blue-600">
                       {customer.customer_code}
                     </div>
@@ -123,9 +111,7 @@ export default function CustomerList({
                   </td>
 
                   <td className="px-4 py-4 text-right font-medium text-slate-700">
-                    {formatCurrency(customer.total_sales, {
-                      currency,
-                    })}
+                    {formatCurrency(customer.total_sales, { currency })}
                   </td>
 
                   <td className="px-4 py-4 text-right">
@@ -155,14 +141,27 @@ export default function CustomerList({
                   </td>
 
                   <td className="px-4 py-4 text-right">
-                    <button
-                      type="button"
-                      onClick={() => onView?.(customer)}
-                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-blue-600 hover:bg-blue-50 transition-colors"
-                    >
-                      <Eye size={15} />
-                      View
-                    </button>
+                    <div className="inline-flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => onEdit?.(customer)}
+                        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
+                        aria-label={`Edit ${customer.name}`}
+                      >
+                        <Pencil size={15} />
+                        Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => onView?.(customer)}
+                        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-blue-600 transition-colors hover:bg-blue-50"
+                        aria-label={`View account for ${customer.name}`}
+                      >
+                        <Eye size={15} />
+                        View
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );
