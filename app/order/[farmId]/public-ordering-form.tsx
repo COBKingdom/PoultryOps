@@ -43,6 +43,7 @@ type CatalogResponse = {
     id: string;
     name: string;
     currency: string;
+    logo_path?: string | null;
   };
   products: FarmProduct[];
 };
@@ -158,6 +159,7 @@ export default function PublicOrderingForm({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All products");
   const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
+  const [farmLogoUrl, setFarmLogoUrl] = useState("");
 
   const currency = catalog?.farm.currency || "NGN";
 
@@ -198,6 +200,28 @@ export default function PublicOrderingForm({
 
       const result = data as unknown as CatalogResponse;
       setCatalog(result);
+      setFarmLogoUrl("");
+
+if (result.farm.logo_path) {
+  try {
+    const response = await fetch(
+      `/api/public/farm-logo?farmId=${encodeURIComponent(farmId)}`,
+      { cache: "no-store" }
+    );
+
+    if (response.ok) {
+      const logoResult = (await response.json()) as {
+        signedUrl?: string;
+      };
+
+      setFarmLogoUrl(logoResult.signedUrl || "");
+    } else {
+      console.warn("Farm logo could not be loaded:", response.status);
+    }
+  } catch (logoError) {
+    console.warn("Farm logo request failed:", logoError);
+  }
+}
 
       const productsWithImages = (result.products || []).filter(
         (product) => Boolean(product.image_path)
@@ -644,9 +668,21 @@ if (productsWithImages.length > 0) {
       <header className="border-b border-slate-200/80 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-md shadow-emerald-600/20">
-              <Store size={24} strokeWidth={1.8} />
-            </div>
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+  {farmLogoUrl ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={farmLogoUrl}
+      alt={`${catalog.farm.name} logo`}
+      className="h-full w-full object-contain p-1"
+      onError={() => setFarmLogoUrl("")}
+    />
+  ) : (
+    <div className="flex h-full w-full items-center justify-center rounded-2xl bg-emerald-600 text-white">
+      <Store size={24} strokeWidth={1.8} />
+    </div>
+  )}
+</div>
             <div className="min-w-0">
               <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-emerald-700 sm:text-xs">
                 PoultryOps Farm Shop
