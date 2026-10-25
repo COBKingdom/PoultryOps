@@ -164,13 +164,17 @@ function getBookingReference(
     batch?.order_reference?.trim() ||
     order.order_reference?.trim();
 
-  const match = reference?.match(/^PO-ORD-(\d+)$/i);
-
-  if (match) {
-    return `PO-ORD-${match[1].padStart(7, "0")}`;
+  if (!reference) {
+    return "Reference unavailable";
   }
 
-  return "Reference unavailable";
+  const match = reference.match(/^PO-ORD-(\d+)$/i);
+
+  if (!match) {
+    return "Reference unavailable";
+  }
+
+  return `PO-ORD-${match[1].padStart(7, "0")}`;
 }
 
 
