@@ -203,44 +203,54 @@ export default function PublicOrderingForm({
         (product) => Boolean(product.image_path)
       );
 
-      if (productsWithImages.length > 0) {
-        const signedUrlResults = await Promise.all(
-          productsWithImages.map(async (product) => {
-            try {
-              const { data: signedData, error: signedError } =
-                await supabase.storage
-                  .from("product-images")
-                  .createSignedUrl(product.image_path as string, 60 * 60);
-
-              if (signedError || !signedData?.signedUrl) {
-                console.warn(
-                  "Could not generate product image URL:",
-                  product.id,
-                  signedError?.message
-                );
-                return null;
-              }
-
-              return [product.id, signedData.signedUrl] as const;
-            } catch (imageError) {
-              console.warn("Product image could not be loaded:", imageError);
-              return null;
-            }
-          })
+      
+if (productsWithImages.length > 0) {
+  const signedUrlResults = await Promise.all(
+    productsWithImages.map(async (product) => {
+      try {
+        const response = await fetch(
+          `/api/public/product-image?farmId=${encodeURIComponent(farmId)}&productId=${encodeURIComponent(product.id)}`,
+          { cache: "no-store" }
         );
 
-        const nextImageUrls: Record<string, string> = {};
+        if (!response.ok) {
+          const result = await response.json().catch(() => null);
 
-        for (const resultItem of signedUrlResults) {
-          if (resultItem) {
-            nextImageUrls[resultItem[0]] = resultItem[1];
-          }
+          console.warn(
+            "Could not load product image:",
+            product.id,
+            result?.error ?? response.statusText
+          );
+
+          return null;
         }
 
-        setImageUrls(nextImageUrls);
-      } else {
-        setImageUrls({});
+        const result = (await response.json()) as {
+          signedUrl?: string;
+        };
+
+        if (!result.signedUrl) {
+          console.warn("Product image URL missing:", product.id);
+          return null;
+        }
+
+        return [product.id, result.signedUrl] as const;
+      } catch (imageError) {
+        console.warn("Product image could not be loaded:", imageError);
+        return null;
       }
+    })
+  );
+
+  const validEntries = signedUrlResults.filter(
+    (
+      entry
+    ): entry is readonly [string, string] => entry !== null
+  );
+
+  setImageUrls(Object.fromEntries(validEntries));
+}
+
     } catch (catalogError) {
       console.error("Public catalogue error:", catalogError);
       setError("Unable to load the farm catalogue. Please try again.");
