@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -34,11 +33,35 @@ const OTHER_SALE_TYPES = [
   "Other Income",
 ];
 
+const UNIT_OPTIONS = [
+  "Birds",
+  "Crates",
+  "Trays",
+  "Bags",
+  "Kg",
+  "Grams",
+  "Pieces",
+  "Litres",
+  "Units",
+];
+
 const inputClass =
   "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm outline-none transition placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10";
 
 const labelClass =
   "mb-2 block text-sm font-semibold text-slate-700";
+
+function getDefaultUnit(
+  category: SaleCategory,
+  itemType: string
+): string {
+  if (category === "Egg Sales") return "Crates";
+  if (category === "Bird Sales") return "Birds";
+  if (itemType === "Manure Sales") return "Bags";
+  if (itemType === "Feed Sales") return "Bags";
+  if (itemType === "Equipment Sales") return "Pieces";
+  return "Units";
+}
 
 export default function AddSaleForm({
   farmId,
@@ -58,57 +81,60 @@ export default function AddSaleForm({
   const [amountPaid, setAmountPaid] = useState("");
   const [applyCredit, setApplyCredit] = useState(true);
   const [notes, setNotes] = useState("");
-  const [recordDate, setRecordDate] = useState(
-    getLocalDateString()
-  );
+  const [recordDate, setRecordDate] = useState(getLocalDateString());
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [unitOfSale, setUnitOfSale] = useState("Crates");
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadCustomers() {
       try {
         setCustomersLoading(true);
         const result = await getCustomers(farmId);
-        setCustomers(result);
+        if (!cancelled) setCustomers(result);
       } catch (error) {
         console.error("Failed to load customers:", error);
       } finally {
-        setCustomersLoading(false);
+        if (!cancelled) setCustomersLoading(false);
       }
     }
 
-    if (farmId) loadCustomers();
+    if (farmId) void loadCustomers();
+
+    return () => {
+      cancelled = true;
+    };
   }, [farmId]);
 
   useEffect(() => {
     if (saleCategory === "Bird Sales") {
       setItemType(BIRD_SALE_TYPES[0]);
-      return;
-    }
-
-    if (saleCategory === "Egg Sales") {
+    } else if (saleCategory === "Egg Sales") {
       setItemType(EGG_SALE_TYPES[0]);
-      return;
+    } else {
+      setItemType(OTHER_SALE_TYPES[0]);
     }
 
-    setItemType(OTHER_SALE_TYPES[0]);
+    setUnitOfSale(
+      getDefaultUnit(saleCategory, saleCategory === "Bird Sales"
+        ? BIRD_SALE_TYPES[0]
+        : saleCategory === "Egg Sales"
+          ? EGG_SALE_TYPES[0]
+          : OTHER_SALE_TYPES[0])
+    );
+
+    if (saleCategory === "Other Sales") {
+      setFlockId("");
+    }
   }, [saleCategory]);
 
   const requiresFlock =
-  saleCategory === "Bird Sales" ||
-  saleCategory === "Egg Sales";
-
-  const allowsFlock =
     saleCategory === "Bird Sales" ||
     saleCategory === "Egg Sales";
 
-  function handleCategoryChange(category: SaleCategory) {
-    setSaleCategory(category);
-
-    if (category === "Other Sales") {
-      setFlockId("");
-    }
-  }
+  const allowsFlock = requiresFlock;
 
   const selectedCustomer = useMemo(
     () =>
@@ -150,21 +176,64 @@ export default function AddSaleForm({
   const isCustomerSale = Boolean(customerId);
 
   const paymentExceedsRemaining =
-    enteredAmountPaid > remainingAfterCredit;
+    enteredAmountPaid > remainingAfterCredit + 0.005;
+
+  const saleTypes =
+    saleCategory === "Bird Sales"
+      ? BIRD_SALE_TYPES
+      : saleCategory === "Egg Sales"
+        ? EGG_SALE_TYPES
+        : OTHER_SALE_TYPES;
+
+  function formatAmount(amount: number) {
+    return new Intl.NumberFormat("en-NG", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  }
+
+  function handleItemTypeChange(nextItemType: string) {
+    setItemType(nextItemType);
+    setUnitOfSale(getDefaultUnit(saleCategory, nextItemType));
+  }
 
   async function handleSave() {
+    if (!farmId) {
+      alert("Farm information is not available. Please refresh and try again.");
+      return;
+    }
+
+    if (!recordDate) {
+      alert("Please select a sale date.");
+      return;
+    }
+
+    const numericQuantity = Number(quantity);
+    const numericUnitPrice = Number(unitPrice);
+
+    if (
+      !Number.isInteger(numericQuantity) ||
+      numericQuantity <= 0
+    ) {
+      alert("Quantity must be a whole number greater than zero.");
+      return;
+    }
+
+    if (
+      !Number.isFinite(numericUnitPrice) ||
+      numericUnitPrice <= 0
+    ) {
+      alert("Please enter a valid unit price greater than zero.");
+      return;
+    }
+
+    if (!unitOfSale) {
+      alert("Please select a unit of sale.");
+      return;
+    }
+
     if (requiresFlock && !flockId) {
-      alert("Please select a flock for this bird sale.");
-      return;
-    }
-
-    if (!quantity || Number(quantity) <= 0) {
-      alert("Please enter a valid quantity.");
-      return;
-    }
-
-    if (!unitPrice || Number(unitPrice) < 0) {
-      alert("Please enter a valid unit price.");
+      alert("Please select a flock for this sale.");
       return;
     }
 
@@ -175,7 +244,7 @@ export default function AddSaleForm({
       return;
     }
 
-    if (totalAmount <= 0) {
+    if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
       alert("The sale amount must be greater than zero.");
       return;
     }
@@ -194,9 +263,10 @@ export default function AddSaleForm({
             p_sale_category: saleCategory,
             p_sale_date: recordDate,
             p_item_type: itemType,
-            p_quantity: Number(quantity),
-            p_unit_price: Number(unitPrice),
+            p_quantity: numericQuantity,
+            p_unit_price: numericUnitPrice,
             p_total_amount: totalAmount,
+            p_unit_of_sale: unitOfSale,
             p_amount_paid: effectiveAmountPaid,
             p_apply_credit: applyCredit,
             p_notes: notes,
@@ -219,9 +289,10 @@ export default function AddSaleForm({
           sale_category: saleCategory,
           sale_date: recordDate,
           item_type: itemType,
-          quantity: Number(quantity),
-          unit_price: Number(unitPrice),
+          quantity: numericQuantity,
+          unit_price: numericUnitPrice,
           total_amount: totalAmount,
+          unit_of_sale: unitOfSale,
           notes,
         });
       }
@@ -237,7 +308,7 @@ export default function AddSaleForm({
       setNotes("");
       setSuccess(true);
 
-      setTimeout(() => {
+      window.setTimeout(() => {
         setSuccess(false);
       }, 2000);
     } catch (error) {
@@ -253,27 +324,11 @@ export default function AddSaleForm({
     }
   }
 
-  const saleTypes =
-    saleCategory === "Bird Sales"
-      ? BIRD_SALE_TYPES
-      : saleCategory === "Egg Sales"
-        ? EGG_SALE_TYPES
-        : OTHER_SALE_TYPES;
-
-  function formatAmount(amount: number) {
-    return new Intl.NumberFormat("en-NG", {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  }
-
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-200/60">
-      {/* Blue accent */}
       <div className="h-1.5 bg-gradient-to-r from-blue-700 via-blue-500 to-sky-400" />
 
       <div className="p-5 sm:p-7">
-        {/* HEADER */}
         <div className="mb-7 border-b border-slate-100 pb-5">
           <div className="flex items-start gap-3">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
@@ -305,13 +360,12 @@ export default function AddSaleForm({
         </div>
 
         <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSave();
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleSave();
           }}
           className="space-y-5"
         >
-          {/* DATE */}
           <div>
             <label className={labelClass} htmlFor="sale-date">
               Sale Date
@@ -320,13 +374,12 @@ export default function AddSaleForm({
               id="sale-date"
               type="date"
               value={recordDate}
-              onChange={(e) => setRecordDate(e.target.value)}
+              onChange={(event) => setRecordDate(event.target.value)}
               className={inputClass}
               required
             />
           </div>
 
-          {/* SALE CATEGORY */}
           <div>
             <label className={labelClass} htmlFor="sale-category">
               Sale Category
@@ -334,8 +387,8 @@ export default function AddSaleForm({
             <select
               id="sale-category"
               value={saleCategory}
-              onChange={(e) =>
-                handleCategoryChange(e.target.value as SaleCategory)
+              onChange={(event) =>
+                setSaleCategory(event.target.value as SaleCategory)
               }
               className={inputClass}
               required
@@ -346,7 +399,6 @@ export default function AddSaleForm({
             </select>
           </div>
 
-          {/* CUSTOMER */}
           <div>
             <label className={labelClass} htmlFor="sale-customer">
               Customer
@@ -354,12 +406,12 @@ export default function AddSaleForm({
             <select
               id="sale-customer"
               value={customerId}
-              onChange={(e) => setCustomerId(e.target.value)}
+              onChange={(event) => setCustomerId(event.target.value)}
               className={inputClass}
             >
               <option value="">
                 {customersLoading
-                  ? "Loading Customers..."
+                  ? "Loading customers..."
                   : "No Customer / Cash Sale"}
               </option>
 
@@ -381,7 +433,8 @@ export default function AddSaleForm({
                     Outstanding
                   </p>
                   <p className="mt-1 text-sm font-bold text-slate-800">
-                    ₦{formatAmount(
+                    ₦
+                    {formatAmount(
                       Number(selectedCustomer.outstanding_balance || 0)
                     )}
                   </p>
@@ -399,31 +452,19 @@ export default function AddSaleForm({
             )}
           </div>
 
-          {/* FLOCK */}
           {allowsFlock && (
             <div>
               <label className={labelClass} htmlFor="sale-flock">
                 Flock
-                {!requiresFlock && (
-                  <span className="ml-1.5 text-xs font-normal text-slate-400">
-                    Optional
-                  </span>
-                )}
               </label>
-
               <select
                 id="sale-flock"
                 value={flockId}
-                onChange={(e) => setFlockId(e.target.value)}
+                onChange={(event) => setFlockId(event.target.value)}
                 className={inputClass}
                 required={requiresFlock}
               >
-                <option value="">
-                  {requiresFlock
-                    ? "Select Flock"
-                    : "No Flock / Not Applicable"}
-                </option>
-
+                <option value="">Select flock</option>
                 {flocks.map((flock: any) => (
                   <option key={flock.id} value={flock.id}>
                     {flock.flock_name}
@@ -433,7 +474,6 @@ export default function AddSaleForm({
             </div>
           )}
 
-          {/* ITEM */}
           <div>
             <label className={labelClass} htmlFor="sale-item">
               Item
@@ -441,7 +481,9 @@ export default function AddSaleForm({
             <select
               id="sale-item"
               value={itemType}
-              onChange={(e) => setItemType(e.target.value)}
+              onChange={(event) =>
+                handleItemTypeChange(event.target.value)
+              }
               className={inputClass}
               required
             >
@@ -453,44 +495,64 @@ export default function AddSaleForm({
             </select>
           </div>
 
-          {/* QUANTITY AND UNIT PRICE */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
+              <label className={labelClass} htmlFor="sale-unit">
+                Unit of Sale
+              </label>
+              <select
+                id="sale-unit"
+                value={unitOfSale}
+                onChange={(event) => setUnitOfSale(event.target.value)}
+                className={inputClass}
+                required
+              >
+                {UNIT_OPTIONS.map((unit) => (
+                  <option key={unit} value={unit}>
+                    {unit}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-slate-500">
+                For example, 50 crates or 50 birds.
+              </p>
+            </div>
+
+            <div>
               <label className={labelClass} htmlFor="sale-quantity">
-                Quantity
+                Quantity ({unitOfSale.toLowerCase()})
               </label>
               <input
                 id="sale-quantity"
                 type="number"
-                min="0"
-                step="any"
+                min="1"
+                step="1"
                 placeholder="0"
                 value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-                className={inputClass}
-                required
-              />
-            </div>
-
-            <div>
-              <label className={labelClass} htmlFor="sale-unit-price">
-                Unit Price (₦)
-              </label>
-              <input
-                id="sale-unit-price"
-                type="number"
-                min="0"
-                step="any"
-                placeholder="0"
-                value={unitPrice}
-                onChange={(e) => setUnitPrice(e.target.value)}
+                onChange={(event) => setQuantity(event.target.value)}
                 className={inputClass}
                 required
               />
             </div>
           </div>
 
-          {/* FINANCIAL SUMMARY */}
+          <div>
+            <label className={labelClass} htmlFor="sale-unit-price">
+              Unit Price (₦ per {unitOfSale.toLowerCase()})
+            </label>
+            <input
+              id="sale-unit-price"
+              type="number"
+              min="0.01"
+              step="0.01"
+              placeholder="0.00"
+              value={unitPrice}
+              onChange={(event) => setUnitPrice(event.target.value)}
+              className={inputClass}
+              required
+            />
+          </div>
+
           <div className="overflow-hidden rounded-2xl border border-blue-100 bg-slate-50/80">
             <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-4 sm:px-5">
               <div>
@@ -498,16 +560,14 @@ export default function AddSaleForm({
                   Total Amount
                 </p>
                 <p className="mt-0.5 text-xs text-slate-400">
-                  Quantity × unit price
+                  Quantity × price per {unitOfSale.toLowerCase()}
                 </p>
               </div>
-
               <p className="text-xl font-bold tracking-tight text-slate-900">
                 ₦{formatAmount(totalAmount)}
               </p>
             </div>
 
-            {/* CUSTOMER CREDIT */}
             {isCustomerSale && availableCredit > 0 && (
               <div className="border-b border-slate-200 px-4 py-4 sm:px-5">
                 <label className="flex cursor-pointer items-center justify-between gap-3">
@@ -519,11 +579,10 @@ export default function AddSaleForm({
                       Available: ₦{formatAmount(availableCredit)}
                     </p>
                   </div>
-
                   <input
                     type="checkbox"
                     checked={applyCredit}
-                    onChange={(e) => setApplyCredit(e.target.checked)}
+                    onChange={(event) => setApplyCredit(event.target.checked)}
                     className="h-5 w-5 shrink-0 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                   />
                 </label>
@@ -541,7 +600,6 @@ export default function AddSaleForm({
               </div>
             )}
 
-            {/* AMOUNT PAID */}
             <div className="px-4 py-4 sm:px-5">
               <label className={labelClass} htmlFor="sale-amount-paid">
                 Amount Paid (₦)
@@ -550,10 +608,10 @@ export default function AddSaleForm({
                 id="sale-amount-paid"
                 type="number"
                 min="0"
-                step="any"
-                placeholder="0"
+                step="0.01"
+                placeholder="0.00"
                 value={amountPaid}
-                onChange={(e) => setAmountPaid(e.target.value)}
+                onChange={(event) => setAmountPaid(event.target.value)}
                 className={`w-full rounded-xl border bg-white px-4 py-3 text-sm outline-none transition focus:ring-4 ${
                   paymentExceedsRemaining
                     ? "border-red-300 focus:border-red-500 focus:ring-red-500/10"
@@ -569,7 +627,6 @@ export default function AddSaleForm({
               )}
             </div>
 
-            {/* BALANCE */}
             <div className="mx-4 mb-4 flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 sm:mx-5">
               <div>
                 <p className="text-sm font-semibold text-slate-700">
@@ -579,7 +636,6 @@ export default function AddSaleForm({
                   Remaining after payments and credit
                 </p>
               </div>
-
               <p
                 className={`text-xl font-bold tracking-tight ${
                   balance > 0 ? "text-red-600" : "text-green-600"
@@ -590,7 +646,6 @@ export default function AddSaleForm({
             </div>
           </div>
 
-          {/* NOTES */}
           <div>
             <label className={labelClass} htmlFor="sale-notes">
               Notes
@@ -602,12 +657,11 @@ export default function AddSaleForm({
               id="sale-notes"
               placeholder="Add any relevant details..."
               value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              onChange={(event) => setNotes(event.target.value)}
               className={inputClass}
             />
           </div>
 
-          {/* SAVE */}
           <div className="border-t border-slate-100 pt-5">
             <SaveButton
               loading={loading}

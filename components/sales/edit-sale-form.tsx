@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -39,6 +38,41 @@ const itemTypes = [
   "Other Income",
 ];
 
+const unitOptions = [
+  "Birds",
+  "Crates",
+  "Trays",
+  "Bags",
+  "Kg",
+  "Grams",
+  "Pieces",
+  "Litres",
+  "Units",
+];
+
+function getDefaultUnit(itemType: string): string {
+  if (itemType === "Egg Sales") return "Crates";
+
+  if (
+    [
+      "Live Bird Sales",
+      "Spent Layer Sales",
+      "Broiler Sales",
+      "Cockerel Sales",
+    ].includes(itemType)
+  ) {
+    return "Birds";
+  }
+
+  if (["Manure Sales", "Feed Sales"].includes(itemType)) {
+    return "Bags";
+  }
+
+  if (itemType === "Equipment Sales") return "Pieces";
+
+  return "Units";
+}
+
 export default function EditSaleForm({
   record,
   onClose,
@@ -47,24 +81,23 @@ export default function EditSaleForm({
   profile,
 }: Props) {
   const [recordDate, setRecordDate] = useState(
-    record.sale_date ||
-      getLocalDateString()
+    record.sale_date || getLocalDateString()
   );
 
   const [itemType, setItemType] = useState(
     record.item_type || "Egg Sales"
   );
 
+  const [unitOfSale, setUnitOfSale] = useState(
+    record.unit_of_sale || getDefaultUnit(record.item_type || "Egg Sales")
+  );
+
   const [customerId, setCustomerId] = useState(
     record.customer_id || ""
   );
 
-  const [customers, setCustomers] = useState<
-    CustomerBalance[]
-  >([]);
-
-  const [customersLoading, setCustomersLoading] =
-    useState(false);
+  const [customers, setCustomers] = useState<CustomerBalance[]>([]);
+  const [customersLoading, setCustomersLoading] = useState(false);
 
   const [quantity, setQuantity] = useState(
     record.quantity?.toString() || ""
@@ -74,34 +107,27 @@ export default function EditSaleForm({
     record.unit_price?.toString() || ""
   );
 
-  const [notes, setNotes] = useState(
-    record.notes || ""
-  );
+  const [notes, setNotes] = useState(record.notes || "");
 
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [error, setError] = useState<string | null>(
-    null
-  );
-
+  const [error, setError] = useState<string | null>(null);
   const [governanceError, setGovernanceError] =
     useState<string | null>(null);
 
   const currency =
-    profile?.currency ||
-    record.currency ||
-    "NGN";
+    profile?.currency || record.currency || "NGN";
 
   const currencySymbol =
     currency === "NGN"
       ? "₦"
       : currency === "USD"
-      ? "$"
-      : currency === "EUR"
-      ? "€"
-      : currency === "GBP"
-      ? "£"
-      : currency;
+        ? "$"
+        : currency === "EUR"
+          ? "€"
+          : currency === "GBP"
+            ? "£"
+            : currency;
 
   const numericQuantity = Number(quantity);
   const numericUnitPrice = Number(unitPrice);
@@ -126,27 +152,17 @@ export default function EditSaleForm({
 
       try {
         setCustomersLoading(true);
+        const result = await getCustomers(record.farm_id);
 
-        const result = await getCustomers(
-          record.farm_id
-        );
-
-        if (!cancelled) {
-          setCustomers(result);
-        }
+        if (!cancelled) setCustomers(result);
       } catch (err) {
-        console.error(
-          "Failed to load customers:",
-          err
-        );
+        console.error("Failed to load customers:", err);
       } finally {
-        if (!cancelled) {
-          setCustomersLoading(false);
-        }
+        if (!cancelled) setCustomersLoading(false);
       }
     }
 
-    loadCustomers();
+    void loadCustomers();
 
     return () => {
       cancelled = true;
@@ -165,10 +181,14 @@ export default function EditSaleForm({
     setGovernanceError(
       result.allowed
         ? null
-        : result.reason ||
-            "You cannot edit this record."
+        : result.reason || "You cannot edit this record."
     );
   }, [user, profile, record]);
+
+  function handleItemTypeChange(nextItemType: string) {
+    setItemType(nextItemType);
+    setUnitOfSale(getDefaultUnit(nextItemType));
+  }
 
   async function handleSave() {
     if (governanceError || loading) return;
@@ -184,9 +204,7 @@ export default function EditSaleForm({
       !Number.isInteger(numericQuantity) ||
       numericQuantity <= 0
     ) {
-      setError(
-        "Quantity must be a whole number greater than zero."
-      );
+      setError("Quantity must be a whole number greater than zero.");
       return;
     }
 
@@ -194,19 +212,20 @@ export default function EditSaleForm({
       !Number.isFinite(numericUnitPrice) ||
       numericUnitPrice <= 0
     ) {
-      setError(
-        "Unit price must be greater than zero."
-      );
+      setError("Unit price must be greater than zero.");
       return;
     }
 
-    const originalCustomerId =
-      record.customer_id || "";
+    if (!unitOfSale) {
+      setError("Please select a unit of sale.");
+      return;
+    }
+
+    const originalCustomerId = record.customer_id || "";
 
     const financialDetailsChanged =
       numericQuantity !== Number(record.quantity) ||
-      numericUnitPrice !==
-        Number(record.unit_price) ||
+      numericUnitPrice !== Number(record.unit_price) ||
       customerId !== originalCustomerId ||
       itemType !== record.item_type;
 
@@ -215,21 +234,15 @@ export default function EditSaleForm({
 
       /*
        * Protect existing payment allocations.
-       *
-       * A sale with allocated payments must not
-       * have its financial details changed through
-       * a direct table update.
-       *
-       * Such changes require a dedicated,
-       * transactional payment-correction workflow.
+       * Financial changes to a sale with allocated payments
+       * require the dedicated payment-correction workflow.
        */
       if (financialDetailsChanged) {
-        const { data, error: allocationError } =
-          await supabase
-            .from("customer_payment_allocations")
-            .select("id")
-            .eq("sale_id", record.id)
-            .limit(1);
+        const { data, error: allocationError } = await supabase
+          .from("customer_payment_allocations")
+          .select("id")
+          .eq("sale_id", record.id)
+          .limit(1);
 
         if (allocationError) {
           throw new Error(
@@ -254,6 +267,7 @@ export default function EditSaleForm({
         unit_price: numericUnitPrice,
         total_amount: totalAmount,
         customer_id: customerId || null,
+        unit_of_sale: unitOfSale,
         notes,
       });
 
@@ -281,7 +295,6 @@ export default function EditSaleForm({
           <h2 className="text-xl font-extrabold text-slate-900">
             Edit Sale
           </h2>
-
           <p className="mt-1 text-xs text-slate-500">
             Update the details of this sales record.
           </p>
@@ -302,7 +315,6 @@ export default function EditSaleForm({
           <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
             {governanceError}
           </div>
-
           <button
             type="button"
             onClick={onClose}
@@ -321,39 +333,27 @@ export default function EditSaleForm({
         >
           <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5 sm:px-6">
             <div>
-              <label
-                htmlFor="edit-sale-date"
-                className={labelClass}
-              >
+              <label htmlFor="edit-sale-date" className={labelClass}>
                 Sale Date
               </label>
-
               <input
                 id="edit-sale-date"
                 type="date"
                 value={recordDate}
-                onChange={(event) =>
-                  setRecordDate(event.target.value)
-                }
+                onChange={(event) => setRecordDate(event.target.value)}
                 className={inputClass}
                 required
               />
             </div>
 
             <div>
-              <label
-                htmlFor="edit-sale-customer"
-                className={labelClass}
-              >
+              <label htmlFor="edit-sale-customer" className={labelClass}>
                 Customer
               </label>
-
               <select
                 id="edit-sale-customer"
                 value={customerId}
-                onChange={(event) =>
-                  setCustomerId(event.target.value)
-                }
+                onChange={(event) => setCustomerId(event.target.value)}
                 className={inputClass}
               >
                 <option value="">
@@ -361,44 +361,33 @@ export default function EditSaleForm({
                     ? "Loading customers..."
                     : "No Customer / Cash Sale"}
                 </option>
-
                 {customers.map((customer) => (
                   <option
                     key={customer.customer_id}
                     value={customer.customer_id}
                   >
-                    {customer.customer_code} —{" "}
-                    {customer.name}
-                    {customer.phone
-                      ? ` — ${customer.phone}`
-                      : ""}
+                    {customer.customer_code} — {customer.name}
+                    {customer.phone ? ` — ${customer.phone}` : ""}
                   </option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label
-                htmlFor="edit-sale-item"
-                className={labelClass}
-              >
+              <label htmlFor="edit-sale-item" className={labelClass}>
                 Item / Sale Type
               </label>
-
               <select
                 id="edit-sale-item"
                 value={itemType}
                 onChange={(event) =>
-                  setItemType(event.target.value)
+                  handleItemTypeChange(event.target.value)
                 }
                 className={inputClass}
               >
                 {!itemTypes.includes(itemType) && (
-                  <option value={itemType}>
-                    {itemType}
-                  </option>
+                  <option value={itemType}>{itemType}</option>
                 )}
-
                 {itemTypes.map((item) => (
                   <option key={item} value={item}>
                     {item}
@@ -407,51 +396,60 @@ export default function EditSaleForm({
               </select>
             </div>
 
+            <div>
+              <label htmlFor="edit-sale-unit" className={labelClass}>
+                Unit of Sale
+              </label>
+              <select
+                id="edit-sale-unit"
+                value={unitOfSale}
+                onChange={(event) => setUnitOfSale(event.target.value)}
+                className={inputClass}
+                required
+              >
+                {!unitOptions.includes(unitOfSale) && (
+                  <option value={unitOfSale}>{unitOfSale}</option>
+                )}
+                {unitOptions.map((unit) => (
+                  <option key={unit} value={unit}>
+                    {unit}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <label
-                  htmlFor="edit-sale-quantity"
-                  className={labelClass}
-                >
-                  Quantity
+                <label htmlFor="edit-sale-quantity" className={labelClass}>
+                  Quantity ({unitOfSale.toLowerCase()})
                 </label>
-
                 <input
                   id="edit-sale-quantity"
                   type="number"
                   min="1"
                   step="1"
                   value={quantity}
-                  onChange={(event) =>
-                    setQuantity(event.target.value)
-                  }
+                  onChange={(event) => setQuantity(event.target.value)}
                   className={inputClass}
                   required
                 />
               </div>
 
               <div>
-                <label
-                  htmlFor="edit-sale-price"
-                  className={labelClass}
-                >
+                <label htmlFor="edit-sale-price" className={labelClass}>
                   Unit Price ({currencySymbol})
                 </label>
-
                 <div className="relative">
                   <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-bold text-slate-500">
                     {currencySymbol}
                   </span>
-
                   <input
                     id="edit-sale-price"
                     type="number"
                     min="0.01"
                     step="0.01"
                     value={unitPrice}
-                    onChange={(event) =>
-                      setUnitPrice(event.target.value)
-                    }
+                    onChange={(event) => setUnitPrice(event.target.value)}
                     className={`${inputClass} pl-10`}
                     required
                   />
@@ -463,31 +461,23 @@ export default function EditSaleForm({
               <p className="text-xs font-bold uppercase tracking-wide text-blue-700">
                 Total Sale Amount
               </p>
-
               <p className="mt-1 text-2xl font-extrabold text-slate-900">
                 {currencySymbol}
                 {formatMoney(totalAmount)}
               </p>
-
               <p className="mt-1 text-xs text-slate-600">
-                Quantity × Unit Price
+                Quantity × price per {unitOfSale.toLowerCase()}
               </p>
             </div>
 
             <div>
-              <label
-                htmlFor="edit-sale-notes"
-                className={labelClass}
-              >
+              <label htmlFor="edit-sale-notes" className={labelClass}>
                 Notes
               </label>
-
               <textarea
                 id="edit-sale-notes"
                 value={notes}
-                onChange={(event) =>
-                  setNotes(event.target.value)
-                }
+                onChange={(event) => setNotes(event.target.value)}
                 rows={2}
                 placeholder="Optional sale notes"
                 className={`${inputClass} resize-y`}
