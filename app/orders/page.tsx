@@ -1292,15 +1292,9 @@ changes: Partial<Pick<OrderRecord, "status" | "dispatch_notes">>
                     This does not verify payment or confirm collection.
                   </p>
 
-                  {group.batchId ? (
-                    <p className="mt-2 text-xs text-slate-500">
-                      Booking reference: {group.reference}
-                    </p>
-                  ) : (
-                    <p className="mt-2 text-xs text-slate-500">
-                      Internal order — no public booking reference
-                    </p>
-                  )}
+                  <p>
+                  Booking reference: {group.reference}
+                  </p>
 
                   {group.customerCode && (
                     <p className="mt-1 text-xs text-slate-500">
