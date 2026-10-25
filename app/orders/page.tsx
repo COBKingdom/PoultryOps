@@ -55,6 +55,7 @@ type OrderRecord = {
   id: string;
   farm_id: string;
   order_batch_id: string | null;
+  order_reference: string | null;
   customer_id: string;
   product_name: string;
   quantity: number;
@@ -154,19 +155,24 @@ function getBatchInfo(order: OrderRecord): NonNullable<BatchInfo> | null {
   return value || null;
 }
 
+
 function getBookingReference(
   order: OrderRecord,
   batch: NonNullable<BatchInfo> | null
 ): string {
-  const reference = batch?.order_reference?.trim();
+  const reference =
+    batch?.order_reference?.trim() ||
+    order.order_reference?.trim();
 
-  // Never expose a UUID or malformed value as a customer booking reference.
-  if (reference && /^PO-ORD-\d+$/i.test(reference)) {
-    return reference;
+  const match = reference?.match(/^PO-ORD-(\d+)$/i);
+
+  if (match) {
+    return `PO-ORD-${match[1].padStart(7, "0")}`;
   }
 
-  return order.order_batch_id ? "Reference unavailable" : "Internal order";
+  return "Reference unavailable";
 }
+
 
 export default function OrdersPage() {
   const { user, profile } = useAuth();
@@ -309,7 +315,7 @@ function shareBookingConfirmation(group: OrderGroup) {
     const { data, error: queryError } = await supabase
       .from("orders")
       .select(
-        "id, farm_id, order_batch_id, customer_id, product_name, quantity, unit_price, total_amount, order_date, proposed_delivery_date, status, payment_status, notes, dispatch_notes, created_at, customers(name, phone), public_order_batches(order_reference, total_amount, item_count, delivery_address, state_region, proposed_delivery_date, status, payment_status)"
+        "id, farm_id, order_batch_id, order_reference, customer_id, product_name, quantity, unit_price, total_amount, order_date, proposed_delivery_date, status, payment_status, notes, dispatch_notes, created_at, customers(name, phone), public_order_batches(order_reference, total_amount, item_count, delivery_address, state_region, proposed_delivery_date, status, payment_status)"
       )
       .eq("farm_id", farmId)
       .order("created_at", { ascending: false });
