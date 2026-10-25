@@ -154,6 +154,20 @@ function getBatchInfo(order: OrderRecord): NonNullable<BatchInfo> | null {
   return value || null;
 }
 
+function getBookingReference(
+  order: OrderRecord,
+  batch: NonNullable<BatchInfo> | null
+): string {
+  const reference = batch?.order_reference?.trim();
+
+  // Never expose a UUID or malformed value as a customer booking reference.
+  if (reference && /^PO-ORD-\d+$/i.test(reference)) {
+    return reference;
+  }
+
+  return order.order_batch_id ? "Reference unavailable" : "Internal order";
+}
+
 export default function OrdersPage() {
   const { user, profile } = useAuth();
   const { data: dashboardData, loading: dashboardLoading } = useDashboard();
@@ -243,7 +257,7 @@ function shareBookingConfirmation(group: OrderGroup) {
     `Hello ${group.customerName},`,
     "",
     `Your booking with ${farmName} has been recorded.`,
-    `Booking reference: ${group.reference}`,
+    ...(group.batchId ? [`Booking reference: ${group.reference}`] : []),
     ...(group.customerCode
       ? [`Customer code: ${group.customerCode}`]
       : []),
@@ -424,7 +438,9 @@ function shareBookingConfirmation(group: OrderGroup) {
       byKey.set(key, {
         key,
         batchId: order.order_batch_id,
-        reference: batch?.order_reference || order.id,
+        
+reference: getBookingReference(order, batch),
+
         customerId: order.customer_id,
         customerName: order.customers?.name || "Customer",
         customerPhone: order.customers?.phone || null,
@@ -1266,9 +1282,15 @@ changes: Partial<Pick<OrderRecord, "status" | "dispatch_notes">>
                     This does not verify payment or confirm collection.
                   </p>
 
-                  <p className="mt-2 text-xs text-slate-500">
-                    Booking reference: {group.reference}
-                  </p>
+                  {group.batchId ? (
+                    <p className="mt-2 text-xs text-slate-500">
+                      Booking reference: {group.reference}
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-xs text-slate-500">
+                      Internal order — no public booking reference
+                    </p>
+                  )}
 
                   {group.customerCode && (
                     <p className="mt-1 text-xs text-slate-500">
@@ -1280,7 +1302,7 @@ changes: Partial<Pick<OrderRecord, "status" | "dispatch_notes">>
                 <button
                   type="button"
                   onClick={() => shareBookingConfirmation(group)}
-                  className={buttonClass}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#25D366] px-4 py-2.5 font-semibold text-white transition-colors hover:bg-[#1DA851]"
                 >
                   <ShoppingBag size={16} />
                   Share on WhatsApp
