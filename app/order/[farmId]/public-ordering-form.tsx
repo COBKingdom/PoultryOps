@@ -23,6 +23,10 @@ import {
   X,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import {
+  isValidInternationalPhone,
+  normalizePhoneForWhatsApp,
+} from "@/lib/phone";
 
 type FarmProduct = {
   id: string;
@@ -584,15 +588,21 @@ export default function PublicOrderingForm({
               </div>
             </div>
 
-            <a
-              href={`https://wa.me/?text=${encodeURIComponent(message)}`}
-              target="_blank"
-              rel="noreferrer"
-              className={`${primaryButtonClass} mt-6 w-full`}
-            >
-              <MessageCircle size={19} />
-              Share confirmation on WhatsApp
-            </a>
+
+<a
+  href={`https://wa.me/${
+    isValidInternationalPhone(phone)
+      ? normalizePhoneForWhatsApp(phone)
+      : ""
+  }?text=${encodeURIComponent(message)}`}
+  target="_blank"
+  rel="noopener noreferrer"
+  className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-[#25D366] px-4 py-3 font-semibold text-white transition-colors hover:bg-[#1DA851]"
+>
+  <MessageCircle size={19} />
+  Share confirmation on WhatsApp
+</a>
+
 
             <button
               type="button"

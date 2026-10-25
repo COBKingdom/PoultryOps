@@ -12,6 +12,8 @@ import {
   updateCustomer,
 } from "@/lib/customers";
 
+import { isValidInternationalPhone, validateInternationalPhone } from "@/lib/phone";
+
 type CustomerFormProps = {
   farmId: string;
   customer?: CustomerBalance | null;
@@ -169,6 +171,16 @@ export default function CustomerForm({
 
     try {
       savedPhone = preparePhoneForStorage(phone, phoneCountry);
+
+      if (phoneCountry === "KEEP") {
+        if (!isValidInternationalPhone(savedPhone)) {
+          throw new Error(
+            "This customer's number must be updated to include its international country calling code (for example +234...) before it can be saved."
+          );
+        }
+      } else {
+        validateInternationalPhone(savedPhone);
+      }
     } catch (err) {
       setError(
         err instanceof Error

@@ -16,6 +16,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { isValidInternationalPhone, normalizePhoneForWhatsApp } from "@/lib/phone";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDashboard } from "@/hooks/useDashboard";
 import { useCustomers } from "@/hooks/useCustomers";
@@ -45,6 +46,7 @@ type BatchInfo = {
   item_count: number;
   delivery_address: string;
   state_region: string | null;
+  proposed_delivery_date: string | null;
   status: OrderStatus;
   payment_status: PaymentStatus;
 } | null;
@@ -59,6 +61,7 @@ type OrderRecord = {
   unit_price: number;
   total_amount: number;
   order_date: string;
+  proposed_delivery_date: string | null;
   status: OrderStatus;
   payment_status: PaymentStatus;
   notes: string | null;
@@ -89,6 +92,7 @@ type OrderGroup = {
   lines: OrderRecord[];
   total: number;
   orderDate: string;
+  proposedDeliveryDate: string | null;
   createdAt: string;
   status: OrderStatus;
   paymentStatus: PaymentStatus;
@@ -205,17 +209,29 @@ export default function OrdersPage() {
       }).format(amount || 0),
     [currency]
   );
+
 function shareBookingConfirmation(group: OrderGroup) {
-  if (!group.customerPhone?.trim()) {
+  const customerPhone = group.customerPhone?.trim() ?? "";
+
+  if (!customerPhone) {
     setError(
       "This customer has no phone number recorded. Update the customer record before sharing a private WhatsApp confirmation."
     );
     return;
   }
 
-  const phone = group.customerPhone.replace(/\D/g, "");
+  if (!isValidInternationalPhone(customerPhone)) {
+    setError(
+      "The customer's phone number must include a valid international country calling code, such as +234 or +353."
+    );
+    return;
+  }
 
-  if (!phone) {
+  let phone: string;
+
+  try {
+    phone = normalizePhoneForWhatsApp(customerPhone);
+  } catch {
     setError("The customer's phone number is invalid.");
     return;
   }
@@ -230,6 +246,13 @@ function shareBookingConfirmation(group: OrderGroup) {
     `Booking reference: ${group.reference}`,
     ...(group.customerCode
       ? [`Customer code: ${group.customerCode}`]
+      : []),
+    ...(group.proposedDeliveryDate
+      ? [
+          `Proposed collection/delivery date: ${new Date(
+            `${group.proposedDeliveryDate.slice(0, 10)}T00:00:00`
+          ).toLocaleDateString("en-GB")}`,
+        ]
       : []),
     "",
     "Items booked:",
@@ -249,12 +272,15 @@ function shareBookingConfirmation(group: OrderGroup) {
     "Please contact the farm directly if you need to amend your booking.",
   ].join("\n");
 
+  setError("");
+
   window.open(
     `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,
     "_blank",
     "noopener,noreferrer"
   );
 }
+
 
   const loadOrders = useCallback(async () => {
     if (!farmId) {
@@ -269,7 +295,7 @@ function shareBookingConfirmation(group: OrderGroup) {
     const { data, error: queryError } = await supabase
       .from("orders")
       .select(
-        "id, farm_id, order_batch_id, customer_id, product_name, quantity, unit_price, total_amount, order_date, status, payment_status, notes, dispatch_notes, created_at, customers(name, phone), public_order_batches(order_reference, total_amount, item_count, delivery_address, state_region, status, payment_status)"
+        "id, farm_id, order_batch_id, customer_id, product_name, quantity, unit_price, total_amount, order_date, proposed_delivery_date, status, payment_status, notes, dispatch_notes, created_at, customers(name, phone), public_order_batches(order_reference, total_amount, item_count, delivery_address, state_region, proposed_delivery_date, status, payment_status)"
       )
       .eq("farm_id", farmId)
       .order("created_at", { ascending: false });
@@ -412,6 +438,8 @@ function shareBookingConfirmation(group: OrderGroup) {
             ? Number(batch.total_amount)
             : Number(order.total_amount || 0),
         orderDate: order.order_date,
+        proposedDeliveryDate:
+        batch?.proposed_delivery_date || order.proposed_delivery_date || null,
         createdAt: order.created_at,
         status: batch?.status || order.status,
         paymentStatus: batch?.payment_status || order.payment_status,
@@ -1292,13 +1320,28 @@ changes: Partial<Pick<OrderRecord, "status" | "dispatch_notes">>
               </div>
             </div>
 
-            {group.deliveryAddress && (
-              <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
-                <span className="font-semibold">Delivery address:</span>{" "}
-                {group.deliveryAddress}
-                {group.stateRegion ? `, ${group.stateRegion}` : ""}
-              </div>
-            )}
+{(group.proposedDeliveryDate || group.deliveryAddress) && (
+  <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600 space-y-1">
+    {group.proposedDeliveryDate && (
+      <p>
+        <span className="font-semibold">
+          Proposed collection/delivery date:
+        </span>{" "}
+        {new Date(
+          `${group.proposedDeliveryDate.slice(0, 10)}T00:00:00`
+        ).toLocaleDateString("en-GB")}
+      </p>
+    )}
+
+    {group.deliveryAddress && (
+      <p>
+        <span className="font-semibold">Delivery address:</span>{" "}
+        {group.deliveryAddress}
+        {group.stateRegion ? `, ${group.stateRegion}` : ""}
+      </p>
+    )}
+  </div>
+)}
 
             {group.notes && (
               <p className="text-sm text-slate-600">
