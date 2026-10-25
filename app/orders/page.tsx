@@ -263,38 +263,33 @@ function shareBookingConfirmation(group: OrderGroup) {
   const farmName =
     (dashboardData as any)?.farm?.name || "Our Farm";
 
+
   const message = [
     `Hello ${group.customerName},`,
     "",
-    `Your booking with ${farmName} has been recorded.`,
-    ...(group.batchId ? [`Booking reference: ${group.reference}`] : []),
+    `Your booking with ${farmName} has been received.`,
+    `Booking reference: ${group.reference}`,
     ...(group.customerCode
       ? [`Customer code: ${group.customerCode}`]
       : []),
-    ...(group.proposedDeliveryDate
-      ? [
-          `Proposed collection/delivery date: ${new Date(
-            `${group.proposedDeliveryDate.slice(0, 10)}T00:00:00`
-          ).toLocaleDateString("en-GB")}`,
-        ]
-      : []),
     "",
-    "Items booked:",
+    "Order:",
     ...group.lines.map(
       (line) =>
-        `- ${line.product_name}: ${line.quantity} × ${formatMoney(Number(line.unit_price))}`
+        `• ${line.product_name}: ${line.quantity} × ${formatMoney(Number(line.unit_price))}`
     ),
     "",
-    `Booking total: ${formatMoney(group.total)}`,
-    `Booking status: ${
+    `Total: ${formatMoney(group.total)}`,
+    `Status: ${
       ORDER_STATUSES.find((item) => item.value === group.status)?.label ??
       group.status
     }`,
     "",
-    "This confirms your booking only. It is not a payment receipt or confirmation that goods have been collected.",
+    "You are responsible for arranging and paying for transportation.",
     "",
-    "Please contact the farm directly if you need to amend your booking.",
+    "Thank you for your business!",
   ].join("\n");
+
 
   setError("");
 
