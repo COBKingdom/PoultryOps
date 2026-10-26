@@ -1343,7 +1343,7 @@ if (productsWithImages.length > 0) {
                 </span>
               </div>
               <a
-                href="https://poultryops.trueops.app"
+                href="https://poultry.trueops.app"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-100 bg-emerald-50 px-3.5 py-2 text-sm font-semibold text-emerald-700 transition hover:border-emerald-200 hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
