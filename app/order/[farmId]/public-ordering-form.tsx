@@ -1321,8 +1321,9 @@ if (productsWithImages.length > 0) {
         </div>
       </div>
 
+
       <footer className="border-t border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-6 text-center sm:flex-row sm:px-6 sm:text-left lg:px-8">
+        <div className="mx-auto flex max-w-7xl flex-col items-center gap-4 px-4 py-7 text-center sm:px-6 lg:px-8">
           <div>
             <p className="text-sm font-bold text-slate-800">
               {catalog.farm.name}
@@ -1331,11 +1332,37 @@ if (productsWithImages.length > 0) {
               Online ordering for farm products
             </p>
           </div>
-          <p className="text-xs text-slate-400">
-            Customer ordering powered by PoultryOps
-          </p>
+
+          <div className="h-px w-full max-w-md bg-slate-100" />
+
+          <div className="space-y-2">
+            <p className="text-sm text-slate-500">
+              Questions about your order? Contact the farm directly.
+            </p>
+            <p className="text-sm text-slate-500">
+              Online ordering made simple for farm customers.
+            </p>
+
+            <p className="text-sm font-bold text-slate-900">
+              Powered by PoultryOps
+            </p>
+
+            <a
+              href="https://poultryops.trueops.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-sm font-semibold text-emerald-600 transition hover:text-emerald-700 hover:underline"
+            >
+              Discover PoultryOps <ArrowRight size={16} />
+            </a>
+
+            <p className="text-xs text-slate-500">
+              Farm management and online ordering software
+            </p>
+          </div>
         </div>
       </footer>
+
     </main>
   );
 }
