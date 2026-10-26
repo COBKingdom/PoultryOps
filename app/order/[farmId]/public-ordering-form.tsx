@@ -1322,47 +1322,49 @@ if (productsWithImages.length > 0) {
       </div>
 
 
+
       <footer className="border-t border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl flex-col items-center gap-4 px-4 py-7 text-center sm:px-6 lg:px-8">
-          <div>
-            <p className="text-sm font-bold text-slate-800">
-              {catalog.farm.name}
-            </p>
-            <p className="mt-1 text-xs text-slate-500">
-              Online ordering for farm products
-            </p>
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+          <div className="flex flex-col items-center justify-between gap-6 text-center sm:flex-row sm:text-left">
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-slate-800">
+                Online ordering, made simple.
+              </p>
+              <p className="text-xs leading-5 text-slate-500">
+                A better way for farms and customers to connect.
+              </p>
+            </div>
+
+            <div className="flex flex-col items-center gap-2 sm:items-end">
+              <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                <span>Powered by</span>
+                <span className="font-bold tracking-tight text-slate-900">
+                  PoultryOps
+                </span>
+              </div>
+              <a
+                href="https://poultryops.trueops.app"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-100 bg-emerald-50 px-3.5 py-2 text-sm font-semibold text-emerald-700 transition hover:border-emerald-200 hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+              >
+                Discover PoultryOps
+                <ArrowRight size={16} />
+              </a>
+
+              <p className="text-[11px] text-slate-400">
+                Farm management and online ordering software
+              </p>
+            </div>
           </div>
 
-          <div className="h-px w-full max-w-md bg-slate-100" />
-
-          <div className="space-y-2">
-            <p className="text-sm text-slate-500">
-              Questions about your order? Contact the farm directly.
-            </p>
-            <p className="text-sm text-slate-500">
-              Online ordering made simple for farm customers.
-            </p>
-
-            <p className="text-sm font-bold text-slate-900">
-              Powered by PoultryOps
-            </p>
-
-            <a
-              href="https://poultryops.trueops.app"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-sm font-semibold text-emerald-600 transition hover:text-emerald-700 hover:underline"
-            >
-              Discover PoultryOps <ArrowRight size={16} />
-            </a>
-
-            <p className="text-xs text-slate-500">
-              Farm management and online ordering software
+          <div className="mt-6 border-t border-slate-100 pt-4 text-center">
+            <p className="text-xs text-slate-400">
+              Secure, convenient online ordering for farm customers.
             </p>
           </div>
         </div>
       </footer>
-
     </main>
   );
 }
