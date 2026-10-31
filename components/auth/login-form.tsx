@@ -8,40 +8,55 @@ import { supabase } from "@/lib/supabase";
 
 /*
  * Existing shared PoultryOps Demo account.
- *
- * Only this email is treated as the Demo. Every other account
- * keeps the existing login behaviour untouched.
  */
 const DEMO_EMAIL = "demo@poultryops.app";
+const DEMO_PASSWORD = "PoultryOps1!";
 
 /*
- * Browser storage key for the opaque Demo visitor token issued by
- * /api/demo/visit. The token is how a repeat Demo access is matched
- * to an existing visitor record.
+ * Browser storage key for the opaque Demo visitor token
+ * issued by /api/demo/visit.
  */
-const DEMO_VISITOR_TOKEN_KEY = "poultryops_demo_visitor_token";
+const DEMO_VISITOR_TOKEN_KEY =
+  "poultryops_demo_visitor_token";
 
-export default function LoginForm() {
+interface LoginFormProps {
+  demoMode?: boolean;
+}
+
+export default function LoginForm({
+  demoMode = false,
+}: LoginFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  /*
+   * Demo mode automatically populates the shared credentials.
+   * Normal login retains empty email/password fields.
+   */
+  const [email, setEmail] = useState(
+    demoMode ? DEMO_EMAIL : ""
+  );
+
+  const [password, setPassword] = useState(
+    demoMode ? DEMO_PASSWORD : ""
+  );
+
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  const [needsVerification, setNeedsVerification] = useState(false);
+  const [needsVerification, setNeedsVerification] =
+    useState(false);
+
   const [resending, setResending] = useState(false);
   const [resendMessage, setResendMessage] = useState("");
 
   const verified = searchParams.get("verified") === "1";
+
   const verificationError =
     searchParams.get("verification_error") === "1";
 
   /*
    * Demo visitor capture fields.
-   *
-   * Requested only when the Demo email is being used.
    */
   const [demoFullName, setDemoFullName] = useState("");
   const [demoPhone, setDemoPhone] = useState("");
@@ -49,11 +64,17 @@ export default function LoginForm() {
   const isDemoLogin =
     email.trim().toLowerCase() === DEMO_EMAIL;
 
+  /*
+   * Resend email verification.
+   * Existing VEND verification functionality preserved.
+   */
   async function handleResendVerification() {
     const targetEmail = email.trim().toLowerCase();
 
     if (!targetEmail) {
-      setResendMessage("Please enter your email address first.");
+      setResendMessage(
+        "Please enter your email address first."
+      );
       return;
     }
 
@@ -61,11 +82,18 @@ export default function LoginForm() {
       setResending(true);
       setResendMessage("");
 
-      const response = await fetch("/api/vend/resend-verification", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: targetEmail }),
-      });
+      const response = await fetch(
+        "/api/vend/resend-verification",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: targetEmail,
+          }),
+        }
+      );
 
       const data = await response.json().catch(() => ({}));
 
@@ -82,7 +110,15 @@ export default function LoginForm() {
     }
   }
 
-  async function handleLogin(e: React.FormEvent) {
+  /*
+   * Main login handler.
+   *
+   * Existing authentication and routing logic is retained.
+   * Demo visitor registration runs before authentication.
+   */
+  async function handleLogin(
+    e: React.FormEvent<HTMLFormElement>
+  ) {
     e.preventDefault();
 
     try {
@@ -92,15 +128,14 @@ export default function LoginForm() {
       setResendMessage("");
 
       // ----------------------------------------------------------
-      // Demo visitor capture
-      //
-      // Runs BEFORE the existing authentication call so that the
-      // login only continues once the visitor has been recorded.
+      // 1. DEMO VISITOR CAPTURE
       // ----------------------------------------------------------
 
       if (isDemoLogin) {
         if (!demoFullName.trim()) {
-          throw new Error("Full name is required for Demo access");
+          throw new Error(
+            "Full name is required for Demo access"
+          );
         }
 
         if (!demoPhone.trim()) {
@@ -109,27 +144,32 @@ export default function LoginForm() {
           );
         }
 
-        const existingToken = window.localStorage.getItem(
-          DEMO_VISITOR_TOKEN_KEY
-        );
+        const existingToken =
+          window.localStorage.getItem(
+            DEMO_VISITOR_TOKEN_KEY
+          );
 
-        const visitResponse = await fetch("/api/demo/visit", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            visitor_token: existingToken || undefined,
-            full_name: demoFullName.trim(),
-            phone: demoPhone.trim(),
-          }),
-        });
+        const visitResponse = await fetch(
+          "/api/demo/visit",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              visitor_token: existingToken || undefined,
+              full_name: demoFullName.trim(),
+              phone: demoPhone.trim(),
+            }),
+          }
+        );
 
         const visitData = await visitResponse.json();
 
         if (!visitResponse.ok || !visitData.success) {
           throw new Error(
-            visitData.error || "Unable to start Demo access"
+            visitData.error ||
+              "Unable to start Demo access"
           );
         }
 
@@ -140,6 +180,10 @@ export default function LoginForm() {
           );
         }
       }
+
+      // ----------------------------------------------------------
+      // 2. SUPABASE AUTHENTICATION
+      // ----------------------------------------------------------
 
       const {
         data,
@@ -156,8 +200,14 @@ export default function LoginForm() {
       const user = data.user;
 
       if (!user) {
-        throw new Error("Unable to identify logged-in user");
+        throw new Error(
+          "Unable to identify logged-in user"
+        );
       }
+
+      // ----------------------------------------------------------
+      // 3. FETCH USER PROFILE
+      // ----------------------------------------------------------
 
       const {
         data: profile,
@@ -175,10 +225,7 @@ export default function LoginForm() {
       }
 
       // ----------------------------------------------------------
-      // POGP USER
-      //
-      // POGPs are independent PoultryOps partners.
-      // They do NOT have a farm_id.
+      // 4. POGP USER
       // ----------------------------------------------------------
 
       if (profile?.role === "pogp") {
@@ -192,10 +239,7 @@ export default function LoginForm() {
       }
 
       // ----------------------------------------------------------
-      // VEND USER
-      //
-      // VENDs are independent PoultryOps referral partners.
-      // They do NOT have a farm_id.
+      // 5. VEND USER
       // ----------------------------------------------------------
 
       if (profile?.role === "vend") {
@@ -209,7 +253,7 @@ export default function LoginForm() {
       }
 
       // ----------------------------------------------------------
-      // NORMAL FARM USER
+      // 6. NORMAL FARM USER
       // ----------------------------------------------------------
 
       if (!profile?.farm_id) {
@@ -218,9 +262,7 @@ export default function LoginForm() {
       }
 
       // ----------------------------------------------------------
-      // FIRST LOGIN
-      //
-      // Invited farm users must change their temporary password.
+      // 7. FIRST LOGIN PASSWORD CHANGE
       // ----------------------------------------------------------
 
       if (profile.must_change_password) {
@@ -229,7 +271,7 @@ export default function LoginForm() {
       }
 
       // ----------------------------------------------------------
-      // PRESERVE INTENDED DESTINATION
+      // 8. PRESERVE INTENDED DESTINATION
       // ----------------------------------------------------------
 
       const params = new URLSearchParams(
@@ -248,30 +290,43 @@ export default function LoginForm() {
       }
 
       // ----------------------------------------------------------
-      // DEFAULT FARM DASHBOARD
+      // 9. DEFAULT FARM DASHBOARD
       // ----------------------------------------------------------
 
       router.push("/dashboard");
     } catch (error: any) {
       console.error("Login error:", error);
 
-      const rawMessage = String(error?.message || "");
+      const rawMessage = String(
+        error?.message || ""
+      );
 
-      // Unconfirmed email — friendly VEND-aware message with resend.
-      // Farm-user and POGP behaviour is otherwise unchanged.
+      // ----------------------------------------------------------
+      // EMAIL VERIFICATION ERROR
+      // ----------------------------------------------------------
+
       if (
-        rawMessage.toLowerCase().includes("email not confirmed") ||
-        rawMessage.toLowerCase().includes("email is not confirmed") ||
-        rawMessage.toLowerCase().includes("not confirmed")
+        rawMessage.toLowerCase().includes(
+          "email not confirmed"
+        ) ||
+        rawMessage.toLowerCase().includes(
+          "email is not confirmed"
+        ) ||
+        rawMessage.toLowerCase().includes(
+          "not confirmed"
+        )
       ) {
         setNeedsVerification(true);
-        setMessage("Please verify your email before logging in.");
+
+        setMessage(
+          "Please verify your email before logging in."
+        );
+
         return;
       }
 
       setMessage(
-        error?.message ||
-          "Invalid login credentials"
+        error?.message || "Invalid login credentials"
       );
     } finally {
       setLoading(false);
@@ -283,115 +338,229 @@ export default function LoginForm() {
       onSubmit={handleLogin}
       className="space-y-4"
     >
-      <input
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={(e) =>
-          setEmail(e.target.value)
-        }
-        className="
-          w-full
-          border
-          p-3
-          rounded-lg
-        "
-        required
-      />
+      {/* -------------------------------------------------------
+          EMAIL
+      ------------------------------------------------------- */}
 
-      <input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) =>
-          setPassword(e.target.value)
-        }
-        className="
-          w-full
-          border
-          p-3
-          rounded-lg
-        "
-        required
-      />
+      <div className="space-y-1">
+        {demoMode && (
+          <label className="text-sm font-medium text-slate-700">
+            Demo Email
+          </label>
+        )}
+
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) =>
+            setEmail(e.target.value)
+          }
+          readOnly={demoMode}
+          autoComplete="username"
+          className={`
+            w-full
+            border
+            p-3
+            rounded-lg
+            outline-none
+            focus:ring-2
+            focus:ring-blue-500
+            ${
+              demoMode
+                ? "bg-slate-100 text-slate-600 cursor-not-allowed"
+                : "bg-white"
+            }
+          `}
+          required
+        />
+      </div>
+
+      {/* -------------------------------------------------------
+          PASSWORD
+      ------------------------------------------------------- */}
+
+      <div className="space-y-1">
+        {demoMode && (
+          <label className="text-sm font-medium text-slate-700">
+            Demo Password
+          </label>
+        )}
+
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) =>
+            setPassword(e.target.value)
+          }
+          readOnly={demoMode}
+          autoComplete="current-password"
+          className={`
+            w-full
+            border
+            p-3
+            rounded-lg
+            outline-none
+            focus:ring-2
+            focus:ring-blue-500
+            ${
+              demoMode
+                ? "bg-slate-100 text-slate-600 cursor-not-allowed"
+                : "bg-white"
+            }
+          `}
+          required
+        />
+      </div>
+
+      {/* -------------------------------------------------------
+          DEMO VISITOR INFORMATION
+      ------------------------------------------------------- */}
 
       {isDemoLogin && (
-        <div className="space-y-3 rounded-lg border border-blue-100 bg-blue-50/60 p-3">
+        <div className="space-y-3 rounded-xl border border-blue-100 bg-blue-50/60 p-4">
+
           <div>
-            <p className="text-sm font-semibold text-slate-700">
-              Demo access
+            <p className="text-sm font-semibold text-slate-800">
+              {demoMode
+                ? "Your Demo Access Details"
+                : "Demo access"}
             </p>
-            <p className="text-xs text-slate-500">
-              Please tell us who is using the Demo.
+
+            <p className="text-xs text-slate-500 mt-1">
+              {demoMode
+                ? "Please enter your details to access the PoultryOps Demo Farm."
+                : "Please tell us who is using the Demo."}
             </p>
           </div>
 
-          <input
-            type="text"
-            placeholder="Full name"
-            value={demoFullName}
-            onChange={(e) =>
-              setDemoFullName(e.target.value)
-            }
-            className="
-              w-full
-              border
-              bg-white
-              p-3
-              rounded-lg
-            "
-            required
-          />
+          {/* FULL NAME */}
 
-          <input
-            type="tel"
-            placeholder="Phone number"
-            value={demoPhone}
-            onChange={(e) =>
-              setDemoPhone(e.target.value)
-            }
-            className="
-              w-full
-              border
-              bg-white
-              p-3
-              rounded-lg
-            "
-            required
-          />
+          <div className="space-y-1">
+            <label
+              htmlFor="demo-full-name"
+              className="text-sm font-medium text-slate-700"
+            >
+              Full Name
+            </label>
+
+            <input
+              id="demo-full-name"
+              type="text"
+              placeholder="Enter your full name"
+              value={demoFullName}
+              onChange={(e) =>
+                setDemoFullName(e.target.value)
+              }
+              maxLength={120}
+              autoComplete="name"
+              className="
+                w-full
+                border
+                bg-white
+                p-3
+                rounded-lg
+                outline-none
+                focus:ring-2
+                focus:ring-blue-500
+              "
+              required
+            />
+          </div>
+
+          {/* PHONE NUMBER */}
+
+          <div className="space-y-1">
+            <label
+              htmlFor="demo-phone"
+              className="text-sm font-medium text-slate-700"
+            >
+              Phone Number
+            </label>
+
+            <input
+              id="demo-phone"
+              type="tel"
+              placeholder="Enter your phone number"
+              value={demoPhone}
+              onChange={(e) =>
+                setDemoPhone(e.target.value)
+              }
+              maxLength={32}
+              autoComplete="tel"
+              className="
+                w-full
+                border
+                bg-white
+                p-3
+                rounded-lg
+                outline-none
+                focus:ring-2
+                focus:ring-blue-500
+              "
+              required
+            />
+          </div>
+
         </div>
       )}
 
-      <div className="flex justify-end">
-        <Link
-          href="/forgot-password"
-          className="
-            text-sm
-            text-blue-600
-            hover:underline
-          "
-        >
-          Forgot Password?
-        </Link>
-      </div>
+      {/* -------------------------------------------------------
+          FORGOT PASSWORD
+          Hidden in dedicated Demo mode.
+      ------------------------------------------------------- */}
+
+      {!demoMode && (
+        <div className="flex justify-end">
+          <Link
+            href="/forgot-password"
+            className="
+              text-sm
+              text-blue-600
+              hover:underline
+            "
+          >
+            Forgot Password?
+          </Link>
+        </div>
+      )}
+
+      {/* -------------------------------------------------------
+          SUBMIT BUTTON
+      ------------------------------------------------------- */}
 
       <button
         type="submit"
         disabled={loading}
-        className="
+        className={`
           w-full
-          bg-blue-600
           text-white
           p-3
           rounded-lg
           font-semibold
+          transition
           disabled:opacity-60
-        "
+          disabled:cursor-not-allowed
+          ${
+            demoMode
+              ? "bg-blue-600 hover:bg-blue-700"
+              : "bg-blue-600 hover:bg-blue-700"
+          }
+        `}
       >
         {loading
-          ? "Signing In..."
-          : "Login"}
+          ? demoMode
+            ? "Entering Demo..."
+            : "Signing In..."
+          : demoMode
+            ? "Enter Demo Farm"
+            : "Login"}
       </button>
+
+      {/* -------------------------------------------------------
+          SUCCESSFUL EMAIL VERIFICATION
+      ------------------------------------------------------- */}
 
       {verified && (
         <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
@@ -399,35 +568,64 @@ export default function LoginForm() {
         </p>
       )}
 
+      {/* -------------------------------------------------------
+          VERIFICATION ERROR
+      ------------------------------------------------------- */}
+
       {verificationError && (
         <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
-          We couldn&apos;t complete email verification. Please try the
-          verification link again or request a new verification email.
+          We couldn&apos;t complete email verification.
+          Please try the verification link again or
+          request a new verification email.
         </p>
       )}
 
+      {/* -------------------------------------------------------
+          LOGIN ERROR
+      ------------------------------------------------------- */}
+
       {message && (
-        <p className="text-sm text-red-500">
+        <p
+          role="alert"
+          className="text-sm text-red-500"
+        >
           {message}
         </p>
       )}
 
+      {/* -------------------------------------------------------
+          RESEND VERIFICATION
+      ------------------------------------------------------- */}
+
       {needsVerification && (
         <div className="rounded-lg border border-blue-100 bg-blue-50/60 p-3">
+
           <button
             type="button"
             onClick={handleResendVerification}
             disabled={resending}
-            className="text-sm font-semibold text-blue-700 hover:underline disabled:opacity-60"
+            className="
+              text-sm
+              font-semibold
+              text-blue-700
+              hover:underline
+              disabled:opacity-60
+            "
           >
-            {resending ? "Sending..." : "Resend verification email"}
+            {resending
+              ? "Sending..."
+              : "Resend verification email"}
           </button>
 
           {resendMessage && (
-            <p className="mt-2 text-sm text-slate-600">{resendMessage}</p>
+            <p className="mt-2 text-sm text-slate-600">
+              {resendMessage}
+            </p>
           )}
+
         </div>
       )}
+
     </form>
   );
 }
