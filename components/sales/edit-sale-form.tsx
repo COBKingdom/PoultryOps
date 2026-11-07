@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -107,6 +108,10 @@ export default function EditSaleForm({
     record.unit_price?.toString() || ""
   );
 
+  const [discount, setDiscount] = useState(
+    String(Number(record.discount || 0))
+  );
+
   const [notes, setNotes] = useState(record.notes || "");
 
   const [loading, setLoading] = useState(false);
@@ -131,12 +136,18 @@ export default function EditSaleForm({
 
   const numericQuantity = Number(quantity);
   const numericUnitPrice = Number(unitPrice);
+  const numericDiscount = Number(discount || 0);
 
-  const totalAmount =
+  const subtotal =
     Number.isFinite(numericQuantity) &&
     Number.isFinite(numericUnitPrice)
       ? numericQuantity * numericUnitPrice
       : 0;
+
+  const totalAmount = Math.max(
+    subtotal - numericDiscount,
+    0
+  );
 
   const formatMoney = (value: number) =>
     new Intl.NumberFormat("en-NG", {
@@ -221,11 +232,23 @@ export default function EditSaleForm({
       return;
     }
 
+    if (
+      !Number.isFinite(numericDiscount) ||
+      numericDiscount < 0 ||
+      numericDiscount > subtotal + 0.005
+    ) {
+      setError(
+        "Discount must be zero or greater and cannot exceed the sale subtotal."
+      );
+      return;
+    }
+
     const originalCustomerId = record.customer_id || "";
 
     const financialDetailsChanged =
       numericQuantity !== Number(record.quantity) ||
       numericUnitPrice !== Number(record.unit_price) ||
+      numericDiscount !== Number(record.discount || 0) ||
       customerId !== originalCustomerId ||
       itemType !== record.item_type;
 
@@ -265,6 +288,7 @@ export default function EditSaleForm({
         item_type: itemType,
         quantity: numericQuantity,
         unit_price: numericUnitPrice,
+        discount: numericDiscount,
         total_amount: totalAmount,
         customer_id: customerId || null,
         unit_of_sale: unitOfSale,
@@ -457,17 +481,50 @@ export default function EditSaleForm({
               </div>
             </div>
 
-            <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
-              <p className="text-xs font-bold uppercase tracking-wide text-blue-700">
-                Total Sale Amount
-              </p>
-              <p className="mt-1 text-2xl font-extrabold text-slate-900">
-                {currencySymbol}
-                {formatMoney(totalAmount)}
-              </p>
-              <p className="mt-1 text-xs text-slate-600">
-                Quantity × price per {unitOfSale.toLowerCase()}
-              </p>
+            <div className="space-y-4 rounded-xl border border-blue-200 bg-blue-50 p-4">
+              <div>
+                <label htmlFor="edit-sale-discount" className={labelClass}>
+                  Discount ({currencySymbol})
+                </label>
+                <input
+                  id="edit-sale-discount"
+                  type="number"
+                  min="0"
+                  max={subtotal}
+                  step="0.01"
+                  value={discount}
+                  onChange={(event) => setDiscount(event.target.value)}
+                  className={inputClass}
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                  Optional. Enter zero if no discount applies.
+                </p>
+              </div>
+
+              <div className="space-y-2 border-t border-blue-200 pt-3 text-sm">
+                <div className="flex justify-between text-slate-600">
+                  <span>Subtotal</span>
+                  <span>
+                    {currencySymbol}{formatMoney(subtotal)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between text-red-600">
+                  <span>Discount</span>
+                  <span>
+                    - {currencySymbol}{formatMoney(numericDiscount || 0)}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between border-t border-blue-200 pt-3">
+                  <span className="font-bold text-blue-700">
+                    Final Sale Amount
+                  </span>
+                  <span className="text-2xl font-extrabold text-slate-900">
+                    {currencySymbol}{formatMoney(totalAmount)}
+                  </span>
+                </div>
+              </div>
             </div>
 
             <div>

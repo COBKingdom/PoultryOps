@@ -10,6 +10,7 @@ export type SaleRecord = {
   item_type: string;
   quantity: number;
   unit_price: number;
+  discount: number;
   total_amount: number;
   unit_of_sale?: string | null;
   notes: string | null;
@@ -21,6 +22,7 @@ export type SaleUpdate = {
   item_type: string;
   quantity: number;
   unit_price: number;
+  discount: number;
   total_amount: number;
   customer_id: string | null;
   unit_of_sale: string;

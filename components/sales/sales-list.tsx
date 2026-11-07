@@ -56,8 +56,6 @@ function getTimestamp(value: unknown): number {
 
 function sortSalesNewestFirst(records: any[]): any[] {
   return [...records].sort((a, b) => {
-    // Prefer the actual creation timestamp when available.
-    // This correctly orders transactions recorded on the same day.
     const createdDifference =
       getTimestamp(b.created_at) - getTimestamp(a.created_at);
 
@@ -65,8 +63,6 @@ function sortSalesNewestFirst(records: any[]): any[] {
       return createdDifference;
     }
 
-    // Fall back to the sale date when creation timestamps are unavailable
-    // or identical.
     const saleDateDifference =
       getTimestamp(b.sale_date) - getTimestamp(a.sale_date);
 
@@ -113,6 +109,7 @@ export default function SalesList({
         <div className="space-y-4">
           {sortedRecords.map((record) => {
             const unit = getUnitOfSale(record);
+            const discount = Math.max(Number(record.discount || 0), 0);
 
             const customerName =
               record.customer?.name ||
@@ -167,7 +164,7 @@ export default function SalesList({
                   </div>
                 </div>
 
-                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
                   <div className="rounded-xl bg-slate-50 p-3">
                     <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                       Quantity
@@ -187,9 +184,18 @@ export default function SalesList({
                     </p>
                   </div>
 
+                  <div className="rounded-xl bg-amber-50 p-3">
+                    <p className="text-xs font-medium uppercase tracking-wide text-amber-700">
+                      Discount
+                    </p>
+                    <p className="mt-1 text-lg font-bold text-amber-700">
+                      {formatCurrency(discount, { currency })}
+                    </p>
+                  </div>
+
                   <div className="rounded-xl bg-green-50 p-3">
                     <p className="text-xs font-medium uppercase tracking-wide text-green-700">
-                      Total
+                      Final total
                     </p>
                     <p className="mt-1 text-lg font-bold text-green-700">
                       {formatCurrency(record.total_amount, { currency })}

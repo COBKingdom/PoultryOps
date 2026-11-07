@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -78,6 +79,7 @@ export default function AddSaleForm({
   const [customersLoading, setCustomersLoading] = useState(false);
   const [quantity, setQuantity] = useState("");
   const [unitPrice, setUnitPrice] = useState("");
+  const [discount, setDiscount] = useState("0");
   const [amountPaid, setAmountPaid] = useState("");
   const [applyCredit, setApplyCredit] = useState(true);
   const [notes, setNotes] = useState("");
@@ -118,11 +120,14 @@ export default function AddSaleForm({
     }
 
     setUnitOfSale(
-      getDefaultUnit(saleCategory, saleCategory === "Bird Sales"
-        ? BIRD_SALE_TYPES[0]
-        : saleCategory === "Egg Sales"
-          ? EGG_SALE_TYPES[0]
-          : OTHER_SALE_TYPES[0])
+      getDefaultUnit(
+        saleCategory,
+        saleCategory === "Bird Sales"
+          ? BIRD_SALE_TYPES[0]
+          : saleCategory === "Egg Sales"
+            ? EGG_SALE_TYPES[0]
+            : OTHER_SALE_TYPES[0]
+      )
     );
 
     if (saleCategory === "Other Sales") {
@@ -144,8 +149,17 @@ export default function AddSaleForm({
     [customers, customerId]
   );
 
-  const totalAmount =
-    Number(quantity || 0) * Number(unitPrice || 0);
+  const numericQuantity = Number(quantity || 0);
+  const numericUnitPrice = Number(unitPrice || 0);
+  const numericDiscount = Number(discount || 0);
+
+  const subtotal =
+    numericQuantity * numericUnitPrice;
+
+  const totalAmount = Math.max(
+    subtotal - numericDiscount,
+    0
+  );
 
   const availableCredit = selectedCustomer
     ? Number(selectedCustomer.credit_balance || 0)
@@ -198,6 +212,8 @@ export default function AddSaleForm({
   }
 
   async function handleSave() {
+    if (loading) return;
+
     if (!farmId) {
       alert("Farm information is not available. Please refresh and try again.");
       return;
@@ -210,6 +226,7 @@ export default function AddSaleForm({
 
     const numericQuantity = Number(quantity);
     const numericUnitPrice = Number(unitPrice);
+    const numericDiscount = Number(discount || 0);
 
     if (
       !Number.isInteger(numericQuantity) ||
@@ -237,15 +254,54 @@ export default function AddSaleForm({
       return;
     }
 
-    if (paymentExceedsRemaining) {
+    const calculatedSubtotal =
+      numericQuantity * numericUnitPrice;
+
+    if (
+      !Number.isFinite(numericDiscount) ||
+      numericDiscount < 0 ||
+      numericDiscount > calculatedSubtotal + 0.005
+    ) {
+      alert(
+        "Discount must be zero or greater and cannot exceed the sale subtotal."
+      );
+      return;
+    }
+
+    const calculatedTotal = Math.max(
+      calculatedSubtotal - numericDiscount,
+      0
+    );
+
+    const calculatedCreditApplied =
+      customerId && applyCredit
+        ? Math.min(availableCredit, calculatedTotal)
+        : 0;
+
+    const calculatedRemaining = Math.max(
+      calculatedTotal - calculatedCreditApplied,
+      0
+    );
+
+    const calculatedAmountPaid = Number(amountPaid || 0);
+
+    if (
+      !Number.isFinite(calculatedAmountPaid) ||
+      calculatedAmountPaid < 0
+    ) {
+      alert("Please enter a valid amount paid.");
+      return;
+    }
+
+    if (calculatedAmountPaid > calculatedRemaining + 0.005) {
       alert(
         "Amount paid cannot exceed the remaining balance after customer credit."
       );
       return;
     }
 
-    if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
-      alert("The sale amount must be greater than zero.");
+    if (!Number.isFinite(calculatedTotal) || calculatedTotal < 0) {
+      alert("The sale amount is invalid.");
       return;
     }
 
@@ -265,9 +321,13 @@ export default function AddSaleForm({
             p_item_type: itemType,
             p_quantity: numericQuantity,
             p_unit_price: numericUnitPrice,
-            p_total_amount: totalAmount,
+            p_total_amount: calculatedTotal,
             p_unit_of_sale: unitOfSale,
-            p_amount_paid: effectiveAmountPaid,
+            p_discount: numericDiscount,
+            p_amount_paid: Math.min(
+              calculatedAmountPaid,
+              calculatedRemaining
+            ),
             p_apply_credit: applyCredit,
             p_notes: notes,
           }
@@ -291,7 +351,8 @@ export default function AddSaleForm({
           item_type: itemType,
           quantity: numericQuantity,
           unit_price: numericUnitPrice,
-          total_amount: totalAmount,
+          discount: numericDiscount,
+          total_amount: calculatedTotal,
           unit_of_sale: unitOfSale,
           notes,
         });
@@ -303,6 +364,7 @@ export default function AddSaleForm({
       setCustomerId("");
       setQuantity("");
       setUnitPrice("");
+      setDiscount("0");
       setAmountPaid("");
       setApplyCredit(true);
       setNotes("");
@@ -554,18 +616,50 @@ export default function AddSaleForm({
           </div>
 
           <div className="overflow-hidden rounded-2xl border border-blue-100 bg-slate-50/80">
-            <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-4 sm:px-5">
-              <div>
-                <p className="text-sm font-medium text-slate-600">
-                  Total Amount
-                </p>
-                <p className="mt-0.5 text-xs text-slate-400">
-                  Quantity × price per {unitOfSale.toLowerCase()}
-                </p>
-              </div>
-              <p className="text-xl font-bold tracking-tight text-slate-900">
-                ₦{formatAmount(totalAmount)}
+            <div className="border-b border-slate-200 px-4 py-4 sm:px-5">
+              <label className={labelClass} htmlFor="sale-discount">
+                Discount (₦)
+              </label>
+              <input
+                id="sale-discount"
+                type="number"
+                min="0"
+                max={subtotal}
+                step="0.01"
+                placeholder="0.00"
+                value={discount}
+                onChange={(event) => setDiscount(event.target.value)}
+                className={inputClass}
+              />
+              <p className="mt-1 text-xs text-slate-500">
+                Optional. Enter zero if no discount applies.
               </p>
+
+              <div className="mt-4 space-y-2 border-t border-slate-200 pt-3 text-sm">
+                <div className="flex items-center justify-between text-slate-600">
+                  <span>Subtotal</span>
+                  <span>₦{formatAmount(subtotal)}</span>
+                </div>
+
+                <div className="flex items-center justify-between text-red-600">
+                  <span>Discount</span>
+                  <span>- ₦{formatAmount(numericDiscount || 0)}</span>
+                </div>
+
+                <div className="flex items-center justify-between border-t border-slate-200 pt-3">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-700">
+                      Final Sale Amount
+                    </p>
+                    <p className="mt-0.5 text-xs text-slate-400">
+                      After discount
+                    </p>
+                  </div>
+                  <p className="text-xl font-bold tracking-tight text-slate-900">
+                    ₦{formatAmount(totalAmount)}
+                  </p>
+                </div>
+              </div>
             </div>
 
             {isCustomerSale && availableCredit > 0 && (

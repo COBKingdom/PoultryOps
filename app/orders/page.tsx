@@ -54,6 +54,7 @@ type BatchInfo = {
 type OrderRecord = {
   id: string;
   farm_id: string;
+  product_id: string | null;
   order_batch_id: string | null;
   order_reference: string | null;
   customer_id: string;
@@ -210,6 +211,7 @@ export default function OrdersPage() {
   const [fulfilledByOrder, setFulfilledByOrder] = useState<Record<string, number>>({});
   const [orderReservations, setOrderReservations] = useState<Array<{ order_id: string | null; order_batch_id: string | null; amount: number | string; amount_applied_to_sales: number | string }>>([]);
   const [showForm, setShowForm] = useState(false);
+  const [editingOrder, setEditingOrder] = useState<OrderRecord | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<
     Record<string, boolean>
   >({});
@@ -314,7 +316,7 @@ function shareBookingConfirmation(group: OrderGroup) {
     const { data, error: queryError } = await supabase
       .from("orders")
       .select(
-        "id, farm_id, order_batch_id, order_reference, customer_id, product_name, quantity, unit_price, total_amount, order_date, proposed_delivery_date, status, payment_status, notes, dispatch_notes, created_at, customers(name, phone), public_order_batches(order_reference, total_amount, item_count, delivery_address, state_region, proposed_delivery_date, status, payment_status)"
+        "id, farm_id, product_id, order_batch_id, order_reference, customer_id, product_name, quantity, unit_price, total_amount, order_date, proposed_delivery_date, status, payment_status, notes, dispatch_notes, created_at, customers(name, phone), public_order_batches(order_reference, total_amount, item_count, delivery_address, state_region, proposed_delivery_date, status, payment_status)"
       )
       .eq("farm_id", farmId)
       .order("created_at", { ascending: false });
@@ -606,16 +608,54 @@ const customerAdvances = useMemo((): number => {
     (group) => group.status === "completed"
   ).length;
 
-  function resetForm() {
-    setCustomerId("");
-    setProductId("");
-    setProductUnit("");
-    setQuantity("1");
-    setUnitPrice("");
-    setNotes("");
-    setOrderDate(new Date().toISOString().slice(0, 10));
+function resetForm() {
+  setCustomerId("");
+  setProductId("");
+  setProductUnit("");
+  setQuantity("1");
+  setUnitPrice("");
+  setNotes("");
+  setOrderDate(new Date().toISOString().slice(0, 10));
+  setEditingOrder(null);
+}
+function startEditingOrder(order: OrderRecord) {
+  if (order.order_batch_id) {
+    setError(
+      "Public checkout orders cannot currently be edited individually."
+    );
+    return;
   }
 
+  if (order.status === "cancelled" || order.status === "completed") {
+    setError("Cancelled or completed orders cannot be edited.");
+    return;
+  }
+
+  const fulfilled = Number(fulfilledByOrder[order.id] || 0);
+
+  setError("");
+  setSuccess("");
+
+  setEditingOrder(order);
+  setCustomerId(order.customer_id);
+  setProductId(order.product_id || "");
+  setProductUnit(
+    products.find((product) => product.id === order.product_id)?.unit || "unit"
+  );
+  setQuantity(String(order.quantity));
+  setUnitPrice(String(order.unit_price));
+  setOrderDate(order.order_date.slice(0, 10));
+  setNotes(order.notes || "");
+
+  if (fulfilled > 0) {
+    setSuccess(
+      `${fulfilled} units have already been supplied. The edited quantity cannot be less than this amount.`
+    );
+  }
+
+  setShowForm(true);
+  void loadProducts();
+}
  
   async function createOrder(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -647,37 +687,112 @@ const customerAdvances = useMemo((): number => {
       return;
     }
 
-    const currentProduct = products.find(
-      (product) => product.id === productId && product.active
-    );
+const currentProduct = products.find(
+  (product) => product.id === productId && product.active
+);
 
-    if (!currentProduct) {
-      setError(
-        "The selected product is no longer available. Refresh the product list and select another product."
-      );
-      return;
-    }
+const existingProductIsUnchanged =
+  editingOrder?.product_id === productId;
+
+if (!currentProduct && !existingProductIsUnchanged) {
+  setError(
+    "The selected product is no longer available. Refresh the product list and select another product."
+  );
+  return;
+}
+
+if (editingOrder) {
+  const fulfilledQuantity = Number(
+    fulfilledByOrder[editingOrder.id] || 0
+  );
+
+  const hasPaymentAllocation = orderReservations.some(
+    (reservation) =>
+      reservation.order_id === editingOrder.id &&
+      Number(reservation.amount) > 0
+  );
+
+  const hasPaymentHistory =
+    hasPaymentAllocation ||
+    editingOrder.payment_status !== "unpaid";
+
+  if (orderQuantity < fulfilledQuantity) {
+    setError(
+      `You cannot reduce the order below ${fulfilledQuantity} units already supplied.`
+    );
+    return;
+  }
+
+  const financialFieldsChanged =
+    customerId !== editingOrder.customer_id ||
+    productId !== (editingOrder.product_id || "") ||
+    orderQuantity !== Number(editingOrder.quantity) ||
+    orderUnitPrice !== Number(editingOrder.unit_price);
+
+  const identityOrPriceChanged =
+    customerId !== editingOrder.customer_id ||
+    productId !== (editingOrder.product_id || "") ||
+    orderUnitPrice !== Number(editingOrder.unit_price);
+
+  if (hasPaymentHistory && financialFieldsChanged) {
+    setError(
+      "This order has payment history. Customer, product, quantity and price cannot be changed until a payment-correction workflow is available. You can still update the date and notes."
+    );
+    return;
+  }
+
+  if (fulfilledQuantity > 0 && identityOrPriceChanged) {
+    setError(
+      "This order has already been partially supplied. Its customer, product and unit price must remain unchanged."
+    );
+    return;
+  }
+}
 
     setSaving(true);
 
     try {
 
-const { error: insertError } = await supabase.from("orders").insert({
-  farm_id: farmId,
-  customer_id: customerId,
-  product_id: currentProduct.id,
-  product_name: currentProduct.name,
-  quantity: orderQuantity,
-  unit_price: orderUnitPrice,
-  order_date: orderDate,
-  notes: notes.trim() || null,
-  status: "pending",
-  payment_status: "unpaid",
-  created_by: user.id,
-});
+if (editingOrder) {
+  // UPDATE EXISTING ORDER
+  const { error: updateError } = await supabase
+    .from("orders")
+    .update({
+      customer_id: customerId,
+      product_id: currentProduct?.id ?? editingOrder.product_id,
+      product_name: currentProduct?.name ?? editingOrder.product_name,
+      quantity: orderQuantity,
+      unit_price: orderUnitPrice,
+      order_date: orderDate,
+      notes: notes.trim() || null,
+    })
+    .eq("id", editingOrder.id)
+    .eq("farm_id", farmId)
+    .is("order_batch_id", null);
 
+  if (updateError) throw updateError;
 
-      if (insertError) throw insertError;
+  setSuccess("Order updated successfully.");
+} else {
+  // CREATE NEW ORDER
+  const { error: insertError } = await supabase.from("orders").insert({
+    farm_id: farmId,
+    customer_id: customerId,
+    product_id: currentProduct!.id,
+    product_name: currentProduct!.name,
+    quantity: orderQuantity,
+    unit_price: orderUnitPrice,
+    order_date: orderDate,
+    notes: notes.trim() || null,
+    status: "pending",
+    payment_status: "unpaid",
+    created_by: user.id,
+  });
+
+  if (insertError) throw insertError;
+
+  setSuccess("Order created successfully.");
+}
 
       setSuccess("Order created successfully.");
       setShowForm(false);
@@ -883,9 +998,9 @@ changes: Partial<Pick<OrderRecord, "status" | "dispatch_notes">>
         {showForm && (
           <section className="rounded-2xl border border-blue-200 bg-white p-5 shadow-sm">
             <div className="mb-5">
-              <h2 className="text-lg font-bold text-slate-900">
-                Create Order
-              </h2>
+<h2 className="text-lg font-bold text-slate-900">
+  {editingOrder ? "Edit Order" : "Create Order"}
+</h2>
 
               <p className="mt-1 text-sm text-slate-500">
                 Select a customer and product from your catalogue. The current
@@ -946,6 +1061,14 @@ changes: Partial<Pick<OrderRecord, "status" | "dispatch_notes">>
                         ? "No active catalogue products"
                         : "Select a product"}
                   </option>
+
+                  {editingOrder &&
+  editingOrder.product_id &&
+  !products.some((product) => product.id === editingOrder.product_id) && (
+    <option value={editingOrder.product_id}>
+      {editingOrder.product_name} (existing product)
+    </option>
+  )}
 
                   {products.map((product) => (
                     <option key={product.id} value={product.id}>
@@ -1091,7 +1214,11 @@ changes: Partial<Pick<OrderRecord, "status" | "dispatch_notes">>
                   }
                   className={buttonClass}
                 >
-                  {saving ? "Saving..." : "Save Order"}
+                  {saving
+  ? "Saving..."
+  : editingOrder
+    ? "Update Order"
+    : "Save Order"}
                 </button>
 
                 <button
@@ -1273,6 +1400,19 @@ changes: Partial<Pick<OrderRecord, "status" | "dispatch_notes">>
         {expanded && (
           <div className="mt-4 space-y-4 border-t border-slate-100 pt-4">
             
+            {!group.batchId &&
+  group.status !== "cancelled" &&
+  group.status !== "completed" && (
+    <div className="flex flex-wrap gap-2">
+      <button
+        type="button"
+        onClick={() => startEditingOrder(group.lines[0])}
+        className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100"
+      >
+        Edit Order
+      </button>
+    </div>
+  )}
  
             {/* Customer Booking Confirmation */}
             <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-4">
