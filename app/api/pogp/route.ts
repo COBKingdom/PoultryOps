@@ -285,8 +285,9 @@ export async function GET(
     const commissionRows =
       commissions || [];
 
+    
     // ----------------------------------------------------------
-    // Recruited referral partners
+    // Recruited referral and VEND partners
     // ----------------------------------------------------------
 
     const {
@@ -307,105 +308,188 @@ export async function GET(
         joined_at,
         created_at
       `)
-      .eq(
-        "recruited_by_pogp_id",
-        partnerId
-      )
+      .eq("recruited_by_pogp_id", partnerId)
       .order("created_at", {
         ascending: false,
       });
 
     if (networkError) {
       console.error(
-        "POGP network lookup failed:",
+        "POGP referral network lookup failed:",
         networkError
       );
     }
 
-    const networkRows =
-      networkPartners || [];
+    const networkRows = networkPartners || [];
 
     // ----------------------------------------------------------
-    // Network referral attributions
+    // Recruited VEND partners
     // ----------------------------------------------------------
 
-    const networkPartnerIds =
-      networkRows.map(
-        (partner) => partner.id
+    const {
+      data: vendPartners,
+      error: vendPartnersError,
+    } = await supabaseAdmin
+      .from("vend_partners")
+      .select(`
+        id,
+        full_name,
+        email,
+        phone,
+        vend_code,
+        territory,
+        status,
+        joined_at,
+        recruited_by_pogp_id
+      `)
+      .eq("recruited_by_pogp_id", partnerId)
+      .order("joined_at", {
+        ascending: false,
+      });
+
+    if (vendPartnersError) {
+      console.error(
+        "POGP VEND network lookup failed:",
+        vendPartnersError
       );
+    }
 
-    let networkAttributions: any[] =
-      [];
+    const vendRows = vendPartners || [];
 
-    let networkCommissions: any[] =
-      [];
+    // ----------------------------------------------------------
+    // Network referral and VEND activity
+    // ----------------------------------------------------------
 
-    if (networkPartnerIds.length > 0) {
-      const [
-        networkAttributionResult,
-        networkCommissionResult,
-      ] = await Promise.all([
-        supabaseAdmin
-          .from("referral_attributions")
-          .select(`
-            id,
-            referral_partner_id,
-            farm_id,
-            source,
-            attributed_at
-          `)
-          .in(
-            "referral_partner_id",
-            networkPartnerIds
-          ),
+    const networkPartnerIds = networkRows.map(
+      (partner) => partner.id
+    );
 
-        supabaseAdmin
-          .from("pogp_commissions")
-          .select(`
-            id,
-            farm_id,
-            subscription_id,
-            commission_type,
-            amount,
-            status,
-            earned_at,
-            paid_at,
-            notes
-          `)
-          .eq(
-            "pogp_id",
-            partnerId
-          )
-          .order("earned_at", {
-            ascending: false,
-          }),
-      ]);
+    const vendPartnerIds = vendRows.map(
+      (partner) => partner.id
+    );
 
-      if (
+    let networkAttributions: any[] = [];
+    let networkCommissions: any[] = [];
+    let vendAttributions: any[] = [];
+    let vendCommissionRows: any[] = [];
+
+    const networkResults = await Promise.all([
+      networkPartnerIds.length > 0
+        ? supabaseAdmin
+            .from("referral_attributions")
+            .select(`
+              id,
+              referral_partner_id,
+              farm_id,
+              source,
+              attributed_at
+            `)
+            .in("referral_partner_id", networkPartnerIds)
+        : Promise.resolve({ data: [], error: null }),
+
+      networkPartnerIds.length > 0
+        ? supabaseAdmin
+            .from("pogp_commissions")
+            .select(`
+              id,
+              farm_id,
+              subscription_id,
+              commission_type,
+              amount,
+              status,
+              earned_at,
+              paid_at,
+              notes
+            `)
+            .eq("pogp_id", partnerId)
+            .order("earned_at", {
+              ascending: false,
+            })
+        : Promise.resolve({ data: [], error: null }),
+
+      vendPartnerIds.length > 0
+        ? supabaseAdmin
+            .from("vend_attributions")
+            .select(`
+              id,
+              vend_id,
+              farm_id,
+              source,
+              attributed_at,
+              created_at,
+              notes
+            `)
+            .in("vend_id", vendPartnerIds)
+        : Promise.resolve({ data: [], error: null }),
+
+      vendPartnerIds.length > 0
+        ? supabaseAdmin
+            .from("vend_commissions")
+            .select(`
+              id,
+              vend_id,
+              farm_id,
+              payment_id,
+              commission_type,
+              amount,
+              status,
+              earned_at,
+              paid_at,
+              notes,
+              created_at
+            `)
+            .in("vend_id", vendPartnerIds)
+            .order("earned_at", {
+              ascending: false,
+            })
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+
+    const [
+      networkAttributionResult,
+      networkCommissionResult,
+      vendAttributionResult,
+      vendCommissionResult,
+    ] = networkResults;
+
+    if (networkAttributionResult.error) {
+      console.error(
+        "Network referral attribution lookup failed:",
         networkAttributionResult.error
-      ) {
-        console.error(
-          "Network attribution lookup failed:",
-          networkAttributionResult.error
-        );
-      } else {
-        networkAttributions =
-          networkAttributionResult.data ||
-          [];
-      }
+      );
+    } else {
+      networkAttributions =
+        networkAttributionResult.data || [];
+    }
 
-      if (
+    if (networkCommissionResult.error) {
+      console.error(
+        "Network commission lookup failed:",
         networkCommissionResult.error
-      ) {
-        console.error(
-          "Network commission lookup failed:",
-          networkCommissionResult.error
-        );
-      } else {
-        networkCommissions =
-          networkCommissionResult.data ||
-          [];
-      }
+      );
+    } else {
+      networkCommissions =
+        networkCommissionResult.data || [];
+    }
+
+    if (vendAttributionResult.error) {
+      console.error(
+        "VEND attribution lookup failed:",
+        vendAttributionResult.error
+      );
+    } else {
+      vendAttributions =
+        vendAttributionResult.data || [];
+    }
+
+    if (vendCommissionResult.error) {
+      console.error(
+        "VEND commission lookup failed:",
+        vendCommissionResult.error
+      );
+    } else {
+      vendCommissionRows =
+        vendCommissionResult.data || [];
     }
 
     // ----------------------------------------------------------
@@ -522,11 +606,12 @@ export async function GET(
         }
       );
 
+    
     // ----------------------------------------------------------
-    // Build network view
+    // Build combined network view
     // ----------------------------------------------------------
 
-    const network = networkRows.map(
+    const referralNetwork = networkRows.map(
       (networkPartner) => {
         const partnerAttributions =
           networkAttributions.filter(
@@ -547,21 +632,75 @@ export async function GET(
           partnerCommissionRows.reduce(
             (total, commission) =>
               total +
-              Number(
-                commission.amount || 0
-              ),
+              Number(commission.amount || 0),
             0
           );
 
         return {
-          ...networkPartner,
+          id: networkPartner.id,
+          full_name: networkPartner.full_name,
+          business_name:
+            networkPartner.business_name,
+          referral_code:
+            networkPartner.referral_code,
+          territory: networkPartner.territory,
+          status: networkPartner.status,
+          joined_at: networkPartner.joined_at,
+          partner_type: "Referral Partner" as const,
           customerCount:
             partnerAttributions.length,
-          earnings:
-            partnerEarnings,
+          earnings: partnerEarnings,
         };
       }
     );
+
+    const vendNetwork = vendRows.map(
+      (vendPartner) => {
+        const partnerAttributions =
+          vendAttributions.filter(
+            (item) =>
+              item.vend_id === vendPartner.id
+          );
+
+        const partnerCommissionRows =
+          vendCommissionRows.filter(
+            (commission) =>
+              commission.vend_id === vendPartner.id
+          );
+
+        const partnerEarnings =
+          partnerCommissionRows.reduce(
+            (total, commission) =>
+              total +
+              Number(commission.amount || 0),
+            0
+          );
+
+        return {
+          id: vendPartner.id,
+          full_name: vendPartner.full_name,
+          business_name: null,
+          referral_code: vendPartner.vend_code,
+          territory: vendPartner.territory,
+          status: vendPartner.status,
+          joined_at: vendPartner.joined_at,
+          partner_type: "VEND Partner" as const,
+          customerCount:
+            partnerAttributions.length,
+          earnings: partnerEarnings,
+        };
+      }
+    );
+
+    const network = [
+      ...referralNetwork,
+      ...vendNetwork,
+    ].sort(
+      (a, b) =>
+        new Date(b.joined_at || 0).getTime() -
+        new Date(a.joined_at || 0).getTime()
+    );
+
 
     return NextResponse.json({
       success: true,
@@ -584,10 +723,11 @@ export async function GET(
         pendingCommission,
 
         networkPartners:
-          networkRows.length,
+  network.length,
 
-        networkCustomers:
-          networkAttributions.length,
+networkCustomers:
+  networkAttributions.length +
+  vendAttributions.length,
 
         networkCommissionTotal,
       },

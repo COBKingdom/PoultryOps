@@ -83,6 +83,8 @@ type NetworkPartner = {
   referral_code: string;
   status: string;
   joined_at: string;
+  territory: string | null;
+  partner_type: "VEND Partner" | "Referral Partner";
   customerCount: number;
   earnings: number;
 };
@@ -1361,14 +1363,14 @@ const pageTitle =
           {activeSection ===
             "network" && (
             <DataTableCard
-              title="My Referral Network"
-              subtitle="Partners you recruited and the activity generated through your network."
+              title="My Network"
+              subtitle="Referral and VEND partners you have recruited, and the activity generated through your network."
               empty={
                 network.length ===
                 0
               }
               emptyTitle="No network partners yet"
-              emptyText="When you recruit referral partners, they will appear here along with the customers and earnings generated through your network."
+              emptyText="When you recruit VEND or referral partners, they will appear here along with the customers and earnings generated through your network."
               icon={Network}
             >
               {network.map(
@@ -1396,21 +1398,33 @@ const pageTitle =
                             .toUpperCase()}
                         </div>
 
-                        <div>
-                          <p className="font-semibold text-[#0b1f3a]">
-                            {
-                              item.full_name
-                            }
-                          </p>
+                       <div>
+  <p className="font-semibold text-[#0b1f3a]">
+    {item.full_name}
+  </p>
 
-                          {item.business_name && (
-                            <p className="mt-0.5 text-xs text-slate-400">
-                              {
-                                item.business_name
-                              }
-                            </p>
-                          )}
-                        </div>
+  <span
+    className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+      item.partner_type === "VEND Partner"
+        ? "bg-amber-50 text-amber-700"
+        : "bg-blue-50 text-blue-700"
+    }`}
+  >
+    {item.partner_type}
+  </span>
+
+  {item.business_name && (
+    <p className="mt-0.5 text-xs text-slate-400">
+      {item.business_name}
+    </p>
+  )}
+
+  {item.territory && (
+    <p className="mt-0.5 text-xs text-slate-400">
+      {item.territory}
+    </p>
+  )}
+</div>
                       </div>
                     </td>
 
